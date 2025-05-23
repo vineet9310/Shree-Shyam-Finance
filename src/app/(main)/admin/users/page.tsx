@@ -9,6 +9,7 @@ import type { User } from "@/lib/types";
 import { Eye, UserCog, UsersRound, Loader2, AlertTriangle } from "lucide-react";
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
+import { ROUTES } from '@/lib/constants';
 
 
 export default function AdminUsersPage() {
@@ -93,7 +94,6 @@ export default function AdminUsersPage() {
                   <TableHead>Role</TableHead>
                   <TableHead>Contact No.</TableHead>
                   <TableHead>Address</TableHead>
-                  {/* <TableHead>Borrower Profile ID</TableHead> */}
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -109,13 +109,11 @@ export default function AdminUsersPage() {
                     </TableCell>
                     <TableCell>{user.contactNo || 'N/A'}</TableCell>
                     <TableCell>{user.address || 'N/A'}</TableCell>
-                    {/* <TableCell>{user.borrowerProfileId || 'N/A'}</TableCell> */}
                     <TableCell className="text-right">
-                      <Button variant="outline" size="sm" disabled>
-                        {/* This link would go to a user detail/edit page in the future */}
-                        {/* <Link href={`/admin/users/${user.id}`}>  */}
-                          <Eye className="mr-2 h-4 w-4" /> View/Edit (Soon)
-                        {/* </Link> */}
+                      <Button asChild variant="outline" size="sm">
+                        <Link href={ROUTES.ADMIN_USER_DETAIL(user.id)}> 
+                          <Eye className="mr-2 h-4 w-4" /> View Details
+                        </Link>
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -130,4 +128,3 @@ export default function AdminUsersPage() {
     </div>
   );
 }
-

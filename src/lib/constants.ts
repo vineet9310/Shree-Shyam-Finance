@@ -6,8 +6,10 @@ export const ROUTES = {
   LOGIN: "/login",
   REGISTER: "/register",
   DASHBOARD: "/dashboard",
-  APPLY_LOAN: "/apply-loan", // This will be the new loan application page
+  APPLY_LOAN: "/apply-loan",
   ADMIN_DASHBOARD: "/admin",
   ADMIN_APPLICATION_DETAIL: (id: string) => `/admin/applications/${id}`,
-  ADMIN_USERS: "/admin/users", // New route for listing users
+  ADMIN_USERS: "/admin/users",
+  ADMIN_USER_DETAIL: (id: string) => `/admin/users/${id}`, // New route for user detail
 };
+
