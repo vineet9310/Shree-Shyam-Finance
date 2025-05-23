@@ -70,7 +70,7 @@ export default function AdminDashboardPage() {
         }
         const data = await response.json();
         console.log("[AdminDashboardPage] API success response data:", data);
-        if (data.success && data.applications) {
+        if (data.success && Array.isArray(data.applications)) {
           console.log("[AdminDashboardPage] Fetched applications from API. Count:", data.applications.length);
           // Log the first application to check its structure, especially the 'id' field
           if (data.applications.length > 0) {
@@ -78,7 +78,10 @@ export default function AdminDashboardPage() {
           }
           setApplications(data.applications);
         } else {
-          throw new Error(data.message || 'Failed to fetch loan applications');
+          // Handle cases where data.applications might not be an array
+          const errMsg = data.message || (Array.isArray(data.applications) ? 'Failed to fetch loan applications' : 'Invalid application data format from API');
+          console.error("[AdminDashboardPage] Error or invalid data format from API:", errMsg, data);
+          throw new Error(errMsg);
         }
       } catch (err: any) {
         console.error("[AdminDashboardPage] Error fetching applications:", err);
@@ -96,7 +99,7 @@ export default function AdminDashboardPage() {
     fetchApplications();
   }, [toast]);
 
-  const newApplicationCount = applications.filter(app => app.status === 'QueryInitiated').length;
+  const newApplicationCount = applications.filter(app => app && app.status === 'QueryInitiated').length;
 
   if (isLoading) {
     return (
@@ -150,29 +153,30 @@ export default function AdminDashboardPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {applications.map((app) => (
-                  <TableRow key={app.id}> {/* Ensure app.id is a valid string */}
-                    <TableCell className="font-medium">
-                      {app.borrowerFullName || ((app.borrowerUserId as any)?.name) || 'N/A'}
-                    </TableCell>
-                    <TableCell>₹{app.requestedAmount?.toLocaleString() || '0'}</TableCell>
-                    <TableCell><FormattedDate dateString={app.applicationDate} /></TableCell>
-                    <TableCell><StatusBadge status={app.status} /></TableCell>
-                    <TableCell className="text-right">
-                      {app.id && typeof app.id === 'string' && app.id.trim() !== '' ? (
+                {applications.map((app) => {
+                  // Skip rendering if app or app.id is invalid to prevent errors
+                  if (!app || typeof app.id !== 'string' || app.id.trim() === '') {
+                    console.warn("[AdminDashboardPage] Skipping rendering for app with missing or invalid ID:", app);
+                    return null; 
+                  }
+                  return (
+                    <TableRow key={app.id}>
+                      <TableCell className="font-medium">
+                        {app.borrowerFullName || ((app.borrowerUserId as any)?.name) || 'N/A'}
+                      </TableCell>
+                      <TableCell>₹{app.requestedAmount?.toLocaleString() || '0'}</TableCell>
+                      <TableCell><FormattedDate dateString={app.applicationDate} /></TableCell>
+                      <TableCell><StatusBadge status={app.status} /></TableCell>
+                      <TableCell className="text-right">
                         <Button asChild variant="outline" size="sm">
                           <Link href={ROUTES.ADMIN_APPLICATION_DETAIL(app.id)}>
                             <Eye className="mr-2 h-4 w-4" /> View
                           </Link>
                         </Button>
-                      ) : (
-                        <Button variant="outline" size="sm" disabled title="Application ID is missing or invalid">
-                          <Eye className="mr-2 h-4 w-4" /> View
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           ) : (
