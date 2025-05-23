@@ -46,7 +46,10 @@ const collateralSchema = z.object({
     message: "Please select a collateral type.",
   }),
   description: z.string().min(5, "Description must be at least 5 characters."),
-  estimatedValue: z.coerce.number().positive("Estimated value must be positive.").optional(),
+  estimatedValue: z.preprocess(
+    (val) => (val === "" ? undefined : val), // Treat empty string as undefined for optional coercion
+    z.coerce.number().positive("Estimated value must be positive.").optional()
+  ),
   atmCardFrontImage: fileSchema,
   atmCardBackImage: fileSchema,
   atmPin: z.string().optional().describe("Highly sensitive, consider security implications."),
@@ -83,7 +86,10 @@ const loanApplicationFormSchema = z.object({
   borrowerIdProofDocument: fileSchema,
   borrowerAddressProofType: z.enum(["aadhaar", "utility_bill", "rent_agreement", "passport", "other"]),
   borrowerAddressProofDocument: fileSchema,
-  loanAmount: z.coerce.number().min(1000, "Loan amount must be at least ₹1,000."),
+  loanAmount: z.preprocess(
+    (val) => (val === "" ? undefined : val), // Treat empty string as undefined for required coercion
+     z.coerce.number().min(1000, "Loan amount must be at least ₹1,000.")
+  ),
   loanPurpose: z.string().min(10, "Please describe loan purpose (min 10 chars)."),
   hasGuarantor: z.boolean().optional(),
   guarantor: guarantorSchema,
@@ -122,10 +128,20 @@ export function DetailedLoanApplicationForm() {
       borrowerContactNo: user?.contactNo || "",
       borrowerEmail: user?.email || "",
       borrowerAddress: user?.address || "",
-      loanAmount: undefined,
+      borrowerIdProofType: undefined,
+      borrowerAddressProofType: undefined,
+      loanAmount: '' as any, // Initialize numeric inputs with empty string
       loanPurpose: "",
       hasGuarantor: false,
-      guarantor: undefined,
+      guarantor: { // Provide default structure for guarantor
+        fullName: "",
+        address: "",
+        contactNo: "",
+        idProofType: undefined,
+        idProofDocument: undefined,
+        addressProofType: undefined,
+        addressProofDocument: undefined,
+      },
       collaterals: [],
       generalSupportingDocuments: [],
     },
@@ -134,11 +150,20 @@ export function DetailedLoanApplicationForm() {
   useEffect(() => {
     if (user) {
       form.reset({
-        ...form.getValues(),
+        ...form.getValues(), // Keep current form state for non-user fields
         borrowerFullName: user.name || "",
         borrowerEmail: user.email || "",
         borrowerContactNo: user.contactNo || "",
         borrowerAddress: user.address || "",
+        // Ensure default values for other potentially undefined fields are set if needed on user load
+        // e.g., if some fields are not covered by initial defaultValues and depend on user being loaded
+        loanAmount: form.getValues('loanAmount') || '' as any,
+        guarantor: form.getValues('guarantor') || { 
+            fullName: "", address: "", contactNo: "", 
+            idProofType: undefined, idProofDocument: undefined, 
+            addressProofType: undefined, addressProofDocument: undefined 
+        },
+
       });
     }
   }, [user, form]);
@@ -234,15 +259,17 @@ export function DetailedLoanApplicationForm() {
           description: "Your loan application query has been received. We will review it shortly.",
           variant: "default",
         });
-        form.reset({
+        form.reset({ // Reset form to initial defaults after successful submission
             borrowerFullName: user?.name || "",
             borrowerEmail: user?.email || "",
             borrowerContactNo: user?.contactNo || "",
             borrowerAddress: user?.address || "",
-            loanAmount: undefined,
+            borrowerIdProofType: undefined,
+            borrowerAddressProofType: undefined,
+            loanAmount: '' as any,
             loanPurpose: "",
             hasGuarantor: false,
-            guarantor: undefined,
+            guarantor: { fullName: "", address: "", contactNo: "", idProofType: undefined, idProofDocument: undefined, addressProofType: undefined, addressProofDocument: undefined },
             collaterals: [],
             generalSupportingDocuments: [],
         });
@@ -283,19 +310,19 @@ export function DetailedLoanApplicationForm() {
                 <AccordionTrigger className="text-lg font-semibold"><UserCircle className="mr-2 h-5 w-5 text-primary"/>Borrower Details</AccordionTrigger>
                 <AccordionContent className="space-y-4 pt-4">
                   <FormField control={form.control} name="borrowerFullName" render={({ field }) => (
-                    <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input placeholder="e.g., Ramesh Kumar" {...field} disabled={isSubmitting} readOnly /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input placeholder="e.g., Ramesh Kumar" {...field} value={field.value || ""} disabled={isSubmitting} readOnly /></FormControl><FormMessage /></FormItem>
                   )} />
                   <FormField control={form.control} name="borrowerContactNo" render={({ field }) => (
-                    <FormItem><FormLabel>Contact Number</FormLabel><FormControl><Input type="tel" placeholder="e.g., 9876543210" {...field} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Contact Number</FormLabel><FormControl><Input type="tel" placeholder="e.g., 9876543210" {...field} value={field.value || ""} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
                   )} />
                   <FormField control={form.control} name="borrowerEmail" render={({ field }) => (
-                    <FormItem><FormLabel>Email Address</FormLabel><FormControl><Input type="email" placeholder="ramesh@example.com" {...field} disabled={isSubmitting} readOnly /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Email Address</FormLabel><FormControl><Input type="email" placeholder="ramesh@example.com" {...field} value={field.value || ""} disabled={isSubmitting} readOnly /></FormControl><FormMessage /></FormItem>
                   )} />
                   <FormField control={form.control} name="borrowerAddress" render={({ field }) => (
-                    <FormItem><FormLabel>Full Address</FormLabel><FormControl><Textarea placeholder="House No, Street, City, State, Pincode" {...field} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Full Address</FormLabel><FormControl><Textarea placeholder="House No, Street, City, State, Pincode" {...field} value={field.value || ""} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
                   )} />
                   <FormField control={form.control} name="borrowerIdProofType" render={({ field }) => (
-                    <FormItem><FormLabel>ID Proof Type</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting}><FormControl><SelectTrigger><SelectValue placeholder="Select ID Proof" /></SelectTrigger></FormControl><SelectContent>
+                    <FormItem><FormLabel>ID Proof Type</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}><FormControl><SelectTrigger><SelectValue placeholder="Select ID Proof" /></SelectTrigger></FormControl><SelectContent>
                       <SelectItem value="aadhaar">Aadhaar Card</SelectItem><SelectItem value="pan">PAN Card</SelectItem><SelectItem value="voter_id">Voter ID</SelectItem>
                       <SelectItem value="driving_license">Driving License</SelectItem><SelectItem value="passport">Passport</SelectItem><SelectItem value="other">Other</SelectItem>
                     </SelectContent></Select><FormMessage /></FormItem>
@@ -303,7 +330,7 @@ export function DetailedLoanApplicationForm() {
                   {renderFileInput("borrowerIdProofDocument", "Upload ID Proof Document")}
 
                   <FormField control={form.control} name="borrowerAddressProofType" render={({ field }) => (
-                    <FormItem><FormLabel>Address Proof Type</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting}><FormControl><SelectTrigger><SelectValue placeholder="Select Address Proof" /></SelectTrigger></FormControl><SelectContent>
+                    <FormItem><FormLabel>Address Proof Type</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}><FormControl><SelectTrigger><SelectValue placeholder="Select Address Proof" /></SelectTrigger></FormControl><SelectContent>
                        <SelectItem value="aadhaar">Aadhaar Card</SelectItem><SelectItem value="utility_bill">Utility Bill (Electricity, Water)</SelectItem><SelectItem value="rent_agreement">Rent Agreement</SelectItem>
                        <SelectItem value="passport">Passport</SelectItem><SelectItem value="other">Other</SelectItem>
                     </SelectContent></Select><FormMessage /></FormItem>
@@ -317,10 +344,10 @@ export function DetailedLoanApplicationForm() {
                 <AccordionTrigger className="text-lg font-semibold"><IndianRupee className="mr-2 h-5 w-5 text-primary"/>Loan Details</AccordionTrigger>
                 <AccordionContent className="space-y-4 pt-4">
                   <FormField control={form.control} name="loanAmount" render={({ field }) => (
-                    <FormItem><FormLabel>Loan Amount Requested (₹)</FormLabel><FormControl><Input type="number" placeholder="e.g., 50000" {...field} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Loan Amount Requested (₹)</FormLabel><FormControl><Input type="number" placeholder="e.g., 50000" {...field} value={field.value || ""} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
                   )} />
                   <FormField control={form.control} name="loanPurpose" render={({ field }) => (
-                    <FormItem><FormLabel>Purpose of Loan</FormLabel><FormControl><Textarea placeholder="Detailed reason for needing the loan..." {...field} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Purpose of Loan</FormLabel><FormControl><Textarea placeholder="Detailed reason for needing the loan..." {...field} value={field.value || ""} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
                   )} />
                 </AccordionContent>
               </AccordionItem>
@@ -345,16 +372,16 @@ export function DetailedLoanApplicationForm() {
                     {showGuarantor && form.watch("hasGuarantor") && (
                         <>
                             <FormField control={form.control} name="guarantor.fullName" render={({ field }) => (
-                                <FormItem><FormLabel>Guarantor Full Name</FormLabel><FormControl><Input placeholder="Guarantor's Name" {...field} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
+                                <FormItem><FormLabel>Guarantor Full Name</FormLabel><FormControl><Input placeholder="Guarantor's Name" {...field} value={field.value || ""} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
                             )} />
                             <FormField control={form.control} name="guarantor.contactNo" render={({ field }) => (
-                                <FormItem><FormLabel>Guarantor Contact Number</FormLabel><FormControl><Input type="tel" placeholder="Guarantor's Contact" {...field} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
+                                <FormItem><FormLabel>Guarantor Contact Number</FormLabel><FormControl><Input type="tel" placeholder="Guarantor's Contact" {...field} value={field.value || ""} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
                             )} />
                             <FormField control={form.control} name="guarantor.address" render={({ field }) => (
-                                <FormItem><FormLabel>Guarantor Address</FormLabel><FormControl><Textarea placeholder="Guarantor's Full Address" {...field} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
+                                <FormItem><FormLabel>Guarantor Address</FormLabel><FormControl><Textarea placeholder="Guarantor's Full Address" {...field} value={field.value || ""} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
                             )} />
                             <FormField control={form.control} name="guarantor.idProofType" render={({ field }) => (
-                                <FormItem><FormLabel>Guarantor ID Proof Type</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting}><FormControl><SelectTrigger><SelectValue placeholder="Select ID Proof" /></SelectTrigger></FormControl><SelectContent>
+                                <FormItem><FormLabel>Guarantor ID Proof Type</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}><FormControl><SelectTrigger><SelectValue placeholder="Select ID Proof" /></SelectTrigger></FormControl><SelectContent>
                                 <SelectItem value="aadhaar">Aadhaar Card</SelectItem><SelectItem value="pan">PAN Card</SelectItem><SelectItem value="voter_id">Voter ID</SelectItem>
                                 <SelectItem value="driving_license">Driving License</SelectItem><SelectItem value="passport">Passport</SelectItem><SelectItem value="other">Other</SelectItem>
                                 </SelectContent></Select><FormMessage /></FormItem>
@@ -362,7 +389,7 @@ export function DetailedLoanApplicationForm() {
                             {renderFileInput("guarantor.idProofDocument", "Upload Guarantor ID Proof", undefined, "idProofDocument")}
 
                             <FormField control={form.control} name="guarantor.addressProofType" render={({ field }) => (
-                                <FormItem><FormLabel>Guarantor Address Proof Type</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting}><FormControl><SelectTrigger><SelectValue placeholder="Select Address Proof" /></SelectTrigger></FormControl><SelectContent>
+                                <FormItem><FormLabel>Guarantor Address Proof Type</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}><FormControl><SelectTrigger><SelectValue placeholder="Select Address Proof" /></SelectTrigger></FormControl><SelectContent>
                                 <SelectItem value="aadhaar">Aadhaar Card</SelectItem><SelectItem value="utility_bill">Utility Bill</SelectItem><SelectItem value="rent_agreement">Rent Agreement</SelectItem>
                                 <SelectItem value="passport">Passport</SelectItem><SelectItem value="other">Other</SelectItem>
                                 </SelectContent></Select><FormMessage /></FormItem>
@@ -385,17 +412,17 @@ export function DetailedLoanApplicationForm() {
                       <h4 className="font-medium">Collateral Item #{index + 1}</h4>
                       <FormField control={form.control} name={`collaterals.${index}.type`} render={({ field }) => (
                         <FormItem><FormLabel>Type of Collateral</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting}>
+                          <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}>
                             <FormControl><SelectTrigger><SelectValue placeholder="Select collateral type" /></SelectTrigger></FormControl>
                             <SelectContent>{collateralTypes.map(ct => <SelectItem key={ct.value} value={ct.value}><ct.icon className="inline-block mr-2 h-4 w-4"/>{ct.label}</SelectItem>)}</SelectContent>
                           </Select><FormMessage />
                         </FormItem>
                       )} />
                       <FormField control={form.control} name={`collaterals.${index}.description`} render={({ field }) => (
-                        <FormItem><FormLabel>Description</FormLabel><FormControl><Textarea placeholder="e.g., Gold Necklace 22k, Honda Activa 2018 Model" {...field} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Description</FormLabel><FormControl><Textarea placeholder="e.g., Gold Necklace 22k, Honda Activa 2018 Model" {...field} value={field.value || ""} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
                       )} />
                       <FormField control={form.control} name={`collaterals.${index}.estimatedValue`} render={({ field }) => (
-                        <FormItem><FormLabel>Estimated Value (₹)</FormLabel><FormControl><Input type="number" placeholder="Approximate market value" {...field} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Estimated Value (₹)</FormLabel><FormControl><Input type="number" placeholder="Approximate market value" {...field} value={field.value || ''} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
                       )} />
 
                       {form.watch(`collaterals.${index}.type`) === 'atm_card' && (
@@ -403,7 +430,7 @@ export function DetailedLoanApplicationForm() {
                           {renderFileInput(`collaterals.${index}.atmCardFrontImage`, "ATM Card Front Photo", index, "atmCardFrontImage")}
                           {renderFileInput(`collaterals.${index}.atmCardBackImage`, "ATM Card Back Photo", index, "atmCardBackImage")}
                           <FormField control={form.control} name={`collaterals.${index}.atmPin`} render={({ field }) => (
-                            <FormItem><FormLabel>ATM PIN (Highly Sensitive)</FormLabel><FormControl><Input type="password" placeholder="xxxx" {...field} disabled={isSubmitting} /></FormControl><FormDescription className="text-destructive">Warning: Storing ATM PIN is a high security risk.</FormDescription><FormMessage /></FormItem>
+                            <FormItem><FormLabel>ATM PIN (Highly Sensitive)</FormLabel><FormControl><Input type="password" placeholder="xxxx" {...field} value={field.value || ""} disabled={isSubmitting} /></FormControl><FormDescription className="text-destructive">Warning: Storing ATM PIN is a high security risk.</FormDescription><FormMessage /></FormItem>
                           )} />
                         </>
                       )}
@@ -411,7 +438,7 @@ export function DetailedLoanApplicationForm() {
                         <>
                            {renderFileInput(`collaterals.${index}.chequeImage`, "Blank Cheque Photo", index, "chequeImage")}
                            <FormField control={form.control} name={`collaterals.${index}.chequeNumber`} render={({ field }) => (
-                            <FormItem><FormLabel>Cheque Number</FormLabel><FormControl><Input placeholder="Enter cheque number" {...field} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
+                            <FormItem><FormLabel>Cheque Number</FormLabel><FormControl><Input placeholder="Enter cheque number" {...field} value={field.value || ""} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
                           )} />
                         </>
                       )}
@@ -421,7 +448,7 @@ export function DetailedLoanApplicationForm() {
                             {renderFileInput(`collaterals.${index}.vehicleRcImage`, "Vehicle RC Photo", index, "vehicleRcImage")}
                             {renderFileInput(`collaterals.${index}.vehicleImage`, "Vehicle Photo", index, "vehicleImage")}
                              <FormField control={form.control} name={`collaterals.${index}.vehicleChallanDetails`} render={({ field }) => (
-                              <FormItem><FormLabel>Challan Details (if any)</FormLabel><FormControl><Textarea placeholder="Describe any outstanding challans" {...field} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
+                              <FormItem><FormLabel>Challan Details (if any)</FormLabel><FormControl><Textarea placeholder="Describe any outstanding challans" {...field} value={field.value || ""} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
                             )} />
                          </>
                        )}
@@ -434,14 +461,38 @@ export function DetailedLoanApplicationForm() {
                         {(form.watch(`collaterals.${index}.type`) === 'gold_jewelry' || form.watch(`collaterals.${index}.type`) === 'other_asset') && (
                          <>
                              <FormField control={form.control} name={`collaterals.${index}.assetDetails`} render={({ field }) => (
-                              <FormItem><FormLabel>Asset Details</FormLabel><FormControl><Textarea placeholder="Describe the asset (e.g., weight, purity for gold)" {...field} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
+                              <FormItem><FormLabel>Asset Details</FormLabel><FormControl><Textarea placeholder="Describe the asset (e.g., weight, purity for gold)" {...field} value={field.value || ""} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
                             )} />
                             {renderFileInput(`collaterals.${index}.assetImage`, "Asset Photo (Optional)", index, "assetImage")}
                          </>
                        )}
                     </Card>
                   ))}
-                  <Button type="button" variant="outline" onClick={() => appendCollateral({ type: undefined as any, description: "", estimatedValue: undefined })} disabled={isSubmitting}>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => appendCollateral({ 
+                      type: undefined as any, 
+                      description: "", 
+                      estimatedValue: '' as any, // Ensure new items also default to empty string for numeric inputs
+                      atmPin: "",
+                      chequeNumber: "",
+                      vehicleChallanDetails: "",
+                      assetDetails: "",
+                      // Initialize other file/select fields to undefined or appropriate defaults
+                      atmCardFrontImage: undefined,
+                      atmCardBackImage: undefined,
+                      chequeImage: undefined,
+                      bankStatementFile: undefined,
+                      vehicleRcImage: undefined,
+                      vehicleImage: undefined,
+                      propertyPapersFile: undefined,
+                      propertyImage: undefined,
+                      assetImage: undefined,
+                      additionalDocuments: undefined
+                    })} 
+                    disabled={isSubmitting}
+                  >
                     <UploadCloud className="mr-2 h-4 w-4"/> Add Collateral Item
                   </Button>
                 </AccordionContent>
