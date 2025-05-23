@@ -8,56 +8,67 @@ import type { LoanApplicationFormValues } from '@/components/custom/DetailedLoan
 import mongoose from 'mongoose';
 
 export async function POST(request: NextRequest) {
+  console.log('[API POST /loan-applications] Received request');
   try {
     await dbConnect();
     const body: LoanApplicationFormValues = await request.json();
+    console.log('[API POST /loan-applications] Request body:', JSON.stringify(body, null, 2));
+
+
+    // Ensure borrowerEmail is provided
+    if (!body.borrowerEmail) {
+        console.error('[API POST /loan-applications] Error: Borrower email is missing from the request body.');
+        return NextResponse.json({ success: false, message: 'Borrower email is required.' }, { status: 400 });
+    }
+     if (!body.borrowerFullName) {
+        console.error('[API POST /loan-applications] Error: Borrower full name is missing from the request body.');
+        return NextResponse.json({ success: false, message: 'Borrower full name is required.' }, { status: 400 });
+    }
+
 
     const borrower = await UserModel.findOne({ email: body.borrowerEmail });
     if (!borrower) {
+      console.log(`[API POST /loan-applications] Borrower not found with email: ${body.borrowerEmail}`);
       return NextResponse.json({ success: false, message: 'Borrower not found with the provided email.' }, { status: 404 });
     }
+    console.log(`[API POST /loan-applications] Found borrower with ID: ${borrower._id}`);
 
     const loanApplicationData: any = {
       borrowerUserId: borrower._id,
+      borrowerFullName: body.borrowerFullName, // Denormalized
+      borrowerEmail: body.borrowerEmail,     // Denormalized
       applicationDate: new Date(),
       requestedAmount: body.loanAmount,
       purpose: body.loanPurpose,
-      status: 'QueryInitiated', // Initial status for new applications
+      status: 'QueryInitiated', 
 
-      // Storing borrower's current details from the form directly on the application
-      // This can be useful for historical record keeping even if user details change later
-      // These fields are not in the Mongoose schema yet, would need to add them if this denormalization is desired
-      // For now, relying on borrowerUserId population.
-
-      // Document names (placeholders for actual URLs after file upload implementation)
       borrowerIdProofDocumentName: body.borrowerIdProofDocument?.name,
       borrowerAddressProofDocumentName: body.borrowerAddressProofDocument?.name,
-      
-      // Include more fields from the form to be saved in the model
-      // Example: borrowerFullName: body.borrowerFullName, (if you add this to schema)
     };
 
     if (body.hasGuarantor && body.guarantor) {
+      console.log('[API POST /loan-applications] Processing guarantor details:', body.guarantor);
       loanApplicationData.guarantor = {
         fullName: body.guarantor.fullName,
         address: body.guarantor.address,
         contactNo: body.guarantor.contactNo,
         idProofType: body.guarantor.idProofType,
-        idProofDocumentName: body.guarantor.idProofDocument?.name, // Store name
+        idProofDocumentName: body.guarantor.idProofDocument?.name,
         addressProofType: body.guarantor.addressProofType,
-        addressProofDocumentName: body.guarantor.addressProofDocument?.name, // Store name
+        addressProofDocumentName: body.guarantor.addressProofDocument?.name,
+        // Add any other guarantor fields from your schema if needed
       };
     }
 
     if (body.collaterals && body.collaterals.length > 0) {
+      console.log('[API POST /loan-applications] Processing collateral details:', body.collaterals);
       loanApplicationData.submittedCollateral = body.collaterals.map(col => ({
         type: col.type,
         description: col.description,
         estimatedValue: col.estimatedValue,
-        // Store document names as placeholders
         atmCardFrontImageName: col.atmCardFrontImage?.name,
         atmCardBackImageName: col.atmCardBackImage?.name,
-        atmPin: col.atmPin, // NB: Security risk
+        atmPin: col.atmPin,
         chequeImageName: col.chequeImage?.name,
         chequeNumber: col.chequeNumber,
         bankStatementFileName: col.bankStatementFile?.name,
@@ -68,27 +79,27 @@ export async function POST(request: NextRequest) {
         propertyImageName: col.propertyImage?.name,
         assetDetails: col.assetDetails,
         assetImageName: col.assetImage?.name,
-        // additionalDocuments: col.additionalDocuments?.map(f => f.name) // if storing names
       }));
     }
     
-    // TODO: Add more fields from `body` to `loanApplicationData` as per your Mongoose schema structure
-    // for guarantor and collateral document file names.
+    console.log('[API POST /loan-applications] Constructed loanApplicationData for saving:', JSON.stringify(loanApplicationData, null, 2));
 
     const newLoanApplication = new LoanApplicationModel(loanApplicationData);
     await newLoanApplication.save();
+    console.log(`[API POST /loan-applications] New loan application saved with ID: ${newLoanApplication._id}`);
 
     // Populate borrowerUserId for the response
-    const savedApplication = await LoanApplicationModel.findById(newLoanApplication._id).populate('borrowerUserId', 'name email');
+    const savedApplication = await LoanApplicationModel.findById(newLoanApplication._id).populate('borrowerUserId', 'name email id');
 
     return NextResponse.json({ success: true, message: 'Loan application submitted successfully', loanApplication: savedApplication?.toObject() }, { status: 201 });
   } catch (error: any) {
-    console.error('Loan application submission error:', error);
+    console.error('[API POST /loan-applications] Loan application submission error:', error);
     if (error.name === 'ValidationError') {
         let errors = {};
         Object.keys(error.errors).forEach((key) => {
             (errors as any)[key] = error.errors[key].message;
         });
+        console.error('[API POST /loan-applications] Validation Errors:', errors);
         return NextResponse.json({ success: false, message: 'Validation Error', errors }, { status: 400 });
     }
     return NextResponse.json({ success: false, message: error.message || 'Internal Server Error while submitting loan application.' }, { status: 500 });
@@ -101,7 +112,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
 
-    let query = {};
+    let query: any = {};
     if (userId) {
       if (!mongoose.Types.ObjectId.isValid(userId)) {
         return NextResponse.json({ success: false, message: 'Invalid user ID format' }, { status: 400 });
@@ -109,8 +120,13 @@ export async function GET(request: NextRequest) {
       query = { borrowerUserId: new mongoose.Types.ObjectId(userId) };
     }
 
+    // If not filtering by userId (e.g. for admin fetching all), still populate borrower info
     const applications = await LoanApplicationModel.find(query)
-      .populate('borrowerUserId', 'name email id') // Ensure 'id' (virtual) is included for consistency
+      .populate({
+          path: 'borrowerUserId',
+          select: 'name email id', // Ensure 'id' virtual is selected or default transform handles it
+          model: UserModel // Explicitly provide model if not automatically inferred
+      })
       .sort({ createdAt: -1 });
       
     return NextResponse.json({ success: true, applications: applications.map(app => app.toObject()) }, { status: 200 });

@@ -6,6 +6,10 @@ import type { LoanApplication as LoanApplicationType, Guarantor as GuarantorType
 // Interface for Mongoose Document
 export interface LoanApplicationDocument extends Omit<LoanApplicationType, 'id' | 'borrowerUserId' | 'guarantor' | 'submittedCollateral' | 'processedDocuments' | 'applicationDate' | 'approvedDate' | 'disbursementDate' | 'firstPaymentDueDate' | 'maturityDate' | 'lastPaymentDate' | 'nextPaymentDueDate' | 'createdAt' | 'updatedAt'>, Document {
   borrowerUserId: mongoose.Types.ObjectId;
+  // Denormalized fields for easier display
+  borrowerFullName: string;
+  borrowerEmail: string;
+
   guarantor?: GuarantorSchemaType;
   submittedCollateral: CollateralDocumentSchemaType[];
   applicationDate: Date;
@@ -76,6 +80,8 @@ const LoanApplicationSchema: Schema<LoanApplicationDocument> = new Schema(
       ref: 'User',
       required: true,
     },
+    borrowerFullName: { type: String, required: true },
+    borrowerEmail: { type: String, required: true },
     guarantor: GuarantorSchema, 
     applicationDate: { type: Date, default: Date.now, required: true },
     requestedAmount: { type: Number, required: true },

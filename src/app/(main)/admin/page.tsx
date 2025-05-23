@@ -7,8 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { LoanApplication, LoanApplicationStatus } from "@/lib/types"; 
-// Removed: import { getMockApplications } from '@/components/custom/LoanApplicationClient';
-import { Eye, ShieldCheck, Clock, AlertTriangle, CheckCircle2, FileText, UserCircle, IndianRupee, Loader2 } from "lucide-react";
+import { Eye, ShieldCheck, Clock, AlertTriangle, CheckCircle2, FileText, UserCircle, IndianRupee, Loader2, BellRing } from "lucide-react";
 import { ROUTES } from '@/lib/constants';
 import FormattedDate from "@/components/custom/FormattedDate";
 import { useToast } from '@/hooks/use-toast';
@@ -16,15 +15,20 @@ import { useToast } from '@/hooks/use-toast';
 const StatusBadge = ({ status }: { status: LoanApplicationStatus }) => {
   let variant: "default" | "secondary" | "destructive" | "outline" = "outline";
   let icon = <Clock className="mr-1 h-3 w-3" />;
+  let badgeClass = "capitalize text-xs flex items-center whitespace-nowrap";
 
   switch (status) {
     case "Approved":
-    case "Active": // Treat Active similar to Approved for badge color
+    case "Active": 
     case "PaidOff":
       variant = "default";
       icon = <CheckCircle2 className="mr-1 h-3 w-3" />;
       break;
-    case "QueryInitiated":
+    case "QueryInitiated": // Highlight for new applications
+      variant = "secondary"; // Using secondary, can be changed to a more prominent one
+      icon = <BellRing className="mr-1 h-3 w-3 text-accent" />; // Changed icon
+      badgeClass += " bg-accent/20 border-accent text-accent-foreground"; // More prominent styling
+      break;
     case "PendingAdminVerification":
       variant = "secondary";
       icon = <Clock className="mr-1 h-3 w-3" />;
@@ -36,13 +40,13 @@ const StatusBadge = ({ status }: { status: LoanApplicationStatus }) => {
       icon = <AlertTriangle className="mr-1 h-3 w-3" />;
       break;
     case "AdditionalInfoRequired":
-      variant = "outline"; // Neutral outline
+      variant = "outline"; 
       icon = <FileText className="mr-1 h-3 w-3" />;
       break;
     default:
-      icon = <FileText className="mr-1 h-3 w-3" />; // Fallback for any new statuses
+      icon = <FileText className="mr-1 h-3 w-3" />; 
   }
-  return <Badge variant={variant} className="capitalize text-xs flex items-center whitespace-nowrap">{icon}{status}</Badge>;
+  return <Badge variant={variant} className={badgeClass}>{icon}{status}</Badge>;
 };
 
 
@@ -84,6 +88,8 @@ export default function AdminDashboardPage() {
     fetchApplications();
   }, [toast]);
 
+  const newApplicationCount = applications.filter(app => app.status === 'QueryInitiated').length;
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-[calc(100vh-10rem)]">
@@ -114,7 +120,14 @@ export default function AdminDashboardPage() {
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="text-xl">Loan Applications Overview</CardTitle>
-          <CardDescription>Review and manage all submitted loan applications.</CardDescription>
+          <CardDescription>
+            Review and manage all submitted loan applications.
+            {newApplicationCount > 0 && (
+              <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-accent text-accent-foreground">
+                <BellRing className="mr-1 h-3 w-3" /> {newApplicationCount} New
+              </span>
+            )}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {applications.length > 0 ? (
@@ -131,7 +144,7 @@ export default function AdminDashboardPage() {
               <TableBody>
                 {applications.map((app) => (
                   <TableRow key={app.id}>
-                    <TableCell className="font-medium">{ (app.borrowerUserId as any)?.name || 'N/A'}</TableCell>
+                    <TableCell className="font-medium">{ app.borrowerFullName || (app.borrowerUserId as any)?.name || 'N/A'}</TableCell>
                     <TableCell>₹{app.requestedAmount.toLocaleString()}</TableCell>
                     <TableCell><FormattedDate dateString={app.applicationDate} /></TableCell>
                     <TableCell><StatusBadge status={app.status} /></TableCell>
