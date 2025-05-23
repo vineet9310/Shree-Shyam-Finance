@@ -47,7 +47,7 @@ const collateralSchema = z.object({
   }),
   description: z.string().min(5, "Description must be at least 5 characters."),
   estimatedValue: z.preprocess(
-    (val) => (val === "" || val === undefined || val === null ? undefined : Number(val)), 
+    (val) => (val === "" || val === undefined || val === null ? undefined : Number(val)),
     z.number().positive("Estimated value must be positive.").optional()
   ),
   atmCardFrontImage: fileSchema,
@@ -70,16 +70,16 @@ const guarantorSchema = z.object({
   fullName: z.string().min(2, "Guarantor full name is required (min 2 chars)."),
   address: z.string().min(5, "Guarantor address is required (min 5 chars)."),
   contactNo: z.string().min(10, "Guarantor contact no. is required (min 10 digits).").max(15, "Guarantor contact no. too long (max 15 digits)."),
-  idProofType: z.enum(["aadhaar", "pan", "voter_id", "driving_license", "passport", "other"], { 
+  idProofType: z.enum(["aadhaar", "pan", "voter_id", "driving_license", "passport", "other"], {
     required_error: "Guarantor ID proof type is required.",
     invalid_type_error: "Please select a valid ID proof type for the guarantor."
   }),
-  idProofDocument: fileSchema, // Already optional
+  idProofDocument: fileSchema,
   addressProofType: z.enum(["aadhaar", "utility_bill", "rent_agreement", "passport", "other"], {
     required_error: "Guarantor address proof type is required.",
     invalid_type_error: "Please select a valid address proof type for the guarantor."
   }),
-  addressProofDocument: fileSchema, // Already optional
+  addressProofDocument: fileSchema,
 }).optional();
 
 
@@ -93,8 +93,11 @@ const loanApplicationFormSchema = z.object({
   borrowerAddressProofType: z.enum(["aadhaar", "utility_bill", "rent_agreement", "passport", "other"], { required_error: "Your address proof type is required." }),
   borrowerAddressProofDocument: fileSchema,
   loanAmount: z.preprocess(
-    (val) => (val === "" ? undefined : Number(val)), 
-    z.number({invalid_type_error: "Loan amount must be a number.", required_error: "Loan amount is required."}).min(1000, "Loan amount must be at least ₹1,000.")
+    (val) => (val === "" ? undefined : Number(val)),
+    z.number({
+      required_error: "Loan amount is required.",
+      invalid_type_error: "Loan amount must be a valid number.",
+    }).min(1000, "Loan amount must be at least ₹1,000.")
   ),
   loanPurpose: z.string().min(10, "Please describe loan purpose (min 10 chars)."),
   hasGuarantor: z.boolean().optional(),
@@ -138,10 +141,10 @@ export function DetailedLoanApplicationForm() {
       borrowerAddress: "",
       borrowerIdProofType: undefined,
       borrowerAddressProofType: undefined,
-      loanAmount: '' as any, 
+      loanAmount: '' as any,
       loanPurpose: "",
       hasGuarantor: false,
-      guarantor: { 
+      guarantor: {
         fullName: "",
         address: "",
         contactNo: "",
@@ -158,13 +161,13 @@ export function DetailedLoanApplicationForm() {
   useEffect(() => {
     if (user) {
       console.log("[DetailedLoanApplicationForm] useEffect - Resetting form with user data:", user);
-      form.reset({ 
+      form.reset({
         borrowerFullName: user.name || "",
         borrowerEmail: user.email || "",
-        borrowerContactNo: user.contactNo || "", 
+        borrowerContactNo: user.contactNo || "",
         borrowerAddress: user.address || "",
-        borrowerIdProofType: undefined, 
-        borrowerAddressProofType: undefined, 
+        borrowerIdProofType: undefined,
+        borrowerAddressProofType: undefined,
         loanAmount: '' as any,
         loanPurpose: "",
         hasGuarantor: false,
@@ -172,11 +175,10 @@ export function DetailedLoanApplicationForm() {
         collaterals: [],
         generalSupportingDocuments: [],
       });
-      // Explicitly set showGuarantor to false as well when user changes, to reset its state
-      setShowGuarantor(false); 
+      setShowGuarantor(false);
     } else {
         console.log("[DetailedLoanApplicationForm] useEffect - User is null, resetting to initial defaults.");
-        form.reset({ 
+        form.reset({
             borrowerFullName: "",
             borrowerEmail: "",
             borrowerContactNo: "",
@@ -255,7 +257,7 @@ export function DetailedLoanApplicationForm() {
         }
         return null;
       }).filter(Boolean);
-      
+
       if (messages.length > 0) {
         errorMessages += messages.join('; ');
       } else if (errors.root?.message) {
@@ -263,7 +265,7 @@ export function DetailedLoanApplicationForm() {
       } else {
         errorMessages = "Please fill all required fields correctly and try again.";
       }
-    } else if (errors.root?.message) { // Catch root level errors from superRefine if any
+    } else if (errors.root?.message) {
        errorMessages = errors.root.message;
     } else {
       errorMessages = "An unknown validation error occurred. Please check all fields.";
@@ -288,22 +290,21 @@ export function DetailedLoanApplicationForm() {
             description: "User details not found. Please log in again to submit the application.",
             variant: "destructive",
         });
-        setIsSubmitting(false); 
+        setIsSubmitting(false);
         return;
     }
     setIsSubmitting(true);
 
     const submissionValues: LoanApplicationFormValues = {
         ...values,
-        borrowerEmail: user.email, 
-        borrowerFullName: user.name || values.borrowerFullName, 
+        borrowerEmail: user.email,
+        borrowerFullName: user.name || values.borrowerFullName,
     };
 
     if (submissionValues.hasGuarantor === false || !submissionValues.hasGuarantor) {
-      // If no guarantor, ensure the guarantor object is not sent or is undefined
-      delete (submissionValues as any).guarantor; // Or set to undefined if API expects it for no guarantor
+      delete (submissionValues as any).guarantor;
     }
-    
+
     console.log("[DetailedLoanApplicationForm] Values being sent to API:", JSON.stringify(submissionValues, null, 2));
 
 
@@ -313,7 +314,7 @@ export function DetailedLoanApplicationForm() {
 
     apiPayload.borrowerIdProofDocument = processFileField(values.borrowerIdProofDocument);
     apiPayload.borrowerAddressProofDocument = processFileField(values.borrowerAddressProofDocument);
-    
+
     if (values.hasGuarantor && values.guarantor) {
         apiPayload.guarantor = {
             ...values.guarantor,
@@ -321,7 +322,7 @@ export function DetailedLoanApplicationForm() {
             addressProofDocument: processFileField(values.guarantor?.addressProofDocument),
         };
     } else {
-      delete apiPayload.guarantor; // Ensure it's not sent if hasGuarantor is false
+      delete apiPayload.guarantor;
     }
 
     if (values.collaterals) {
@@ -347,7 +348,7 @@ export function DetailedLoanApplicationForm() {
       const response = await fetch('/api/loan-applications', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(apiPayload), 
+        body: JSON.stringify(apiPayload),
       });
       const result = await response.json();
 
@@ -357,7 +358,7 @@ export function DetailedLoanApplicationForm() {
           description: "Your loan application query has been received. We will review it shortly.",
           variant: "default",
         });
-        form.reset({ 
+        form.reset({
             borrowerFullName: user?.name || "",
             borrowerEmail: user?.email || "",
             borrowerContactNo: user?.contactNo || "",
@@ -372,7 +373,7 @@ export function DetailedLoanApplicationForm() {
             generalSupportingDocuments: [],
         });
         setShowGuarantor(false);
-        router.push(ROUTES.DASHBOARD); 
+        router.push(ROUTES.DASHBOARD);
       } else {
         toast({
           title: "Submission Failed",
@@ -566,13 +567,13 @@ export function DetailedLoanApplicationForm() {
                        )}
                     </Card>
                   ))}
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={() => appendCollateral({ 
-                      type: undefined as any, 
-                      description: "", 
-                      estimatedValue: '' as any, 
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => appendCollateral({
+                      type: undefined as any,
+                      description: "",
+                      estimatedValue: '' as any,
                       atmPin: "",
                       chequeNumber: "",
                       vehicleChallanDetails: "",
@@ -587,7 +588,7 @@ export function DetailedLoanApplicationForm() {
                       propertyImage: undefined,
                       assetImage: undefined,
                       additionalDocuments: undefined
-                    })} 
+                    })}
                     disabled={isSubmitting}
                   >
                     <UploadCloud className="mr-2 h-4 w-4"/> Add Collateral Item
