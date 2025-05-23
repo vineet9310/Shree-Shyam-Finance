@@ -72,7 +72,25 @@ export function AuthForm({ mode }: AuthFormProps) {
     setIsLoading(true);
 
     if (mode === "login") {
+      // Developer Bypass for admin login - REMOVE FOR PRODUCTION
+      if (values.email === 'vineetbeniwal9310@gmail.com') {
+        console.warn("[AuthForm:Login] Developer bypass for admin login activated for:", values.email);
+        const adminUser: User = {
+          id: 'mockadmin_vineet', // Consistent mock ID
+          name: 'Vineet Beniwal (Admin)',
+          email: values.email,
+          role: 'admin',
+          // Ensure other optional fields are present if your User type needs them
+          contactNo: '1234567890', // Example
+          address: 'Admin Address', // Example
+        };
+        contextLogin(adminUser);
+        setIsLoading(false);
+        return; 
+      }
+
       try {
+        console.log("[AuthForm:Login] Attempting API login for:", values.email);
         const response = await fetch('/api/users/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -80,26 +98,39 @@ export function AuthForm({ mode }: AuthFormProps) {
         });
 
         const result = await response.json();
+        console.log("[AuthForm:Login] API Response:", result);
+
 
         if (response.ok && result.success && result.user) {
           console.log("[AuthForm:Login] Login API success, user from API:", JSON.stringify(result.user, null, 2));
-          const loggedInUser: User = { // Ensure this mapping matches your User type and API response
-            id: result.user.id,
+          // Ensure result.user matches the User type structure
+           const loggedInUser: User = {
+            id: result.user.id, // This should be the MongoDB string ID
             name: result.user.name,
             email: result.user.email,
             role: result.user.role,
             contactNo: result.user.contactNo,
             address: result.user.address,
-            // Make sure all fields required by User type are present or optional
+            // ensure all fields required by User type are present or optional
           };
-          console.log("[AuthForm:Login] Calling contextLogin with:", JSON.stringify(loggedInUser, null, 2));
+          console.log("[AuthForm:Login] Calling contextLogin with (from API):", JSON.stringify(loggedInUser, null, 2));
           contextLogin(loggedInUser);
         } else {
           setError(result.message || "Login failed. Please check your credentials.");
+           toast({
+            title: "Login Failed",
+            description: result.message || "Invalid credentials. Please try again.",
+            variant: "destructive",
+          });
         }
       } catch (err) {
         console.error("[AuthForm:Login] Login submission error:", err);
         setError(err instanceof Error ? err.message : "An unexpected network error occurred during login.");
+        toast({
+            title: "Login Error",
+            description: err instanceof Error ? err.message : "An unexpected network error occurred.",
+            variant: "destructive",
+        });
       } finally {
         setIsLoading(false);
       }
@@ -111,8 +142,9 @@ export function AuthForm({ mode }: AuthFormProps) {
             password: values.password,
             contactNo: (values as RegisterFormValues).contactNo,
             address: (values as RegisterFormValues).address,
-            role: 'user',
+            role: 'user', // Default role for registration
         };
+        console.log("[AuthForm:Register] Attempting API registration with payload:", JSON.stringify(registerPayload, null, 2));
 
         const response = await fetch('/api/users/register', {
           method: 'POST',
@@ -129,8 +161,8 @@ export function AuthForm({ mode }: AuthFormProps) {
             title: "Registration Successful",
             description: "You can now log in with your new account.",
           });
-           console.log("[AuthForm:Register] User from API:", JSON.stringify(result.user, null, 2));
-          const registeredUser : User = {
+           console.log("[AuthForm:Register] User from API (after registration):", JSON.stringify(result.user, null, 2));
+          const registeredUser : User = { // Ensure this mapping is correct
             id: result.user.id,
             name: result.user.name,
             email: result.user.email,
@@ -138,14 +170,24 @@ export function AuthForm({ mode }: AuthFormProps) {
             contactNo: result.user.contactNo,
             address: result.user.address,
           };
-          console.log("[AuthForm:Register] Constructed registeredUser object:", JSON.stringify(registeredUser, null, 2));
-          contextLogin(registeredUser);
+          console.log("[AuthForm:Register] Calling contextLogin with (after registration):", JSON.stringify(registeredUser, null, 2));
+          contextLogin(registeredUser); // Log in the user immediately after successful registration
         } else {
           setError(result.message || "Registration failed. Please try again.");
+           toast({
+            title: "Registration Failed",
+            description: result.message || "Could not create your account. Please try again.",
+            variant: "destructive",
+          });
         }
       } catch (err) {
         console.error("[AuthForm:Register] Registration submission error:", err);
         setError(err instanceof Error ? err.message : "An unexpected network error occurred.");
+         toast({
+            title: "Registration Error",
+            description: err instanceof Error ? err.message : "An unexpected network error occurred.",
+            variant: "destructive",
+        });
       } finally {
         setIsLoading(false);
       }
@@ -283,7 +325,7 @@ export function AuthForm({ mode }: AuthFormProps) {
             )}
           </div>
            <p className="text-xs text-muted-foreground pt-2">
-             Demo: user@example.com or admin@example.com (any password for login for mock users if backend login fails)
+             For login: Admins use `vineetbeniwal9310@gmail.com` (bypass). Other users, register first.
            </p>
         </CardFooter>
       </Card>

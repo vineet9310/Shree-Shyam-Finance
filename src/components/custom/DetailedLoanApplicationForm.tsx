@@ -47,8 +47,8 @@ const collateralSchema = z.object({
   }),
   description: z.string().min(5, "Description must be at least 5 characters."),
   estimatedValue: z.preprocess(
-    (val) => (val === "" ? undefined : val), // Treat empty string as undefined for optional coercion
-    z.coerce.number().positive("Estimated value must be positive.").optional()
+    (val) => (val === "" || val === undefined || val === null ? undefined : Number(val)), 
+    z.number().positive("Estimated value must be positive.").optional()
   ),
   atmCardFrontImage: fileSchema,
   atmCardBackImage: fileSchema,
@@ -78,17 +78,17 @@ const guarantorSchema = z.object({
 
 
 const loanApplicationFormSchema = z.object({
-  borrowerFullName: z.string().min(2, "Full name must be at least 2 characters."),
+  borrowerFullName: z.string().min(1, "Full name is required."), // Changed from min(2) to min(1) temporarily if prefill is an issue
   borrowerContactNo: z.string().min(10, "Contact number must be at least 10 digits.").max(15),
   borrowerEmail: z.string().email("Invalid email address."),
   borrowerAddress: z.string().min(10, "Address must be at least 10 characters."),
-  borrowerIdProofType: z.enum(["aadhaar", "pan", "voter_id", "driving_license", "passport", "other"]),
+  borrowerIdProofType: z.enum(["aadhaar", "pan", "voter_id", "driving_license", "passport", "other"], { required_error: "ID proof type is required."}),
   borrowerIdProofDocument: fileSchema,
-  borrowerAddressProofType: z.enum(["aadhaar", "utility_bill", "rent_agreement", "passport", "other"]),
+  borrowerAddressProofType: z.enum(["aadhaar", "utility_bill", "rent_agreement", "passport", "other"], { required_error: "Address proof type is required." }),
   borrowerAddressProofDocument: fileSchema,
   loanAmount: z.preprocess(
-    (val) => (val === "" ? undefined : val), // Treat empty string as undefined for required coercion
-     z.coerce.number().min(1000, "Loan amount must be at least ₹1,000.")
+    (val) => (val === "" ? undefined : Number(val)), 
+    z.number({ required_error: "Loan amount is required."}).min(1000, "Loan amount must be at least ₹1,000.")
   ),
   loanPurpose: z.string().min(10, "Please describe loan purpose (min 10 chars)."),
   hasGuarantor: z.boolean().optional(),
@@ -120,20 +120,22 @@ export function DetailedLoanApplicationForm() {
   const [showGuarantor, setShowGuarantor] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  console.log("[DetailedLoanApplicationForm] User from AuthContext:", user);
+
 
   const form = useForm<LoanApplicationFormValues>({
     resolver: zodResolver(loanApplicationFormSchema),
     defaultValues: {
-      borrowerFullName: user?.name || "",
-      borrowerContactNo: user?.contactNo || "",
-      borrowerEmail: user?.email || "",
-      borrowerAddress: user?.address || "",
+      borrowerFullName:  "",
+      borrowerContactNo: "",
+      borrowerEmail: "",
+      borrowerAddress: "",
       borrowerIdProofType: undefined,
       borrowerAddressProofType: undefined,
-      loanAmount: '' as any, // Initialize numeric inputs with empty string
+      loanAmount: '' as any, 
       loanPurpose: "",
       hasGuarantor: false,
-      guarantor: { // Provide default structure for guarantor
+      guarantor: { 
         fullName: "",
         address: "",
         contactNo: "",
@@ -149,22 +151,41 @@ export function DetailedLoanApplicationForm() {
 
   useEffect(() => {
     if (user) {
+      console.log("[DetailedLoanApplicationForm] useEffect - Resetting form with user data:", user);
       form.reset({
-        ...form.getValues(), // Keep current form state for non-user fields
+        // Keep other form values if user navigates away and back, unless they are user-specific
+        ...form.getValues(),
         borrowerFullName: user.name || "",
         borrowerEmail: user.email || "",
-        borrowerContactNo: user.contactNo || "",
-        borrowerAddress: user.address || "",
-        // Ensure default values for other potentially undefined fields are set if needed on user load
-        // e.g., if some fields are not covered by initial defaultValues and depend on user being loaded
-        loanAmount: form.getValues('loanAmount') || '' as any,
-        guarantor: form.getValues('guarantor') || { 
-            fullName: "", address: "", contactNo: "", 
-            idProofType: undefined, idProofDocument: undefined, 
-            addressProofType: undefined, addressProofDocument: undefined 
-        },
+        borrowerContactNo: user.contactNo || form.getValues('borrowerContactNo') || "", // Prefer user context, then form, then empty
+        borrowerAddress: user.address || form.getValues('borrowerAddress') || "",
+        // Reset other fields to initial state or persisted state from form.getValues() if needed
+        borrowerIdProofType: form.getValues('borrowerIdProofType') || undefined,
+        borrowerAddressProofType: form.getValues('borrowerAddressProofType') || undefined,
+        loanAmount: form.getValues('loanAmount') || ('' as any),
+        loanPurpose: form.getValues('loanPurpose') || "",
+        hasGuarantor: form.getValues('hasGuarantor') || false,
+        guarantor: form.getValues('guarantor') || { fullName: "", address: "", contactNo: "", idProofType: undefined, idProofDocument: undefined, addressProofType: undefined, addressProofDocument: undefined },
+        collaterals: form.getValues('collaterals') || [],
+        generalSupportingDocuments: form.getValues('generalSupportingDocuments') || [],
 
       });
+    } else {
+        console.log("[DetailedLoanApplicationForm] useEffect - User is null, resetting to initial defaults.");
+        form.reset({ // Reset form to initial defaults if user becomes null
+            borrowerFullName: "",
+            borrowerEmail: "",
+            borrowerContactNo: "",
+            borrowerAddress: "",
+            borrowerIdProofType: undefined,
+            borrowerAddressProofType: undefined,
+            loanAmount: '' as any,
+            loanPurpose: "",
+            hasGuarantor: false,
+            guarantor: { fullName: "", address: "", contactNo: "", idProofType: undefined, idProofDocument: undefined, addressProofType: undefined, addressProofDocument: undefined },
+            collaterals: [],
+            generalSupportingDocuments: [],
+        });
     }
   }, [user, form]);
 
@@ -208,26 +229,73 @@ export function DetailedLoanApplicationForm() {
     );
   };
 
+  const onInvalid = (errors: any) => {
+    console.error("[DetailedLoanApplicationForm] Form validation failed:", errors);
+    let errorMessages = "Please check the form for errors: ";
+    const fieldsWithErrors = Object.keys(errors);
+    if (fieldsWithErrors.length > 0) {
+        errorMessages += fieldsWithErrors.map(field => `${field}: ${errors[field]?.message || 'Invalid'}`).join(', ');
+    } else {
+        errorMessages = "Please fill all required fields correctly.";
+    }
+
+    toast({
+      title: "Validation Error",
+      description: errorMessages,
+      variant: "destructive",
+    });
+  };
+
 
   async function onSubmit(values: LoanApplicationFormValues) {
+    console.log("[DetailedLoanApplicationForm] onSubmit triggered.");
+    // console.log("[DetailedLoanApplicationForm] Form errors (should be empty if this runs):", form.formState.errors); // Already handled by onInvalid
+    console.log("[DetailedLoanApplicationForm] Raw values from form:", JSON.stringify(values, null, 2));
+
+
+    if (!user || !user.email) {
+        toast({
+            title: "Authentication Error",
+            description: "User details not found. Please log in again to submit the application.",
+            variant: "destructive",
+        });
+        setIsSubmitting(false); 
+        return;
+    }
     setIsSubmitting(true);
 
-    const submissionValues = JSON.parse(JSON.stringify(values));
+    // Ensure the submission payload uses the authenticated user's email and name
+    // This is a safeguard. The form.reset in useEffect should handle pre-filling.
+    const submissionValues = {
+        ...values,
+        borrowerEmail: user.email, 
+        borrowerFullName: user.name || values.borrowerFullName, // If user.name is somehow null/undefined from context
+    };
+    console.log("[DetailedLoanApplicationForm] Values being sent to API:", JSON.stringify(submissionValues, null, 2));
+
+
+    // Prepare a separate object for JSON stringification to API,
+    // processing File objects to just their metadata (name, type, size)
+    // as actual File objects cannot be directly JSON.stringified.
+    const apiPayload: any = { ...submissionValues };
 
     const processFileField = (file: File | undefined) => file ? { name: file.name, type: file.type, size: file.size } : undefined;
 
-    if (submissionValues.borrowerIdProofDocument) {
-        submissionValues.borrowerIdProofDocument = processFileField(values.borrowerIdProofDocument);
+    if (values.borrowerIdProofDocument) {
+        apiPayload.borrowerIdProofDocument = processFileField(values.borrowerIdProofDocument);
     }
-    if (submissionValues.borrowerAddressProofDocument) {
-        submissionValues.borrowerAddressProofDocument = processFileField(values.borrowerAddressProofDocument);
+    if (values.borrowerAddressProofDocument) {
+        apiPayload.borrowerAddressProofDocument = processFileField(values.borrowerAddressProofDocument);
     }
-    if (submissionValues.hasGuarantor && submissionValues.guarantor) {
-        submissionValues.guarantor.idProofDocument = processFileField(values.guarantor?.idProofDocument);
-        submissionValues.guarantor.addressProofDocument = processFileField(values.guarantor?.addressProofDocument);
+    if (values.hasGuarantor && values.guarantor) {
+        apiPayload.guarantor = {
+            ...values.guarantor,
+            idProofDocument: processFileField(values.guarantor?.idProofDocument),
+            addressProofDocument: processFileField(values.guarantor?.addressProofDocument),
+        };
     }
-    if (submissionValues.collaterals) {
-        submissionValues.collaterals = submissionValues.collaterals.map((col: any, index: number) => ({
+    if (values.collaterals) {
+        apiPayload.collaterals = values.collaterals.map((col, index) => ({
             ...col,
             atmCardFrontImage: processFileField(values.collaterals?.[index]?.atmCardFrontImage),
             atmCardBackImage: processFileField(values.collaterals?.[index]?.atmCardBackImage),
@@ -240,8 +308,8 @@ export function DetailedLoanApplicationForm() {
             assetImage: processFileField(values.collaterals?.[index]?.assetImage),
         }));
     }
-     if (submissionValues.generalSupportingDocuments) {
-        submissionValues.generalSupportingDocuments = values.generalSupportingDocuments?.map(processFileField) || [];
+     if (values.generalSupportingDocuments) {
+        apiPayload.generalSupportingDocuments = values.generalSupportingDocuments?.map(processFileField) || [];
     }
 
 
@@ -249,7 +317,7 @@ export function DetailedLoanApplicationForm() {
       const response = await fetch('/api/loan-applications', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(submissionValues),
+        body: JSON.stringify(apiPayload), // Send processed payload
       });
       const result = await response.json();
 
@@ -259,7 +327,7 @@ export function DetailedLoanApplicationForm() {
           description: "Your loan application query has been received. We will review it shortly.",
           variant: "default",
         });
-        form.reset({ // Reset form to initial defaults after successful submission
+        form.reset({ 
             borrowerFullName: user?.name || "",
             borrowerEmail: user?.email || "",
             borrowerContactNo: user?.contactNo || "",
@@ -274,7 +342,7 @@ export function DetailedLoanApplicationForm() {
             generalSupportingDocuments: [],
         });
         setShowGuarantor(false);
-        router.push(ROUTES.DASHBOARD); // Redirect to dashboard
+        router.push(ROUTES.DASHBOARD); 
       } else {
         toast({
           title: "Submission Failed",
@@ -283,7 +351,7 @@ export function DetailedLoanApplicationForm() {
         });
       }
     } catch (error) {
-      console.error("Form submission error:", error);
+      console.error("[DetailedLoanApplicationForm] Form submission error:", error);
       toast({
         title: "Network Error",
         description: "Could not connect to the server. Please check your connection.",
@@ -302,7 +370,7 @@ export function DetailedLoanApplicationForm() {
       </CardHeader>
       <CardContent>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="space-y-8">
 
             <Accordion type="multiple" defaultValue={["borrower_details", "loan_details"]} className="w-full">
               {/* Borrower Details Section */}
@@ -474,12 +542,11 @@ export function DetailedLoanApplicationForm() {
                     onClick={() => appendCollateral({ 
                       type: undefined as any, 
                       description: "", 
-                      estimatedValue: '' as any, // Ensure new items also default to empty string for numeric inputs
+                      estimatedValue: '' as any, 
                       atmPin: "",
                       chequeNumber: "",
                       vehicleChallanDetails: "",
                       assetDetails: "",
-                      // Initialize other file/select fields to undefined or appropriate defaults
                       atmCardFrontImage: undefined,
                       atmCardBackImage: undefined,
                       chequeImage: undefined,
@@ -516,5 +583,3 @@ export function DetailedLoanApplicationForm() {
     </Card>
   );
 }
-
-    
