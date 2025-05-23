@@ -97,7 +97,7 @@ export default function AdminApplicationDetailsPage() {
 
       } else {
         setIsLoading(false);
-        // Handle not found, e.g. redirect or show error
+        router.push('/admin/applications'); // Redirect to list page
       }
     }
   }, [applicationId]);

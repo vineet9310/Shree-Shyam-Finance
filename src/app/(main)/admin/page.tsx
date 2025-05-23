@@ -143,17 +143,23 @@ export default function AdminDashboardPage() {
               </TableHeader>
               <TableBody>
                 {applications.map((app) => (
-                  <TableRow key={app.id}>
-                    <TableCell className="font-medium">{ app.borrowerFullName || (app.borrowerUserId as any)?.name || 'N/A'}</TableCell>
+                  <TableRow key={app.id || Math.random()}> {/* Added fallback key if app.id is missing */}
+                    <TableCell className="font-medium">{ app.borrowerFullName || ((app.borrowerUserId as any)?.name) || 'N/A'}</TableCell>
                     <TableCell>₹{app.requestedAmount.toLocaleString()}</TableCell>
                     <TableCell><FormattedDate dateString={app.applicationDate} /></TableCell>
                     <TableCell><StatusBadge status={app.status} /></TableCell>
                     <TableCell className="text-right">
-                      <Button asChild variant="outline" size="sm">
-                        <Link href={ROUTES.ADMIN_APPLICATION_DETAIL(app.id)}>
+                      {app.id && typeof app.id === 'string' && app.id.trim() !== '' ? (
+                        <Button asChild variant="outline" size="sm">
+                          <Link href={ROUTES.ADMIN_APPLICATION_DETAIL(app.id)}>
+                            <Eye className="mr-2 h-4 w-4" /> View
+                          </Link>
+                        </Button>
+                      ) : (
+                        <Button variant="outline" size="sm" disabled title="Application ID is missing">
                           <Eye className="mr-2 h-4 w-4" /> View
-                        </Link>
-                      </Button>
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
