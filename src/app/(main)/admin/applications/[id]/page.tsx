@@ -39,21 +39,20 @@ export default function AdminApplicationDetailsPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [application, setApplication] = useState<LoanApplication | null>(null);
-  const [isLoading, setIsLoading] = useState(true); // Start with true
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   const applicationId = params.id as string;
 
   useEffect(() => {
-    // If applicationId is not yet available from the router, keep loading.
     if (!applicationId) {
       setIsLoading(true);
-      setError(null); // Clear any previous error
+      setError(null);
       setApplication(null);
       return;
     }
 
-    // If applicationId is the literal string "[id]", it's an invalid navigation.
     if (applicationId === "[id]") {
         setError("Invalid page URL. Please select a specific application to view from the dashboard.");
         setIsLoading(false);
@@ -68,9 +67,8 @@ export default function AdminApplicationDetailsPage() {
       return;
     }
 
-    // Proceed with fetching only if ID is valid and not the placeholder
     setIsLoading(true);
-    setError(null); // Clear previous errors before fetching
+    setError(null); 
     fetch(`/api/loan-applications/${applicationId}`)
       .then(res => {
         if (!res.ok) {
@@ -83,21 +81,16 @@ export default function AdminApplicationDetailsPage() {
       .then(data => {
         if (data.success && data.application) {
           const appData = data.application;
-          // Map fields carefully for ApplicationDetails and RiskAssessmentClient
           setApplication({
             ...appData,
-            // Fields expected by ApplicationDetails component
             fullName: appData.borrowerFullName || (appData.borrowerUserId as any)?.name || 'N/A',
             email: appData.borrowerEmail || (appData.borrowerUserId as any)?.email || 'N/A',
-            loanAmount: appData.requestedAmount, // ApplicationDetails uses loanAmount
-            loanPurpose: appData.purpose,       // ApplicationDetails uses loanPurpose
-            submittedDate: appData.applicationDate, // ApplicationDetails uses submittedDate
-            income: appData.income || 0, // Ensure income is present
-            employmentStatus: appData.employmentStatus || 'N/A', // Ensure present
-            creditScore: appData.creditScore || 0, // Ensure present
-            // processedDocuments for RiskAssessmentClient
-            // The API currently does not return processedDocuments.
-            // This will be an empty array unless API is updated.
+            loanAmount: appData.requestedAmount, 
+            loanPurpose: appData.purpose,      
+            submittedDate: appData.applicationDate, 
+            income: appData.income || 0, 
+            employmentStatus: appData.employmentStatus || 'N/A', 
+            creditScore: appData.creditScore || 0, 
             processedDocuments: appData.processedDocuments || [],
           });
         } else {
@@ -115,19 +108,49 @@ export default function AdminApplicationDetailsPage() {
       });
   }, [applicationId]);
 
-  const updateApplicationStatus = (status: LoanApplication['status']) => {
-    if (application) {
-      // TODO: Implement API call to update status
-      console.log(`TODO: API call to update status to ${status} for app ID ${application.id}`);
-      setApplication({ ...application, status });
-      toast({
-        title: `Application status would be ${status}`,
-        description: `(Backend update not yet implemented) Loan application for ${application.borrowerFullName || 'N/A'} would be ${status.toLowerCase()}.`,
+  const handleUpdateApplicationStatus = async (newStatus: LoanApplication['status']) => {
+    if (!application || !application.id) {
+      toast({ title: "Error", description: "Application data not available.", variant: "destructive" });
+      return;
+    }
+    setIsUpdatingStatus(true);
+    try {
+      const response = await fetch(`/api/loan-applications/${application.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
       });
+      const result = await response.json();
+      if (response.ok && result.success) {
+        setApplication(prev => prev ? {
+          ...prev,
+          ...result.application, // Update with the full application object from API
+           // Ensure frontend specific mappings are reapplied if API response structure differs
+           fullName: result.application.borrowerFullName || (result.application.borrowerUserId as any)?.name || 'N/A',
+           email: result.application.borrowerEmail || (result.application.borrowerUserId as any)?.email || 'N/A',
+           loanAmount: result.application.requestedAmount,
+           loanPurpose: result.application.purpose,
+           submittedDate: result.application.applicationDate,
+        } : null);
+        toast({
+          title: "Status Updated",
+          description: `Loan application for ${application.borrowerFullName || 'N/A'} is now ${newStatus.toLowerCase()}.`,
+        });
+      } else {
+        throw new Error(result.message || "Failed to update application status.");
+      }
+    } catch (err: any) {
+      console.error("Error updating application status:", err);
+      toast({
+        title: "Update Failed",
+        description: err.message || "Could not update application status.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdatingStatus(false);
     }
   };
 
-  // Initial loading state if applicationId isn't available yet and no error has occurred
   if (!applicationId && !error && isLoading) {
      return <div className="flex justify-center items-center min-h-[calc(100vh-10rem)]"><Loader2 className="h-8 w-8 animate-spin text-primary mr-2" /><p>Loading application ID...</p></div>;
   }
@@ -179,12 +202,17 @@ export default function AdminApplicationDetailsPage() {
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="text-xl flex items-center gap-2"><Edit3 className="h-6 w-6 text-primary"/>Application Actions</CardTitle>
-          <CardDescription>Approve or reject this loan application (Backend for status update not yet implemented).</CardDescription>
+          <CardDescription>Approve or reject this loan application.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col sm:flex-row gap-4">
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="default" className="bg-primary hover:bg-primary/90 text-primary-foreground w-full sm:w-auto" disabled={application.status === 'Approved'}>
+              <Button 
+                variant="default" 
+                className="bg-primary hover:bg-primary/90 text-primary-foreground w-full sm:w-auto" 
+                disabled={application.status === 'Approved' || isUpdatingStatus}
+              >
+                {isUpdatingStatus && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 <CheckCircle className="mr-2 h-4 w-4" /> Approve
               </Button>
             </AlertDialogTrigger>
@@ -192,12 +220,13 @@ export default function AdminApplicationDetailsPage() {
               <AlertDialogHeader>
                 <AlertDialogTitle>Confirm Approval</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Are you sure you want to approve this loan application for {application.borrowerFullName || 'N/A'}? This action cannot be undone easily.
+                  Are you sure you want to approve this loan application for {application.borrowerFullName || 'N/A'}?
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={() => updateApplicationStatus('Approved')} className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                <AlertDialogCancel disabled={isUpdatingStatus}>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={() => handleUpdateApplicationStatus('Approved')} className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isUpdatingStatus}>
+                  {isUpdatingStatus && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Confirm Approve
                 </AlertDialogAction>
               </AlertDialogFooter>
@@ -206,7 +235,12 @@ export default function AdminApplicationDetailsPage() {
 
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="destructive" className="w-full sm:w-auto" disabled={application.status === 'Rejected'}>
+              <Button 
+                variant="destructive" 
+                className="w-full sm:w-auto" 
+                disabled={application.status === 'Rejected' || isUpdatingStatus}
+              >
+                 {isUpdatingStatus && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 <XCircle className="mr-2 h-4 w-4" /> Reject
               </Button>
             </AlertDialogTrigger>
@@ -214,12 +248,13 @@ export default function AdminApplicationDetailsPage() {
               <AlertDialogHeader>
                 <AlertDialogTitle>Confirm Rejection</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Are you sure you want to reject this loan application for {application.borrowerFullName || 'N/A'}? This action cannot be undone easily.
+                  Are you sure you want to reject this loan application for {application.borrowerFullName || 'N/A'}?
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={() => updateApplicationStatus('Rejected')} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+                <AlertDialogCancel disabled={isUpdatingStatus}>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={() => handleUpdateApplicationStatus('Rejected')} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground" disabled={isUpdatingStatus}>
+                  {isUpdatingStatus && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Confirm Reject
                 </AlertDialogAction>
               </AlertDialogFooter>
@@ -230,3 +265,4 @@ export default function AdminApplicationDetailsPage() {
     </div>
   );
 }
+
