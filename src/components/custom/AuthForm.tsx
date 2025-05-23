@@ -75,11 +75,16 @@ export function AuthForm({ mode }: AuthFormProps) {
     if (mode === "login") {
       // Mock login using AuthContext as before
       try {
-        const userData: Partial<User> = {
+        // For mock login, construct a full User object with role based on email
+        const userForContext: User = {
+          id: '', // Mock login doesn't rely on ID from form, AuthContext might assign or find one from mockUsers
           email: values.email,
-          role: values.email === 'admin@example.com' ? 'admin' : 'user',
+          name: values.email.split('@')[0], // Generate a mock name
+          // Check against the user's specific admin email and the generic demo admin email
+          role: (values.email.toLowerCase() === "vineetbeniwal9310@gmail.com" || values.email.toLowerCase() === 'admin@example.com') ? 'admin' : 'user',
         };
-        contextLogin(userData as User); 
+
+        contextLogin(userForContext);
         // AuthContext's login handles redirection
       } catch (err) {
         setError(err instanceof Error ? err.message : "An unexpected error occurred during login.");
@@ -105,19 +110,19 @@ export function AuthForm({ mode }: AuthFormProps) {
 
         const result = await response.json();
 
-        if (response.ok && result.success) {
+        if (response.ok && result.success && result.user) {
           toast({
             title: "Registration Successful",
             description: "You can now log in with your new account.",
           });
           // Log in the user with AuthContext after successful backend registration
-          // Use the user data returned from the API if available and complete
           const registeredUser : User = {
-            id: result.user.id,
+            id: result.user.id, // Use ID from backend
             name: result.user.name,
             email: result.user.email,
             role: result.user.role,
-            // Add other fields if returned and needed by AuthContext's user type
+            contactNo: result.user.contactNo,
+            address: result.user.address,
           };
           contextLogin(registeredUser); // This will redirect
         } else {
@@ -133,7 +138,7 @@ export function AuthForm({ mode }: AuthFormProps) {
   }
 
   return (
-    <div className="flex w-full min-h-screen items-center justify-center bg-background p-4">
+    <div className="flex min-h-screen w-full items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md shadow-2xl">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">
@@ -270,3 +275,5 @@ export function AuthForm({ mode }: AuthFormProps) {
     </div>
   );
 }
+
+    
