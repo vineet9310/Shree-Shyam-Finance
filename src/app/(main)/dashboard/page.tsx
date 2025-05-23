@@ -8,7 +8,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ROUTES } from "@/lib/constants";
-import { TrendingUp, History, CalendarClock, AlertTriangle, CheckCircle2, Clock, IndianRupee, FileText, Loader2, Eye, Users, ListChecks, ShieldCheck } from "lucide-react";
+import { TrendingUp, History, CalendarClock, AlertTriangle, CheckCircle2, Clock, IndianRupee, FileText, Loader2, Eye, Users, ListChecks, ShieldCheck, BellRing } from "lucide-react";
 import FormattedDate from "@/components/custom/FormattedDate";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -57,7 +57,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const fetchUserLoans = async () => {
-      if (!user?.id) { // This check for user.id is important
+      if (!user?.id) { 
         setIsLoadingLoans(false);
         setUserLoanApplications([]);
         return;
@@ -65,6 +65,7 @@ export default function DashboardPage() {
       setIsLoadingLoans(true);
       setErrorLoans(null);
       try {
+        console.log(`[DashboardPage] Fetching loans for userId: ${user.id}`);
         const response = await fetch(`/api/loan-applications?userId=${user.id}`);
         if (!response.ok) {
           const errorData = await response.json();
@@ -77,7 +78,7 @@ export default function DashboardPage() {
           throw new Error(data.message || 'Could not parse user loan applications');
         }
       } catch (err: any) {
-        console.error("Error fetching user loans:", err);
+        console.error("[DashboardPage] Error fetching user loans:", err);
         setErrorLoans(err.message);
         toast({
           title: "Error loading loan applications",
@@ -90,11 +91,9 @@ export default function DashboardPage() {
       }
     };
 
-    // Only fetch loans if the user is not an admin and has an ID
     if (user && user.role !== 'admin' && user.id) {
       fetchUserLoans();
     } else {
-      // For admin or if no user.id (or user not loaded yet), clear loan data and stop loading indicator
       setUserLoanApplications([]);
       setIsLoadingLoans(false); 
     }
@@ -218,8 +217,10 @@ export default function DashboardPage() {
                   <CardContent className="space-y-1 text-sm">
                     <p>Amount Requested: <span className="font-semibold">₹{app.requestedAmount.toLocaleString()}</span></p>
                     <p className="flex items-center text-xs text-muted-foreground"><Clock className="mr-1 h-3 w-3" /> Applied: <FormattedDate dateString={app.applicationDate} /></p>
-                     <Button variant="outline" size="sm" className="mt-2 w-full" disabled> 
-                        <Eye className="mr-2 h-4 w-4" /> View/Edit (Soon)
+                     <Button asChild variant="outline" size="sm" className="mt-2 w-full"> 
+                        <Link href={ROUTES.USER_APPLICATION_DETAIL(app.id)}>
+                            <Eye className="mr-2 h-4 w-4" /> View Details
+                        </Link>
                      </Button>
                   </CardContent>
                 </Card>
