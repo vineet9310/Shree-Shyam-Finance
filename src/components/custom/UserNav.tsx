@@ -56,7 +56,7 @@ export function UserNav() {
     <div className="flex items-center gap-2">
       {/* Notification Bell - Placeholder for now */}
       {user.role !== 'admin' && (
-        <Button variant="ghost" size="icon" className="relative rounded-full h-10 w-10" asChild>
+        <Button variant="ghost" size="icon" className="relative rounded-full h-10 w-10">
           {/* We can later make this a link to a notifications page or a trigger for a dropdown */}
           {/* <Link href={ROUTES.NOTIFICATIONS_PAGE || '#'}> */}
             <Bell className="h-5 w-5" />
