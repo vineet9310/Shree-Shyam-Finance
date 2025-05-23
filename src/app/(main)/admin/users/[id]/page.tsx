@@ -100,8 +100,8 @@ export default function AdminUserDetailPage() {
   };
 
   const handleSaveChanges = async () => {
-    if (!user || !mongoose.Types.ObjectId.isValid(user.id)) {
-        toast({ title: "Error", description: "Invalid user ID for update.", variant: "destructive" });
+    if (!user || !user.id) { // Check if user and user.id exist
+        toast({ title: "Error", description: "Invalid user data for update.", variant: "destructive" });
         return;
     }
     setIsUpdating(true);
@@ -115,7 +115,7 @@ export default function AdminUserDetailPage() {
       const result = await response.json();
       if (result.success) {
         setUser(result.user);
-        setEditData(result.user);
+        setEditData(result.user); // Update editData with the fresh user data from backend
         setIsEditing(false);
         toast({ title: "Success", description: "User details updated successfully." });
       } else {
@@ -131,8 +131,8 @@ export default function AdminUserDetailPage() {
   };
 
   const handleDeleteUser = async () => {
-    if (!user || !mongoose.Types.ObjectId.isValid(user.id)) {
-        toast({ title: "Error", description: "Invalid user ID for deletion.", variant: "destructive" });
+    if (!user || !user.id) { // Check if user and user.id exist
+        toast({ title: "Error", description: "Invalid user data for deletion.", variant: "destructive" });
         return;
     }
     setIsDeleting(true);
@@ -195,6 +195,7 @@ export default function AdminUserDetailPage() {
     );
   }
   
+  // Use editData for display when editing, otherwise use user
   const currentDisplayUser = isEditing ? editData : user;
 
 
