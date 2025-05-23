@@ -1,44 +1,59 @@
 
+import type mongoose from 'mongoose';
+
 export type LoanApplicationStatusOriginal = 'Pending' | 'Approved' | 'Rejected' | 'Under Review';
 
 // --- New Detailed Types for Lending Application ---
 
 export interface User {
-  id: string;
+  id: string; // Corresponds to Mongoose _id
   email: string;
   name: string;
-  role: 'user' | 'admin'; // 'user' here means borrower
-  borrowerProfileId?: string; // Link to detailed borrower profile
+  role: 'user' | 'admin';
+  borrowerProfileId?: string; // Link to detailed borrower profile (could be mongoose.Types.ObjectId string)
+  // Optional fields that might come from User model
+  contactNo?: string;
+  address?: string;
+  idProofType?: string;
+  idProofDocumentUrl?: string;
+  addressProofType?: string;
+  addressProofDocumentUrl?: string;
+  passwordHash?: string; // Only for backend, should not be sent to client
+  createdAt?: string; // ISO Date string
+  updatedAt?: string; // ISO Date string
 }
 
+// This interface might be merged into User or kept separate if admin needs extensive borrower-specific fields.
+// For now, User model has some of these.
 export interface BorrowerProfile {
   id: string;
-  userId: string; // Link back to the main User ID
-  fullName: string; // May differ from user.name if admin edits
+  userId: string; 
+  fullName: string; 
   address: string;
   contactNo: string;
   idProofType: 'aadhaar' | 'pan' | 'voter_id' | 'driving_license' | 'passport' | 'other';
-  idProofDocumentUrl: string; // URL to stored document (e.g., data URI or cloud storage link)
-  idProofOtherDetails?: string; // If idProofType is 'other'
+  idProofDocumentUrl: string; 
+  idProofOtherDetails?: string; 
   addressProofType: 'aadhaar' | 'utility_bill' | 'rent_agreement' | 'passport' | 'other';
   addressProofDocumentUrl: string;
-  addressProofOtherDetails?: string; // If addressProofType is 'other'
-  // Additional fields admin might want to store about a borrower
+  addressProofOtherDetails?: string; 
   occupation?: string;
-  notes?: string; // Admin notes about the borrower
+  notes?: string; 
 }
 
 export interface Guarantor {
-  id: string;
-  loanApplicationId: string; // Which loan application this guarantor is for
+  // id: string; // Mongoose will handle _id if this becomes a sub-document or its own model
+  // loanApplicationId: string; 
   fullName: string;
   address: string;
   contactNo: string;
   idProofType: 'aadhaar' | 'pan' | 'voter_id' | 'driving_license' | 'passport' | 'other';
-  idProofDocumentUrl: string;
+  idProofDocumentUrl?: string; // Made optional for frontend type, backend model handles storage
+  idProofDocument?: File | {name: string, type: string, size: number}; // For form state
   idProofOtherDetails?: string;
   addressProofType: 'aadhaar' | 'utility_bill' | 'rent_agreement' | 'passport' | 'other';
-  addressProofDocumentUrl: string;
+  addressProofDocumentUrl?: string; // Made optional
+  addressProofDocument?: File | {name: string, type: string, size: number}; // For form state
   addressProofOtherDetails?: string;
   relationshipToBorrower?: string;
 }
@@ -46,7 +61,7 @@ export interface Guarantor {
 export type CollateralType =
   | 'atm_card'
   | 'blank_cheque'
-  | 'bank_statement' // 3 months
+  | 'bank_statement' 
   | 'vehicle_bike'
   | 'vehicle_car'
   | 'vehicle_scooty'
@@ -56,84 +71,88 @@ export type CollateralType =
   | 'other_asset';
 
 export interface CollateralDocument {
-  id: string;
-  loanApplicationId: string;
+  // id: string; // Mongoose will handle _id
+  // loanApplicationId: string;
   type: CollateralType;
-  description: string; // e.g., "SBI ATM Card ending XXXX" or "Bajaj Pulsar 150" or "2 Bigha Land in Village X"
+  description: string; 
 
-  // Specific fields based on type
-  // WARNING: Storing ATM PIN is a major security risk. Consider alternatives.
-  atmPin?: string;
-  atmCardFrontImageUrl?: string; // data URI or cloud storage link
-  atmCardBackImageUrl?: string;  // data URI or cloud storage link
+  atmPin?: string; 
+  atmCardFrontImageUrl?: string; 
+  atmCardBackImageUrl?: string;  
+  // File objects for form state, URLs for stored data
+  atmCardFrontImage?: File | {name: string, type: string, size: number};
+  atmCardBackImage?: File | {name: string, type: string, size: number};
 
-  chequeImageUrl?: string; // Image of the blank cheque
+
+  chequeImageUrl?: string; 
+  chequeImage?: File | {name: string, type: string, size: number};
   chequeNumber?: string;
   chequeBankName?: string;
 
-  bankStatementUrl?: string; // For 3 months statement
+  bankStatementUrl?: string; 
+  bankStatementFile?: File | {name: string, type: string, size: number};
 
   vehicleRcImageUrl?: string;
-  vehicleImageUrl?: string; // Photo of the vehicle
-  vehicleChallanDetails?: string; // Any outstanding challans
-  vehiclePapersUrl?: string; // Other vehicle documents
+  vehicleRcImage?: File | {name: string, type: string, size: number};
+  vehicleImageUrl?: string; 
+  vehicleImage?: File | {name: string, type: string, size: number};
+  vehicleChallanDetails?: string; 
+  vehiclePapersUrl?: string;
 
-  propertyPapersUrl?: string; // Deed, Khatauni, etc.
-  propertyImageUrl?: string; // Photo of the property
+  propertyPapersUrl?: string; 
+  propertyPapersFile?: File | {name: string, type: string, size: number};
+  propertyImageUrl?: string; 
+  propertyImage?: File | {name: string, type: string, size: number};
 
-  assetDetails?: string; // For gold, other assets
+  assetDetails?: string; 
   assetImageUrl?: string;
+  assetImage?: File | {name: string, type: string, size: number};
 
-  // Common fields
   estimatedValue?: number;
-  documentUrls?: string[]; // For multiple related files for one collateral item
+  documentUrls?: string[]; 
   notes?: string;
+  additionalDocuments?: (File | {name: string, type: string, size: number})[]; // for form
 }
 
 export type LoanApplicationStatus =
-  | 'QueryInitiated'         // Borrower submitted initial query
-  | 'PendingAdminVerification' // Admin is reviewing documents and details
-  | 'AdditionalInfoRequired' // Admin needs more info from borrower
-  | 'Approved'               // Loan approved by admin
-  | 'Rejected'               // Loan rejected by admin
-  | 'Active'                 // Loan disbursed and ongoing
-  | 'PaidOff'                // Loan fully repaid
-  | 'Overdue'                // Payments are overdue
-  | 'Defaulted';             // Loan is in default
+  | 'QueryInitiated'         
+  | 'PendingAdminVerification' 
+  | 'AdditionalInfoRequired' 
+  | 'Approved'               
+  | 'Rejected'               
+  | 'Active'                 
+  | 'PaidOff'                
+  | 'Overdue'                
+  | 'Defaulted';             
 
 export interface LoanApplication {
-  id: string;
-  borrowerUserId: string; // Links to User.id
-  guarantor?: Guarantor; // Guarantor details embedded or linked by ID
+  id: string; // Mongoose _id
+  borrowerUserId: string | User; // string for ID, User object when populated
+  guarantor?: Guarantor; 
   
-  applicationDate: string; // ISO date string
+  applicationDate: string; 
   requestedAmount: number;
   purpose: string;
   
-  // Collateral submitted by user
   submittedCollateral: CollateralDocument[];
   
-  // Admin assessment fields
   status: LoanApplicationStatus;
   adminVerificationNotes?: string;
-  adminAssignedTo?: string; // Admin user ID who is handling this
+  adminAssignedTo?: string; 
   
-  // Approved loan terms (set by admin)
   approvedAmount?: number;
-  interestRate?: number; // Annual percentage, e.g., 24 for 24% p.a.
-  interestType?: 'simple' | 'compound_monthly'; // How interest is calculated
+  interestRate?: number; 
+  interestType?: 'simple' | 'compound_monthly'; 
   repaymentFrequency?: 'daily' | 'weekly' | 'monthly' | 'custom';
-  loanTermMonths?: number; // Duration in months
+  loanTermMonths?: number; 
   processingFee?: number;
   otherCharges?: { description: string; amount: number }[];
   
-  // Dates
-  approvedDate?: string; // ISO date string
-  disbursementDate?: string; // ISO date string
-  firstPaymentDueDate?: string; // ISO date string
-  maturityDate?: string; // Expected loan end date
+  approvedDate?: string; 
+  disbursementDate?: string; 
+  firstPaymentDueDate?: string; 
+  maturityDate?: string; 
   
-  // Financial Tracking (calculated and updated regularly)
   principalDisbursed: number;
   currentPrincipalOutstanding: number;
   currentInterestOutstanding: number;
@@ -142,33 +161,39 @@ export interface LoanApplication {
   totalPenaltiesPaid: number;
   lastPaymentDate?: string;
   nextPaymentDueDate?: string;
-  nextPaymentAmount?: number; // EMI or scheduled payment
+  nextPaymentAmount?: number; 
   
-  // Supporting documents from original LoanApplicationData, can be kept if distinct
-  // from collateral. For simplicity, new collateral type covers most.
-  // This 'processedDocuments' was more for the AI flow, might evolve.
-  processedDocuments?: { name: string; dataUri: string }[];
+  // Representing document names/placeholders from form for initial backend storage
+  // These are temporary until full file upload logic is in place.
+  borrowerIdProofDocumentName?: string;
+  borrowerAddressProofDocumentName?: string;
+  // Add more such fields for guarantor and collateral documents if needed for Mongoose schema
+
+  processedDocuments?: { name: string; dataUri: string }[]; // For AI flow primarily
+
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface PaymentRecord {
   id: string;
   loanApplicationId: string;
   borrowerUserId: string;
-  paymentDate: string; // ISO date string
+  paymentDate: string; 
   amountPaid: number;
   paymentMethod: 'cash' | 'online_transfer_upi' | 'online_transfer_neft' | 'cheque_deposit';
-  transactionReference?: string; // For online/cheque
+  transactionReference?: string; 
   principalApplied: number;
   interestApplied: number;
   penaltyApplied?: number;
-  notes?: string; // e.g., "Payment for March EMI"
-  recordedByAdminId: string; // Admin who recorded this payment
-  recordedAt: string; // ISO date string
+  notes?: string; 
+  recordedByAdminId: string; 
+  recordedAt: string; 
 }
 
 export interface SystemNotification {
   id: string;
-  recipientUserId: string; // Borrower or Admin User.id
+  recipientUserId: string; 
   loanApplicationId?: string;
   paymentRecordId?: string;
   message: string;
@@ -182,15 +207,12 @@ export interface SystemNotification {
     | 'general_admin_alert'
     | 'general_user_info';
   isRead: boolean;
-  createdAt: string; // ISO date string
-  linkTo?: string; // e.g., `/admin/applications/[id]` or `/dashboard/loans/[id]`
+  createdAt: string; 
+  linkTo?: string; 
 }
 
 
 // --- Existing types (can be reviewed/merged if needed) ---
-
-// This was the original type for loan application, now superceded by the more detailed LoanApplication.
-// Keep for reference or if parts are still used by AI flow directly, but aim to consolidate.
 export interface LoanApplicationData_Old {
   fullName: string;
   email: string;
@@ -198,31 +220,30 @@ export interface LoanApplicationData_Old {
   loanPurpose: string;
   income: number;
   employmentStatus: 'Employed' | 'Self-Employed' | 'Unemployed' | 'Student';
-  creditScore: number;
-  supportingDocuments?: File[]; // These are File objects, client-side
+  creditScore?: number; // Made optional as in form
+  supportingDocuments?: File[]; 
 }
 
-// This was the extended version for mock data.
 export interface LoanApplication_Old extends LoanApplicationData_Old {
   id: string;
-  submittedDate: string; // ISO date string
+  submittedDate: string; 
   status: LoanApplicationStatusOriginal;
-  processedDocuments?: { name: string; dataUri: string }[]; // For AI flow
+  processedDocuments?: { name: string; dataUri: string }[]; 
 }
 
 export interface UserLoan {
-  id: string; // Corresponds to LoanApplication.id
-  loanType: string; // Corresponds to LoanApplication.purpose or a summary
-  amount: number; // Corresponds to LoanApplication.approvedAmount
-  status: LoanApplicationStatus; // From LoanApplication.status
-  nextPaymentDate?: string; // ISO date string, from LoanApplication.nextPaymentDueDate
-  nextPaymentAmount?: number; // From LoanApplication.nextPaymentAmount
+  id: string; 
+  loanType: string; 
+  amount: number; 
+  status: LoanApplicationStatus; 
+  nextPaymentDate?: string; 
+  nextPaymentAmount?: number; 
 }
 
 export interface PaymentHistoryEntry {
-  id: string; // Corresponds to PaymentRecord.id
-  loanId: string; // Corresponds to PaymentRecord.loanApplicationId
-  date: string; // ISO date string, from PaymentRecord.paymentDate
-  amount: number; // From PaymentRecord.amountPaid
-  status: 'Paid' | 'Missed' | 'Upcoming'; // This status might need to be derived or a new field.
+  id: string; 
+  loanId: string; 
+  date: string; 
+  amount: number; 
+  status: 'Paid' | 'Missed' | 'Upcoming'; 
 }

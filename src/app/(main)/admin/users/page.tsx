@@ -5,28 +5,68 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import type { User } from "@/lib/types"; // Assuming User type includes role
-import { Eye, UserCog, UsersRound } from "lucide-react";
+import type { User } from "@/lib/types"; 
+import { Eye, UserCog, UsersRound, Loader2, AlertTriangle } from "lucide-react";
 import Link from 'next/link';
-// import { useAuth } from '@/context/AuthContext'; // For fetching real users later
+import { useToast } from '@/hooks/use-toast';
 
-// Mock user data for now, in a real app this would come from your backend/AuthContext
-const mockUsers: User[] = [
-  { id: '1', email: 'user1@example.com', name: 'Borrower One', role: 'user' },
-  { id: '2', email: 'admin@example.com', name: 'Administrator', role: 'admin' },
-  { id: '3', email: 'user2@example.com', name: 'Borrower Two', role: 'user' },
-  { id: '4', email: 'anotheruser@example.com', name: 'Borrower Three', role: 'user', borrowerProfileId: 'bp123' },
-];
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<User[]>([]);
-  // const { allUsers } = useAuth(); // If AuthContext provided a way to get all users
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
-    // In a real app, fetch users from your backend
-    setUsers(mockUsers);
-    // if (allUsers) setUsers(allUsers);
-  }, []);
+    const fetchUsers = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const response = await fetch('/api/users');
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to fetch users');
+        }
+        const data = await response.json();
+        if (data.success) {
+          setUsers(data.users);
+        } else {
+          throw new Error(data.message || 'Failed to fetch users');
+        }
+      } catch (err: any) {
+        console.error("Error fetching users:", err);
+        setError(err.message);
+        toast({
+          title: "Error",
+          description: err.message || "Could not load users.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchUsers();
+  }, [toast]);
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-[calc(100vh-10rem)]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="ml-2">Loading users...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col justify-center items-center min-h-[calc(100vh-10rem)] text-destructive">
+        <AlertTriangle className="h-12 w-12 mb-4" />
+        <p className="text-xl font-semibold">Failed to load users</p>
+        <p>{error}</p>
+        <Button onClick={() => window.location.reload()} variant="outline" className="mt-4">Retry</Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -47,7 +87,9 @@ export default function AdminUsersPage() {
                   <TableHead>Full Name</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Role</TableHead>
-                  <TableHead>Borrower Profile ID</TableHead>
+                  <TableHead>Contact No.</TableHead>
+                  <TableHead>Address</TableHead>
+                  {/* <TableHead>Borrower Profile ID</TableHead> */}
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -61,13 +103,15 @@ export default function AdminUsersPage() {
                         {user.role}
                       </Badge>
                     </TableCell>
-                     <TableCell>{user.borrowerProfileId || 'N/A'}</TableCell>
+                    <TableCell>{(user as any).contactNo || 'N/A'}</TableCell>
+                    <TableCell>{(user as any).address || 'N/A'}</TableCell>
+                    {/* <TableCell>{user.borrowerProfileId || 'N/A'}</TableCell> */}
                     <TableCell className="text-right">
-                      <Button asChild variant="outline" size="sm">
+                      <Button asChild variant="outline" size="sm" disabled>
                         {/* This link would go to a user detail/edit page in the future */}
-                        <Link href={`/admin/users/${user.id}`}> 
-                          <Eye className="mr-2 h-4 w-4" /> View/Edit
-                        </Link>
+                        {/* <Link href={`/admin/users/${user.id}`}>  */}
+                          <Eye className="mr-2 h-4 w-4" /> View/Edit (Soon)
+                        {/* </Link> */}
                       </Button>
                     </TableCell>
                   </TableRow>
