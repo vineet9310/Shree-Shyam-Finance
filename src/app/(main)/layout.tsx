@@ -18,6 +18,8 @@ import { Button } from '@/components/ui/button';
 import {
   Sheet,
   SheetContent,
+  SheetHeader,
+  SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
 import { AppLogo } from '@/components/custom/AppLogo';
@@ -90,10 +92,11 @@ export default function MainAppLayout({
     : navItemsBase;
   
   const SidebarContentComp = () => (
-    <div className="flex h-full max-h-screen flex-col">
-      <div className="flex h-16 items-center border-b border-sidebar-border px-6 shrink-0">
+    <>
+      <SheetHeader className="flex h-16 items-center border-b border-sidebar-border px-6 shrink-0">
         <AppLogo />
-      </div>
+        <SheetTitle className="sr-only">Main Menu</SheetTitle>
+      </SheetHeader>
       <ScrollArea className="flex-1 py-4">
         <nav className="grid items-start px-4 text-sm font-medium">
           {currentNavItems.map((item) => (
@@ -114,14 +117,38 @@ export default function MainAppLayout({
           Logout
         </Button>
       </div>
-    </div>
+    </>
   );
 
 
   return (
     <div className="grid min-h-screen w-full lg:grid-cols-[280px_1fr]">
       <div className="hidden border-r border-sidebar-border bg-sidebar lg:block">
-        <SidebarContentComp />
+        {/* For desktop, SheetHeader/SheetTitle are not strictly needed but structure is now consistent */}
+        <div className="flex h-full max-h-screen flex-col">
+           <div className="flex h-16 items-center border-b border-sidebar-border px-6 shrink-0">
+             <AppLogo />
+           </div>
+           <ScrollArea className="flex-1 py-4">
+             <nav className="grid items-start px-4 text-sm font-medium">
+               {currentNavItems.map((item) => (
+                 <NavLink
+                   key={item.href}
+                   href={item.href}
+                   label={item.label}
+                   icon={item.icon}
+                   isActive={pathname.startsWith(item.href)}
+                 />
+               ))}
+             </nav>
+           </ScrollArea>
+           <div className="mt-auto p-4 border-t border-sidebar-border">
+             <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:text-sidebar-accent-foreground" onClick={() => { logout(); }}>
+               <LogOut className="mr-2 h-5 w-5" />
+               Logout
+             </Button>
+           </div>
+         </div>
       </div>
       <div className="flex flex-col">
         <header className="flex h-16 items-center gap-4 border-b bg-card px-6 shrink-0">
