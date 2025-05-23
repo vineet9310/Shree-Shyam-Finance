@@ -3,7 +3,7 @@
 import type { LoanApplication } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Link as LinkIcon, UserCircle, CalendarDays, DollarSign, Briefcase, ShieldQuestion, Info } from "lucide-react";
+import { FileText, Link as LinkIcon, UserCircle, CalendarDays, IndianRupee, Briefcase, ShieldQuestion, Info } from "lucide-react";
 import FormattedDate from "@/components/custom/FormattedDate";
 
 interface ApplicationDetailsProps {
@@ -35,15 +35,15 @@ export function ApplicationDetails({ application }: ApplicationDetailsProps) {
         </div>
 
         <div className="space-y-2">
-          <h3 className="font-semibold flex items-center"><DollarSign className="mr-2 h-5 w-5 text-muted-foreground" />Loan Details</h3>
-          <p><strong className="text-muted-foreground">Amount Requested:</strong> ${application.loanAmount.toLocaleString()}</p>
+          <h3 className="font-semibold flex items-center"><IndianRupee className="mr-2 h-5 w-5 text-muted-foreground" />Loan Details</h3>
+          <p><strong className="text-muted-foreground">Amount Requested:</strong> ₹{application.loanAmount.toLocaleString()}</p>
           <p><strong className="text-muted-foreground">Purpose:</strong> {application.loanPurpose}</p>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
             <div>
                 <h3 className="font-semibold mb-1 flex items-center"><Briefcase className="mr-2 h-5 w-5 text-muted-foreground" />Financial Profile</h3>
-                <p><strong className="text-muted-foreground">Annual Income:</strong> ${application.income.toLocaleString()}</p>
+                <p><strong className="text-muted-foreground">Annual Income:</strong> ₹{application.income.toLocaleString()}</p>
                 <p><strong className="text-muted-foreground">Employment:</strong> {application.employmentStatus}</p>
             </div>
             <div>

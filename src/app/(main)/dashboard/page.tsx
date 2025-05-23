@@ -8,7 +8,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ROUTES } from "@/lib/constants";
-import { TrendingUp, History, CalendarClock, AlertTriangle, CheckCircle2, Clock, DollarSign, FileText, Loader2 } from "lucide-react";
+import { TrendingUp, History, CalendarClock, AlertTriangle, CheckCircle2, Clock, IndianRupee, FileText, Loader2 } from "lucide-react";
 import FormattedDate from "@/components/custom/FormattedDate";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -113,7 +113,7 @@ export default function DashboardPage() {
 
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><DollarSign className="h-6 w-6 text-primary" />Active Loans</CardTitle>
+          <CardTitle className="flex items-center gap-2"><IndianRupee className="h-6 w-6 text-primary" />Active Loans</CardTitle>
           <CardDescription>Your current loan applications and their statuses.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -131,12 +131,12 @@ export default function DashboardPage() {
                     <StatusBadge status={loan.status} />
                   </CardHeader>
                   <CardContent className="space-y-1 text-sm">
-                    <p>Amount: <span className="font-semibold">${loan.requestedAmount.toLocaleString()}</span></p>
+                    <p>Amount: <span className="font-semibold">₹{loan.requestedAmount.toLocaleString()}</span></p>
                     {loan.nextPaymentDueDate && (
                       <p className="flex items-center"><CalendarClock className="mr-2 h-4 w-4 text-muted-foreground" /> Next Payment: <FormattedDate dateString={loan.nextPaymentDueDate} /></p>
                     )}
                     {loan.nextPaymentAmount && (
-                       <p>Next Payment Amount: <span className="font-semibold">${loan.nextPaymentAmount.toLocaleString()}</span></p>
+                       <p>Next Payment Amount: <span className="font-semibold">₹{loan.nextPaymentAmount.toLocaleString()}</span></p>
                     )}
                      <p className="flex items-center text-xs text-muted-foreground"><Clock className="mr-1 h-3 w-3" /> Applied: <FormattedDate dateString={loan.applicationDate} /></p>
                   </CardContent>
@@ -168,7 +168,7 @@ export default function DashboardPage() {
               {paymentHistory.map((payment) => (
                 <TableRow key={payment.id}>
                   <TableCell><FormattedDate dateString={payment.date} /></TableCell>
-                  <TableCell>${payment.amount.toLocaleString()}</TableCell>
+                  <TableCell>₹{payment.amount.toLocaleString()}</TableCell>
                   <TableCell className="text-right">
                     <Badge variant={payment.status === 'Paid' ? 'default' : payment.status === 'Missed' ? 'destructive' : 'secondary'} className="capitalize text-xs">
                       {payment.status}
@@ -186,4 +186,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-

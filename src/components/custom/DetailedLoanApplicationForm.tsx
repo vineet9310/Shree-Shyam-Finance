@@ -24,11 +24,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { useState, ChangeEvent } from "react";
+import { useState, ChangeEvent, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { DollarSign, Briefcase, UserCircle, FileText, ShieldCheck, Info, Trash2, UploadCloud, Paperclip, Users, Building, Car, Bike, LandPlot, Landmark, Loader2 } from "lucide-react";
+import { IndianRupee, Briefcase, UserCircle, FileText, ShieldCheck, Info, Trash2, UploadCloud, Paperclip, Users, Building, Car, Bike, LandPlot, Landmark, Loader2 } from "lucide-react";
 import type { CollateralType } from "@/lib/types"; // Import the CollateralType
+import { useAuth } from "@/context/AuthContext";
 
 // Schema for a single file, useful for arrays of files.
 const fileSchema = z.instanceof(File)
@@ -90,7 +91,7 @@ const loanApplicationFormSchema = z.object({
   borrowerAddressProofDocument: fileSchema,
   
   // Loan Details
-  loanAmount: z.coerce.number().min(1000, "Loan amount must be at least $1,000."),
+  loanAmount: z.coerce.number().min(1000, "Loan amount must be at least ₹1,000."),
   loanPurpose: z.string().min(10, "Please describe loan purpose (min 10 chars)."),
   
   // Guarantor (Optional)
@@ -115,13 +116,14 @@ const collateralTypes: { value: CollateralType; label: string; icon: React.Eleme
   { value: "vehicle_scooty", label: "Vehicle - Scooty", icon: Bike }, // Using Bike icon
   { value: "property_house", label: "Property - House", icon: Landmark },
   { value: "property_land", label: "Property - Land", icon: LandPlot },
-  { value: "gold_jewelry", label: "Gold/Jewelry", icon: DollarSign }, // Generic icon
+  { value: "gold_jewelry", label: "Gold/Jewelry", icon: IndianRupee }, 
   { value: "other_asset", label: "Other Asset", icon: Info },
 ];
 
 
 export function DetailedLoanApplicationForm() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [showGuarantor, setShowGuarantor] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -129,18 +131,28 @@ export function DetailedLoanApplicationForm() {
   const form = useForm<LoanApplicationFormValues>({
     resolver: zodResolver(loanApplicationFormSchema),
     defaultValues: {
-      borrowerFullName: "",
+      borrowerFullName: user?.name || "",
       borrowerContactNo: "",
-      borrowerEmail: "", // TODO: Pre-fill from auth context if user is logged in
+      borrowerEmail: user?.email || "",
       borrowerAddress: "",
       loanAmount: undefined,
       loanPurpose: "",
       hasGuarantor: false,
-      guarantor: undefined, // Set to undefined initially
+      guarantor: undefined, 
       collaterals: [],
       generalSupportingDocuments: [],
     },
   });
+
+  useEffect(() => {
+    if (user) {
+      form.reset({
+        ...form.getValues(), // keep other form values
+        borrowerFullName: user.name || "",
+        borrowerEmail: user.email || "",
+      });
+    }
+  }, [user, form]);
 
   const { fields: collateralFields, append: appendCollateral, remove: removeCollateral } = useFieldArray({
     control: form.control,
@@ -159,8 +171,6 @@ export function DetailedLoanApplicationForm() {
   };
   
   const renderFileInput = (fieldName: any, label: string, index?: number, specificFieldName?: string) => {
-    // For nested fields like collaterals[index].atmCardFrontImage, fieldName from map is `item.id` + specific field.
-    // We need the actual field path.
     const fieldPath = typeof index === 'number' ? `collaterals.${index}.${specificFieldName || fieldName}` : fieldName;
     
     const fileValue = form.watch(fieldPath as any);
@@ -188,12 +198,8 @@ export function DetailedLoanApplicationForm() {
   async function onSubmit(values: LoanApplicationFormValues) {
     setIsSubmitting(true);
 
-    // Create a deep copy to modify for submission, especially to handle File objects
     const submissionValues = JSON.parse(JSON.stringify(values));
 
-    // Replace File objects with their names or placeholders.
-    // Proper file upload to a server/storage service would happen here or before.
-    // For now, we're just sending metadata or filenames.
     const processFileField = (file: File | undefined) => file ? { name: file.name, type: file.type, size: file.size } : undefined;
 
     if (submissionValues.borrowerIdProofDocument) {
@@ -218,7 +224,6 @@ export function DetailedLoanApplicationForm() {
             propertyPapersFile: processFileField(values.collaterals?.[index]?.propertyPapersFile),
             propertyImage: processFileField(values.collaterals?.[index]?.propertyImage),
             assetImage: processFileField(values.collaterals?.[index]?.assetImage),
-            // additionalDocuments: values.collaterals?.[index]?.additionalDocuments?.map(processFileField) || []
         }));
     }
      if (submissionValues.generalSupportingDocuments) {
@@ -240,7 +245,18 @@ export function DetailedLoanApplicationForm() {
           description: "Your loan application query has been received. We will review it shortly.",
           variant: "default",
         });
-        form.reset();
+        form.reset({
+            borrowerFullName: user?.name || "", // Re-initialize with user's details after reset
+            borrowerEmail: user?.email || "",
+            borrowerContactNo: "",
+            borrowerAddress: "",
+            loanAmount: undefined,
+            loanPurpose: "",
+            hasGuarantor: false,
+            guarantor: undefined, 
+            collaterals: [],
+            generalSupportingDocuments: [],
+        });
         setShowGuarantor(false);
       } else {
         toast({
@@ -277,13 +293,13 @@ export function DetailedLoanApplicationForm() {
                 <AccordionTrigger className="text-lg font-semibold"><UserCircle className="mr-2 h-5 w-5 text-primary"/>Borrower Details</AccordionTrigger>
                 <AccordionContent className="space-y-4 pt-4">
                   <FormField control={form.control} name="borrowerFullName" render={({ field }) => (
-                    <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input placeholder="e.g., Ramesh Kumar" {...field} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input placeholder="e.g., Ramesh Kumar" {...field} disabled={isSubmitting} readOnly /></FormControl><FormMessage /></FormItem>
                   )} />
                   <FormField control={form.control} name="borrowerContactNo" render={({ field }) => (
                     <FormItem><FormLabel>Contact Number</FormLabel><FormControl><Input type="tel" placeholder="e.g., 9876543210" {...field} disabled={isSubmitting}/></FormControl><FormMessage /></FormItem>
                   )} />
                   <FormField control={form.control} name="borrowerEmail" render={({ field }) => (
-                    <FormItem><FormLabel>Email Address</FormLabel><FormControl><Input type="email" placeholder="ramesh@example.com" {...field} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Email Address</FormLabel><FormControl><Input type="email" placeholder="ramesh@example.com" {...field} disabled={isSubmitting} readOnly /></FormControl><FormMessage /></FormItem>
                   )} />
                   <FormField control={form.control} name="borrowerAddress" render={({ field }) => (
                     <FormItem><FormLabel>Full Address</FormLabel><FormControl><Textarea placeholder="House No, Street, City, State, Pincode" {...field} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
@@ -308,7 +324,7 @@ export function DetailedLoanApplicationForm() {
 
               {/* Loan Details Section */}
               <AccordionItem value="loan_details">
-                <AccordionTrigger className="text-lg font-semibold"><DollarSign className="mr-2 h-5 w-5 text-primary"/>Loan Details</AccordionTrigger>
+                <AccordionTrigger className="text-lg font-semibold"><IndianRupee className="mr-2 h-5 w-5 text-primary"/>Loan Details</AccordionTrigger>
                 <AccordionContent className="space-y-4 pt-4">
                   <FormField control={form.control} name="loanAmount" render={({ field }) => (
                     <FormItem><FormLabel>Loan Amount Requested (₹)</FormLabel><FormControl><Input type="number" placeholder="e.g., 50000" {...field} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>

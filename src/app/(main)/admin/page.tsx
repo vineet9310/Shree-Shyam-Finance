@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { LoanApplication, LoanApplicationStatus } from "@/lib/types"; 
 // Removed: import { getMockApplications } from '@/components/custom/LoanApplicationClient';
-import { Eye, ShieldCheck, Clock, AlertTriangle, CheckCircle2, FileText, UserCircle, DollarSign, Loader2 } from "lucide-react";
+import { Eye, ShieldCheck, Clock, AlertTriangle, CheckCircle2, FileText, UserCircle, IndianRupee, Loader2 } from "lucide-react";
 import { ROUTES } from '@/lib/constants';
 import FormattedDate from "@/components/custom/FormattedDate";
 import { useToast } from '@/hooks/use-toast';
@@ -122,7 +122,7 @@ export default function AdminDashboardPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead><UserCircle className="inline-block mr-1 h-4 w-4" />Applicant Name</TableHead>
-                  <TableHead><DollarSign className="inline-block mr-1 h-4 w-4" />Amount</TableHead>
+                  <TableHead><IndianRupee className="inline-block mr-1 h-4 w-4" />Amount</TableHead>
                   <TableHead>Submitted</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -132,7 +132,7 @@ export default function AdminDashboardPage() {
                 {applications.map((app) => (
                   <TableRow key={app.id}>
                     <TableCell className="font-medium">{ (app.borrowerUserId as any)?.name || 'N/A'}</TableCell>
-                    <TableCell>${app.requestedAmount.toLocaleString()}</TableCell>
+                    <TableCell>₹{app.requestedAmount.toLocaleString()}</TableCell>
                     <TableCell><FormattedDate dateString={app.applicationDate} /></TableCell>
                     <TableCell><StatusBadge status={app.status} /></TableCell>
                     <TableCell className="text-right">
