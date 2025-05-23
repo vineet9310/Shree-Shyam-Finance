@@ -77,7 +77,11 @@ export default function AdminUsersPage() {
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="text-xl">All Users</CardTitle>
-          <CardDescription>View and manage all registered users in the system.</CardDescription>
+          <CardDescription>
+            View and manage all registered users in the system. 
+            <br />
+            <span className="text-xs text-destructive font-semibold">Note: For security reasons, user passwords are not displayed. Implement a password reset functionality if needed.</span>
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {users.length > 0 ? (
@@ -103,8 +107,8 @@ export default function AdminUsersPage() {
                         {user.role}
                       </Badge>
                     </TableCell>
-                    <TableCell>{(user as any).contactNo || 'N/A'}</TableCell>
-                    <TableCell>{(user as any).address || 'N/A'}</TableCell>
+                    <TableCell>{user.contactNo || 'N/A'}</TableCell>
+                    <TableCell>{user.address || 'N/A'}</TableCell>
                     {/* <TableCell>{user.borrowerProfileId || 'N/A'}</TableCell> */}
                     <TableCell className="text-right">
                       <Button asChild variant="outline" size="sm" disabled>
@@ -126,3 +130,4 @@ export default function AdminUsersPage() {
     </div>
   );
 }
+
