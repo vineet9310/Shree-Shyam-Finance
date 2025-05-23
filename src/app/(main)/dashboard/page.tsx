@@ -8,7 +8,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ROUTES } from "@/lib/constants";
-import { TrendingUp, History, CalendarClock, AlertTriangle, CheckCircle2, Clock, IndianRupee, FileText, Loader2, Eye } from "lucide-react";
+import { TrendingUp, History, CalendarClock, AlertTriangle, CheckCircle2, Clock, IndianRupee, FileText, Loader2, Eye, Users, ListChecks, ShieldCheck } from "lucide-react";
 import FormattedDate from "@/components/custom/FormattedDate";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -57,15 +57,14 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const fetchUserLoans = async () => {
-      if (!user?.id) {
+      if (!user?.id) { // This check for user.id is important
         setIsLoadingLoans(false);
-        setUserLoanApplications([]); // Clear applications if no user
+        setUserLoanApplications([]);
         return;
       }
       setIsLoadingLoans(true);
       setErrorLoans(null);
       try {
-        // Fetch applications specifically for the current user
         const response = await fetch(`/api/loan-applications?userId=${user.id}`);
         if (!response.ok) {
           const errorData = await response.json();
@@ -85,17 +84,24 @@ export default function DashboardPage() {
           description: err.message || "Could not load your loan applications.",
           variant: "destructive",
         });
-        setUserLoanApplications([]); // Clear on error
+        setUserLoanApplications([]);
       } finally {
         setIsLoadingLoans(false);
       }
     };
 
-    fetchUserLoans();
-    // Reset payment history (actual fetching would be separate)
+    // Only fetch loans if the user is not an admin and has an ID
+    if (user && user.role !== 'admin' && user.id) {
+      fetchUserLoans();
+    } else {
+      // For admin or if no user.id (or user not loaded yet), clear loan data and stop loading indicator
+      setUserLoanApplications([]);
+      setIsLoadingLoans(false); 
+    }
+    
     setPaymentHistory([]); 
 
-  }, [user, toast]); // user.id could be added, but user object change should be enough
+  }, [user, toast]);
 
   const applicationQueries = userLoanApplications.filter(
     app => app.status === 'QueryInitiated' || app.status === 'PendingAdminVerification' || app.status === 'AdditionalInfoRequired'
@@ -103,6 +109,69 @@ export default function DashboardPage() {
   const activeLoans = userLoanApplications.filter(
     app => app.status === 'Active' || app.status === 'Overdue'
   );
+
+  if (user?.role === 'admin') {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Welcome, {user?.name}! (Admin)</h1>
+          <p className="text-muted-foreground">Quick access to administrative tools.</p>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <Card className="shadow-lg hover:shadow-xl transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Users (Placeholder)</CardTitle>
+              <Users className="h-5 w-5 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">150</div>
+              <p className="text-xs text-muted-foreground">+5 since last week</p>
+            </CardContent>
+          </Card>
+          <Card className="shadow-lg hover:shadow-xl transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Pending Applications (Placeholder)</CardTitle>
+              <ListChecks className="h-5 w-5 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">12</div>
+              <p className="text-xs text-muted-foreground">Requires review</p>
+            </CardContent>
+          </Card>
+           <Card className="shadow-lg hover:shadow-xl transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Active Loans (Placeholder)</CardTitle>
+              <IndianRupee className="h-5 w-5 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">₹5,67,890</div>
+              <p className="text-xs text-muted-foreground">Total amount disbursed</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><ShieldCheck className="h-6 w-6 text-primary"/>Admin Actions</CardTitle>
+            <CardDescription>Navigate to key administrative sections.</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 sm:grid-cols-2">
+            <Button asChild size="lg" className="w-full">
+              <Link href={ROUTES.ADMIN_DASHBOARD}>
+                <ListChecks className="mr-2 h-5 w-5" /> View All Loan Applications
+              </Link>
+            </Button>
+            <Button asChild size="lg" variant="outline" className="w-full">
+              <Link href={ROUTES.ADMIN_USERS}>
+                <Users className="mr-2 h-5 w-5" /> Manage Users
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
 
   return (
@@ -112,14 +181,15 @@ export default function DashboardPage() {
           <h1 className="text-3xl font-bold text-foreground">Welcome, {user?.name}!</h1>
           <p className="text-muted-foreground">Here's an overview of your loan activities.</p>
         </div>
-        <Button asChild className="bg-primary hover:bg-primary/90 text-primary-foreground">
-          <Link href={ROUTES.APPLY_LOAN}>
-            <TrendingUp className="mr-2 h-4 w-4" /> Apply for New Loan
-          </Link>
-        </Button>
+        {user?.role !== 'admin' && (
+          <Button asChild className="bg-primary hover:bg-primary/90 text-primary-foreground">
+            <Link href={ROUTES.APPLY_LOAN}>
+              <TrendingUp className="mr-2 h-4 w-4" /> Apply for New Loan
+            </Link>
+          </Button>
+        )}
       </div>
 
-      {/* Submitted Application Queries Section */}
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><FileText className="h-6 w-6 text-primary" />My Loan Application Queries</CardTitle>
