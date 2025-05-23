@@ -1,3 +1,4 @@
+
 "use client";
 import type { User } from '@/lib/types';
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
@@ -13,10 +14,13 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock users
+// Mock users - ensure their IDs are distinct and recognizable if needed for debugging.
+// For actual DB users, their IDs will be MongoDB ObjectIds.
 const mockUsers: User[] = [
-  { id: '1', email: 'user@example.com', name: 'Test User', role: 'user' },
-  { id: '2', email: 'admin@example.com', name: 'Admin User', role: 'admin' },
+  { id: 'mockuser1', email: 'user@example.com', name: 'Test User', role: 'user' },
+  { id: 'mockadmin1', email: 'admin@example.com', name: 'Admin User', role: 'admin' },
+  // Added your specific admin email to the mock list for easier admin testing via mock login
+  { id: 'mockadmin_vineet', email: 'vineetbeniwal9310@gmail.com', name: 'Vineet Beniwal (Admin)', role: 'admin' },
 ];
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -25,7 +29,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    // Try to load user from localStorage
     try {
       const storedUser = localStorage.getItem('rivaayat-user');
       if (storedUser) {
@@ -39,31 +42,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = (userData: User) => {
-    // In a real app, this would involve an API call.
-    // For mock, we find user by email.
-    const foundUser = mockUsers.find(u => u.email === userData.email);
-    if (foundUser) { // Simplified check, real app would check password
-      setUser(foundUser);
-      localStorage.setItem('rivaayat-user', JSON.stringify(foundUser));
-      if (foundUser.role === 'admin') {
+    // Check if the userData.id looks like a MongoDB ObjectId (24 char hex string)
+    // This typically means it's coming from a successful registration flow.
+    const isPotentiallyValidMongoId = userData.id && /^[0-9a-fA-F]{24}$/.test(userData.id);
+
+    if (isPotentiallyValidMongoId) {
+      setUser(userData);
+      localStorage.setItem('rivaayat-user', JSON.stringify(userData));
+      if (userData.role === 'admin') {
         router.push(ROUTES.ADMIN_DASHBOARD);
       } else {
         router.push(ROUTES.DASHBOARD);
       }
-    } else {
-      // Handle login failure (e.g., show error message)
-      // For now, we'll just simulate a successful login for any provided email
-      // to allow registration flow to "work".
-      const newUser = { ...userData, id: String(Date.now()) }; // Create a mock ID
-      setUser(newUser);
-      localStorage.setItem('rivaayat-user', JSON.stringify(newUser));
-      mockUsers.push(newUser); // Add to mock users for this session
-       if (newUser.role === 'admin') { // Unlikely for registration but for completeness
-        router.push(ROUTES.ADMIN_DASHBOARD);
-      } else {
-        router.push(ROUTES.DASHBOARD);
-      }
+      return;
     }
+
+    // If not a direct valid ID, check against the hardcoded mock users (for demo/testing)
+    const foundMockUser = mockUsers.find(u => u.email.toLowerCase() === userData.email.toLowerCase());
+    if (foundMockUser) {
+      // Use the complete mock user object, including its predefined ID
+      setUser(foundMockUser); 
+      localStorage.setItem('rivaayat-user', JSON.stringify(foundMockUser));
+      if (foundMockUser.role === 'admin') {
+        router.push(ROUTES.ADMIN_DASHBOARD);
+      } else {
+        router.push(ROUTES.DASHBOARD);
+      }
+      return;
+    }
+
+    // If the user is not in the mock list and didn't come with a valid ID (e.g., from registration),
+    // this login attempt is for a user potentially in the DB but not covered by mocks.
+    // We should NOT create a new user or a fake ID (like Date.now()) here.
+    // This requires a proper backend login API to verify credentials and fetch the user's real DB ID.
+    console.warn(`Login attempt for ${userData.email}: User not found in mocks and no valid ID provided. A backend login API is required for these users. Login will not proceed for this session.`);
+    // Optionally: Show a toast or message to the user indicating login failure.
+    // For now, it effectively fails "silently" for this specific path to prevent bad ID propagation.
   };
 
   const logout = () => {
