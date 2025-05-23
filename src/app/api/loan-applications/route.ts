@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     }
 
 
-    const borrower = await UserModel.findOne({ email: body.borrowerEmail });
+    const borrower = await UserModel.findOne({ email: body.borrowerEmail.toLowerCase() });
     if (!borrower) {
       console.log(`[API POST /loan-applications] Borrower not found with email: ${body.borrowerEmail}`);
       return NextResponse.json({ success: false, message: 'Borrower not found with the provided email.' }, { status: 404 });
@@ -35,12 +35,12 @@ export async function POST(request: NextRequest) {
 
     const loanApplicationData: any = {
       borrowerUserId: borrower._id,
-      borrowerFullName: body.borrowerFullName, 
-      borrowerEmail: body.borrowerEmail,     
+      borrowerFullName: body.borrowerFullName,
+      borrowerEmail: body.borrowerEmail.toLowerCase(),
       applicationDate: new Date(),
       requestedAmount: body.loanAmount,
       purpose: body.loanPurpose,
-      status: 'QueryInitiated', 
+      status: 'QueryInitiated',
 
       // Storing document names from form
       borrowerIdProofDocumentName: body.borrowerIdProofDocument && body.borrowerIdProofDocument.name ? body.borrowerIdProofDocument.name : undefined,
@@ -81,17 +81,18 @@ export async function POST(request: NextRequest) {
         assetImageName: col.assetImage && col.assetImage.name ? col.assetImage.name : undefined,
       }));
     }
-    
+
     console.log('[API POST /loan-applications] Constructed loanApplicationData for saving:', JSON.stringify(loanApplicationData, null, 2));
 
     const newLoanApplication = new LoanApplicationModel(loanApplicationData);
     await newLoanApplication.save();
     console.log(`[API POST /loan-applications] New loan application saved with ID: ${newLoanApplication._id}`);
 
+    // Fetch the saved application and populate borrowerUserId to include name and email in the response
     const savedApplication = await LoanApplicationModel.findById(newLoanApplication._id).populate({
         path: 'borrowerUserId',
-        select: 'name email id', 
-        model: UserModel 
+        select: 'name email id', // Ensure 'id' virtual is included if available in User model
+        model: UserModel
     });
 
     return NextResponse.json({ success: true, message: 'Loan application submitted successfully', loanApplication: savedApplication?.toObject() }, { status: 201 });
@@ -132,21 +133,28 @@ export async function GET(request: NextRequest) {
       console.log('[API GET /loan-applications] Querying for all applications (no userId specified)');
     }
 
-    const applications = await LoanApplicationModel.find(query)
-      .populate({
+    const applicationsFromDB = await LoanApplicationModel.find(query)
+      .populate<{ borrowerUserId: { _id: mongoose.Types.ObjectId, id: string, name: string, email: string } }>({ // Added type hint for populate
           path: 'borrowerUserId',
-          select: 'name email id', 
-          model: UserModel 
+          select: 'name email', // Mongoose includes _id by default, virtual 'id' should be handled by toObject
+          model: UserModel // Explicitly specify the model for population
       })
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 }); // Sort by creation date, newest first
+
+    console.log(`[API GET /loan-applications] Found ${applicationsFromDB.length} applications in DB matching query.`);
+
+    const applications = applicationsFromDB.map(app => {
+      const appObj = app.toObject();
+      // console.log(`[API GET /loan-applications] App object after toObject(): ID=${appObj.id}, Name=${appObj.borrowerFullName}`);
+      return appObj;
+    });
     
-    console.log(`[API GET /loan-applications] Found ${applications.length} applications in DB matching query.`);
     if (applications.length > 0) {
-        console.log("[API GET /loan-applications] First application's borrowerUserId (populated):", JSON.stringify(applications[0].borrowerUserId, null, 2));
-        console.log("[API GET /loan-applications] First application's direct borrowerFullName:", applications[0].borrowerFullName);
+        // console.log("[API GET /loan-applications] First application's borrowerUserId (populated):", JSON.stringify(applications[0].borrowerUserId, null, 2));
+        // console.log("[API GET /loan-applications] First application's direct borrowerFullName:", applications[0].borrowerFullName);
     }
-      
-    return NextResponse.json({ success: true, applications: applications.map(app => app.toObject()) }, { status: 200 });
+
+    return NextResponse.json({ success: true, applications: applications }, { status: 200 });
   } catch (error: any) {
     console.error('[API GET /loan-applications] Error fetching loan applications:', error);
     return NextResponse.json({ success: false, message: error.message || 'Internal Server Error while fetching applications.' }, { status: 500 });
@@ -158,6 +166,3 @@ export async function PUT(request: NextRequest) {
   // TODO: Implement logic to update a loan application
   return NextResponse.json({ success: false, message: 'PUT method not implemented yet.' }, { status: 405 });
 }
-
-    
-

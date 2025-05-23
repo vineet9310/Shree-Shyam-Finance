@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import type { LoanApplication, LoanApplicationStatus } from "@/lib/types"; 
+import type { LoanApplication, LoanApplicationStatus } from "@/lib/types";
 import { Eye, ShieldCheck, Clock, AlertTriangle, CheckCircle2, FileText, UserCircle, IndianRupee, Loader2, BellRing } from "lucide-react";
 import { ROUTES } from '@/lib/constants';
 import FormattedDate from "@/components/custom/FormattedDate";
@@ -19,7 +19,7 @@ const StatusBadge = ({ status }: { status: LoanApplicationStatus }) => {
 
   switch (status) {
     case "Approved":
-    case "Active": 
+    case "Active":
     case "PaidOff":
       variant = "default";
       icon = <CheckCircle2 className="mr-1 h-3 w-3" />;
@@ -40,11 +40,11 @@ const StatusBadge = ({ status }: { status: LoanApplicationStatus }) => {
       icon = <AlertTriangle className="mr-1 h-3 w-3" />;
       break;
     case "AdditionalInfoRequired":
-      variant = "outline"; 
+      variant = "outline";
       icon = <FileText className="mr-1 h-3 w-3" />;
       break;
     default:
-      icon = <FileText className="mr-1 h-3 w-3" />; 
+      icon = <FileText className="mr-1 h-3 w-3" />;
   }
   return <Badge variant={variant} className={badgeClass}>{icon}{status}</Badge>;
 };
@@ -70,8 +70,12 @@ export default function AdminDashboardPage() {
         }
         const data = await response.json();
         console.log("[AdminDashboardPage] API success response data:", data);
-        if (data.success) {
-          console.log("[AdminDashboardPage] Fetched applications from API:", JSON.stringify(data.applications, null, 2));
+        if (data.success && data.applications) {
+          console.log("[AdminDashboardPage] Fetched applications from API. Count:", data.applications.length);
+          // Log the first application to check its structure, especially the 'id' field
+          if (data.applications.length > 0) {
+            console.log("[AdminDashboardPage] First application object:", JSON.stringify(data.applications[0], null, 2));
+          }
           setApplications(data.applications);
         } else {
           throw new Error(data.message || 'Failed to fetch loan applications');
@@ -120,7 +124,7 @@ export default function AdminDashboardPage() {
       <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
         <ShieldCheck className="h-8 w-8 text-primary" /> Admin Dashboard
       </h1>
-      
+
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="text-xl">Loan Applications Overview</CardTitle>
@@ -147,9 +151,11 @@ export default function AdminDashboardPage() {
               </TableHeader>
               <TableBody>
                 {applications.map((app) => (
-                  <TableRow key={app.id || Math.random()}> {/* Added fallback key */}
-                    <TableCell className="font-medium">{ app.borrowerFullName || ((app.borrowerUserId as any)?.name) || 'N/A'}</TableCell>
-                    <TableCell>₹{app.requestedAmount.toLocaleString()}</TableCell>
+                  <TableRow key={app.id}> {/* Ensure app.id is a valid string */}
+                    <TableCell className="font-medium">
+                      {app.borrowerFullName || ((app.borrowerUserId as any)?.name) || 'N/A'}
+                    </TableCell>
+                    <TableCell>₹{app.requestedAmount?.toLocaleString() || '0'}</TableCell>
                     <TableCell><FormattedDate dateString={app.applicationDate} /></TableCell>
                     <TableCell><StatusBadge status={app.status} /></TableCell>
                     <TableCell className="text-right">

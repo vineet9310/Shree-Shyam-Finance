@@ -2,10 +2,11 @@
 // src/models/LoanApplication.ts
 import mongoose, { Schema, Document, models, Model } from 'mongoose';
 import type { LoanApplication as LoanApplicationType, Guarantor as GuarantorType, CollateralDocument as CollateralDocumentType } from '@/lib/types';
+import UserModel from './User'; // Import UserModel for populate
 
 // Interface for Mongoose Document
 export interface LoanApplicationDocument extends Omit<LoanApplicationType, 'id' | 'borrowerUserId' | 'guarantor' | 'submittedCollateral' | 'processedDocuments' | 'applicationDate' | 'approvedDate' | 'disbursementDate' | 'firstPaymentDueDate' | 'maturityDate' | 'lastPaymentDate' | 'nextPaymentDueDate' | 'createdAt' | 'updatedAt'>, Document {
-  borrowerUserId: mongoose.Types.ObjectId;
+  borrowerUserId: mongoose.Types.ObjectId | UserDocument; // Can be populated
   // Denormalized fields for easier display
   borrowerFullName: string;
   borrowerEmail: string;
@@ -19,8 +20,15 @@ export interface LoanApplicationDocument extends Omit<LoanApplicationType, 'id' 
   maturityDate?: Date;
   lastPaymentDate?: Date;
   nextPaymentDueDate?: Date;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt?: Date; // Mongoose timestamps will add this
+  updatedAt?: Date; // Mongoose timestamps will add this
+}
+
+interface UserDocument extends Document {
+  _id: mongoose.Types.ObjectId;
+  name: string;
+  email: string;
+  id: string; // virtual
 }
 
 
@@ -30,10 +38,10 @@ const GuarantorSchema = new Schema<GuarantorType>({
   address: { type: String, required: true },
   contactNo: { type: String, required: true },
   idProofType: { type: String, enum: ["aadhaar", "pan", "voter_id", "driving_license", "passport", "other"], required: true },
-  idProofDocumentName: String, 
+  idProofDocumentName: String,
   idProofOtherDetails: String,
   addressProofType: { type: String, enum: ["aadhaar", "utility_bill", "rent_agreement", "passport", "other"], required: true },
-  addressProofDocumentName: String, 
+  addressProofDocumentName: String,
   addressProofOtherDetails: String,
   relationshipToBorrower: String,
 }, { _id: false });
@@ -45,26 +53,26 @@ export type GuarantorSchemaType = mongoose.InferSchemaType<typeof GuarantorSchem
 const CollateralDocumentSchema = new Schema<Omit<CollateralDocumentType, 'atmCardFrontImage' | 'atmCardBackImage' | 'chequeImage' | 'bankStatementFile' | 'vehicleRcImage' | 'vehicleImage' | 'propertyPapersFile' | 'propertyImage' | 'assetImage' | 'additionalDocuments'>>({
   type: { type: String, required: true }, // CollateralType
   description: { type: String, required: true },
-  
-  atmPin: String, 
-  atmCardFrontImageName: String, 
-  atmCardBackImageName: String,  
-  
-  chequeImageName: String, 
+
+  atmPin: String,
+  atmCardFrontImageName: String,
+  atmCardBackImageName: String,
+
+  chequeImageName: String,
   chequeNumber: String,
   chequeBankName: String,
 
-  bankStatementFileName: String, 
+  bankStatementFileName: String,
 
-  vehicleRcImageName: String, 
-  vehicleImageName: String, 
-  vehicleChallanDetails: String, 
+  vehicleRcImageName: String,
+  vehicleImageName: String,
+  vehicleChallanDetails: String,
 
-  propertyPapersFileName: String, 
-  propertyImageName: String, 
+  propertyPapersFileName: String,
+  propertyImageName: String,
 
-  assetDetails: String, 
-  assetImageName: String, 
+  assetDetails: String,
+  assetImageName: String,
 
   estimatedValue: Number,
   notes: String,
@@ -77,18 +85,18 @@ const LoanApplicationSchema: Schema<LoanApplicationDocument> = new Schema(
   {
     borrowerUserId: {
       type: Schema.Types.ObjectId,
-      ref: 'User',
+      ref: 'User', // Ensure this matches the name you used for mongoose.model('User', ...)
       required: true,
     },
     borrowerFullName: { type: String, required: true },
     borrowerEmail: { type: String, required: true },
-    guarantor: GuarantorSchema, 
+    guarantor: GuarantorSchema,
     applicationDate: { type: Date, default: Date.now, required: true },
     requestedAmount: { type: Number, required: true },
     purpose: { type: String, required: true },
-    
-    submittedCollateral: [CollateralDocumentSchema], 
-    
+
+    submittedCollateral: [CollateralDocumentSchema],
+
     status: {
       type: String,
       enum: ['QueryInitiated', 'PendingAdminVerification', 'AdditionalInfoRequired', 'Approved', 'Rejected', 'Active', 'PaidOff', 'Overdue', 'Defaulted'],
@@ -96,21 +104,21 @@ const LoanApplicationSchema: Schema<LoanApplicationDocument> = new Schema(
       required: true,
     },
     adminVerificationNotes: String,
-    adminAssignedTo: String, 
-    
+    adminAssignedTo: String,
+
     approvedAmount: Number,
     interestRate: Number,
-    interestType: String, 
-    repaymentFrequency: String, 
+    interestType: String,
+    repaymentFrequency: String,
     loanTermMonths: Number,
     processingFee: Number,
     otherCharges: [{ description: String, amount: Number }],
-    
+
     approvedDate: Date,
     disbursementDate: Date,
     firstPaymentDueDate: Date,
     maturityDate: Date,
-    
+
     principalDisbursed: { type: Number, default: 0 },
     currentPrincipalOutstanding: { type: Number, default: 0 },
     currentInterestOutstanding: { type: Number, default: 0 },
@@ -125,12 +133,19 @@ const LoanApplicationSchema: Schema<LoanApplicationDocument> = new Schema(
     borrowerAddressProofDocumentName: String,
   },
   {
-    timestamps: true, 
+    timestamps: true,
     toJSON: {
-        virtuals: true, 
-        getters: true, 
+        virtuals: true,
+        getters: true,
         transform: function(doc, ret) {
-            ret.id = ret._id.toString(); 
+            ret.id = ret._id.toString();
+            if (ret.borrowerUserId && typeof ret.borrowerUserId === 'object' && ret.borrowerUserId._id) {
+              // If populated, ensure the populated object also has 'id'
+              if (!ret.borrowerUserId.id) {
+                ret.borrowerUserId.id = ret.borrowerUserId._id.toString();
+              }
+              // delete ret.borrowerUserId._id; // Optionally remove _id from populated sub-object
+            }
             delete ret._id;
             delete ret.__v;
         }
@@ -140,6 +155,12 @@ const LoanApplicationSchema: Schema<LoanApplicationDocument> = new Schema(
         getters: true,
         transform: function(doc, ret) {
             ret.id = ret._id.toString();
+             if (ret.borrowerUserId && typeof ret.borrowerUserId === 'object' && ret.borrowerUserId._id) {
+              if (!ret.borrowerUserId.id) {
+                ret.borrowerUserId.id = ret.borrowerUserId._id.toString();
+              }
+              // delete ret.borrowerUserId._id;
+            }
             delete ret._id;
             delete ret.__v;
         }
@@ -147,6 +168,7 @@ const LoanApplicationSchema: Schema<LoanApplicationDocument> = new Schema(
   }
 );
 
+// Ensure virtual 'id' is explicitly defined if not already present through transform
 if (!LoanApplicationSchema.virtuals['id']) {
   LoanApplicationSchema.virtual('id').get(function(this: LoanApplicationDocument) {
     return this._id.toHexString();

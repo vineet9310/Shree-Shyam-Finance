@@ -5,15 +5,14 @@ import type { User as UserType } from '@/lib/types'; // Using existing User type
 
 // Interface for Mongoose Document
 export interface UserDocument extends Omit<UserType, 'id' | 'borrowerProfileId'>, Document {
-  id: string; // Mongoose _id will be used as id
+  // id: string; // Mongoose _id will be transformed to id by virtual/toJSON
   borrowerProfileId?: mongoose.Types.ObjectId; // Link to BorrowerProfile model
-  // Add any backend-specific fields if necessary, e.g., passwordHash
   passwordHash?: string;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt?: Date; // Mongoose timestamps will add this
+  updatedAt?: Date; // Mongoose timestamps will add this
 }
 
-const UserSchema: Schema = new Schema(
+const UserSchema: Schema<UserDocument> = new Schema(
   {
     name: {
       type: String,
@@ -26,54 +25,52 @@ const UserSchema: Schema = new Schema(
       match: [/.+@.+\..+/, 'Please enter a valid email address'],
       lowercase: true, // Ensure email is stored in lowercase
     },
-    passwordHash: { // Store hashed passwords, not plain text
+    passwordHash: {
       type: String,
-      // required: [true, 'Password is required.'] // Consider if using external auth provider
+      select: false, // Default to not select passwordHash unless explicitly asked
     },
     role: {
       type: String,
       enum: ['user', 'admin'],
       default: 'user',
     },
-    // Fields from BorrowerProfile (denormalized or to be linked)
     contactNo: String,
     address: String,
     idProofType: String,
-    idProofDocumentUrl: String,
+    idProofDocumentUrl: String, // Placeholder for now
     addressProofType: String,
-    addressProofDocumentUrl: String,
+    addressProofDocumentUrl: String, // Placeholder for now
     borrowerProfileId: {
       type: Schema.Types.ObjectId,
-      ref: 'BorrowerProfile', // Assuming you'll have a BorrowerProfile model
+      ref: 'BorrowerProfile',
     },
   },
   {
-    timestamps: true, // Adds createdAt and updatedAt automatically
+    timestamps: true,
     toJSON: {
-        virtuals: true,
+        virtuals: true, // Ensure virtuals are included
+        getters: true,
         transform: function(doc, ret) {
             ret.id = ret._id.toString(); // Ensure id is a string
             delete ret._id;
             delete ret.__v;
-            // DO NOT delete ret.passwordHash here if admin needs to see it.
-            // It will be selectively removed in API responses where needed (e.g., login).
+            // Do not delete passwordHash here, handle in API responses
         }
     },
     toObject: {
-        virtuals: true,
+        virtuals: true, // Ensure virtuals are included
+        getters: true,
         transform: function(doc, ret) {
             ret.id = ret._id.toString(); // Ensure id is a string
             delete ret._id;
             delete ret.__v;
-            // DO NOT delete ret.passwordHash here if admin needs to see it.
+            // Do not delete passwordHash here, handle in API responses
         }
     }
   }
 );
 
-// Add a virtual 'id' property to get the _id as a string
-// This is redundant if toJSON/toObject virtuals are correctly transforming _id to id as string.
-// However, explicitly defining it doesn't hurt.
+// Explicitly define virtual 'id' if not already present
 if (!UserSchema.virtuals['id']) {
     UserSchema.virtual('id').get(function(this: UserDocument) {
         return this._id.toHexString();
@@ -81,6 +78,6 @@ if (!UserSchema.virtuals['id']) {
 }
 
 
-const UserModel = models.User || mongoose.model<UserDocument>('User', UserSchema);
+const UserModel = (models.User as Model<UserDocument>) || mongoose.model<UserDocument>('User', UserSchema);
 
-export default UserModel as Model<UserDocument>;
+export default UserModel;
