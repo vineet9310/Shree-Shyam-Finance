@@ -111,7 +111,7 @@ export default function AdminUsersPage() {
                     <TableCell>{user.address || 'N/A'}</TableCell>
                     {/* <TableCell>{user.borrowerProfileId || 'N/A'}</TableCell> */}
                     <TableCell className="text-right">
-                      <Button asChild variant="outline" size="sm" disabled>
+                      <Button variant="outline" size="sm" disabled>
                         {/* This link would go to a user detail/edit page in the future */}
                         {/* <Link href={`/admin/users/${user.id}`}>  */}
                           <Eye className="mr-2 h-4 w-4" /> View/Edit (Soon)
