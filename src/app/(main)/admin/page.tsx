@@ -60,20 +60,24 @@ export default function AdminDashboardPage() {
     const fetchApplications = async () => {
       setIsLoading(true);
       setError(null);
+      console.log("[AdminDashboardPage] Fetching applications...");
       try {
         const response = await fetch('/api/loan-applications');
         if (!response.ok) {
           const errorData = await response.json();
+          console.error("[AdminDashboardPage] API error response:", errorData);
           throw new Error(errorData.message || 'Failed to fetch loan applications');
         }
         const data = await response.json();
+        console.log("[AdminDashboardPage] API success response data:", data);
         if (data.success) {
+          console.log("[AdminDashboardPage] Fetched applications from API:", JSON.stringify(data.applications, null, 2));
           setApplications(data.applications);
         } else {
           throw new Error(data.message || 'Failed to fetch loan applications');
         }
       } catch (err: any) {
-        console.error("Error fetching applications:", err);
+        console.error("[AdminDashboardPage] Error fetching applications:", err);
         setError(err.message);
         toast({
           title: "Error",
@@ -143,7 +147,7 @@ export default function AdminDashboardPage() {
               </TableHeader>
               <TableBody>
                 {applications.map((app) => (
-                  <TableRow key={app.id || Math.random()}> {/* Added fallback key if app.id is missing */}
+                  <TableRow key={app.id || Math.random()}> {/* Added fallback key */}
                     <TableCell className="font-medium">{ app.borrowerFullName || ((app.borrowerUserId as any)?.name) || 'N/A'}</TableCell>
                     <TableCell>₹{app.requestedAmount.toLocaleString()}</TableCell>
                     <TableCell><FormattedDate dateString={app.applicationDate} /></TableCell>
@@ -156,7 +160,7 @@ export default function AdminDashboardPage() {
                           </Link>
                         </Button>
                       ) : (
-                        <Button variant="outline" size="sm" disabled title="Application ID is missing">
+                        <Button variant="outline" size="sm" disabled title="Application ID is missing or invalid">
                           <Eye className="mr-2 h-4 w-4" /> View
                         </Button>
                       )}

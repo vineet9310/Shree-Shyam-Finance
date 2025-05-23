@@ -35,13 +35,14 @@ export async function POST(request: NextRequest) {
 
     const loanApplicationData: any = {
       borrowerUserId: borrower._id,
-      borrowerFullName: body.borrowerFullName, // Directly from form, aligned with user context
-      borrowerEmail: body.borrowerEmail,     // Directly from form, aligned with user context
+      borrowerFullName: body.borrowerFullName, 
+      borrowerEmail: body.borrowerEmail,     
       applicationDate: new Date(),
       requestedAmount: body.loanAmount,
       purpose: body.loanPurpose,
       status: 'QueryInitiated', 
 
+      // Storing document names from form
       borrowerIdProofDocumentName: body.borrowerIdProofDocument && body.borrowerIdProofDocument.name ? body.borrowerIdProofDocument.name : undefined,
       borrowerAddressProofDocumentName: body.borrowerAddressProofDocument && body.borrowerAddressProofDocument.name ? body.borrowerAddressProofDocument.name : undefined,
     };
@@ -56,7 +57,6 @@ export async function POST(request: NextRequest) {
         idProofDocumentName: body.guarantor.idProofDocument && body.guarantor.idProofDocument.name ? body.guarantor.idProofDocument.name : undefined,
         addressProofType: body.guarantor.addressProofType,
         addressProofDocumentName: body.guarantor.addressProofDocument && body.guarantor.addressProofDocument.name ? body.guarantor.addressProofDocument.name : undefined,
-        // Add any other guarantor fields from your schema if needed
       };
     }
 
@@ -82,14 +82,12 @@ export async function POST(request: NextRequest) {
       }));
     }
     
-    // Enhanced log: Show the complete object being sent to Mongoose
     console.log('[API POST /loan-applications] Constructed loanApplicationData for saving:', JSON.stringify(loanApplicationData, null, 2));
 
     const newLoanApplication = new LoanApplicationModel(loanApplicationData);
     await newLoanApplication.save();
     console.log(`[API POST /loan-applications] New loan application saved with ID: ${newLoanApplication._id}`);
 
-    // Populate borrowerUserId for the response
     const savedApplication = await LoanApplicationModel.findById(newLoanApplication._id).populate({
         path: 'borrowerUserId',
         select: 'name email id', 
@@ -116,6 +114,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
+  console.log('[API GET /loan-applications] Received request');
   try {
     await dbConnect();
     const { searchParams } = new URL(request.url);
@@ -124,31 +123,41 @@ export async function GET(request: NextRequest) {
     let query: any = {};
     if (userId) {
       if (!mongoose.Types.ObjectId.isValid(userId)) {
+        console.log(`[API GET /loan-applications] Invalid userId format received: ${userId}`);
         return NextResponse.json({ success: false, message: 'Invalid user ID format' }, { status: 400 });
       }
       query = { borrowerUserId: new mongoose.Types.ObjectId(userId) };
+      console.log(`[API GET /loan-applications] Querying for userId: ${userId}`);
+    } else {
+      console.log('[API GET /loan-applications] Querying for all applications (no userId specified)');
     }
 
     const applications = await LoanApplicationModel.find(query)
       .populate({
           path: 'borrowerUserId',
-          select: 'name email id', // ensure id is populated
+          select: 'name email id', 
           model: UserModel 
       })
       .sort({ createdAt: -1 });
+    
+    console.log(`[API GET /loan-applications] Found ${applications.length} applications in DB matching query.`);
+    if (applications.length > 0) {
+        console.log("[API GET /loan-applications] First application's borrowerUserId (populated):", JSON.stringify(applications[0].borrowerUserId, null, 2));
+        console.log("[API GET /loan-applications] First application's direct borrowerFullName:", applications[0].borrowerFullName);
+    }
       
     return NextResponse.json({ success: true, applications: applications.map(app => app.toObject()) }, { status: 200 });
   } catch (error: any) {
-    console.error('Error fetching loan applications:', error);
+    console.error('[API GET /loan-applications] Error fetching loan applications:', error);
     return NextResponse.json({ success: false, message: error.message || 'Internal Server Error while fetching applications.' }, { status: 500 });
   }
 }
 
-// Placeholder for PUT (update) and DELETE operations
+
 export async function PUT(request: NextRequest) {
   // TODO: Implement logic to update a loan application
-  // e.g., for user editing their query or admin updating status
   return NextResponse.json({ success: false, message: 'PUT method not implemented yet.' }, { status: 405 });
 }
 
     
+
