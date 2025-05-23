@@ -31,7 +31,7 @@ interface AuthFormProps {
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
-  password: z.string().min(1, { message: "Password is required." }), // Simplified for mock
+  password: z.string().min(1, { message: "Password is required." }),
 });
 
 const registerSchema = z.object({
@@ -39,7 +39,6 @@ const registerSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
   password: z.string().min(6, { message: "Password must be at least 6 characters." }),
   confirmPassword: z.string(),
-  // Optional fields for registration, can be filled later in profile
   contactNo: z.string().optional(),
   address: z.string().optional(),
 
@@ -52,7 +51,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export function AuthForm({ mode }: AuthFormProps) {
-  const { login: contextLogin } = useAuth(); // login from AuthContext for mock login
+  const { login: contextLogin } = useAuth(); 
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -62,7 +61,7 @@ export function AuthForm({ mode }: AuthFormProps) {
   type FormValues = typeof mode extends "login" ? LoginFormValues : RegisterFormValues;
   
   const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema as any), // TS workaround for conditional type
+    resolver: zodResolver(formSchema as any), 
     defaultValues: mode === 'login' 
       ? { email: "", password: "" } 
       : { name: "", email: "", password: "", confirmPassword: "", contactNo: "", address: "" },
@@ -73,21 +72,31 @@ export function AuthForm({ mode }: AuthFormProps) {
     setIsLoading(true);
 
     if (mode === "login") {
-      // Mock login using AuthContext as before
       try {
-        // For mock login, construct a full User object with role based on email
-        const userForContext: User = {
-          id: '', // Mock login doesn't rely on ID from form, AuthContext might assign or find one from mockUsers
-          email: values.email,
-          name: values.email.split('@')[0], // Generate a mock name
-          // Check against the user's specific admin email and the generic demo admin email
-          role: (values.email.toLowerCase() === "vineetbeniwal9310@gmail.com" || values.email.toLowerCase() === 'admin@example.com') ? 'admin' : 'user',
-        };
+        const response = await fetch('/api/users/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: values.email, password: values.password }),
+        });
 
-        contextLogin(userForContext);
-        // AuthContext's login handles redirection
+        const result = await response.json();
+
+        if (response.ok && result.success && result.user) {
+          const loggedInUser: User = {
+            id: result.user.id,
+            name: result.user.name,
+            email: result.user.email,
+            role: result.user.role,
+            contactNo: result.user.contactNo,
+            address: result.user.address,
+          };
+          contextLogin(loggedInUser); // This will handle redirection
+        } else {
+          setError(result.message || "Login failed. Please check your credentials.");
+        }
       } catch (err) {
-        setError(err instanceof Error ? err.message : "An unexpected error occurred during login.");
+        console.error("Login submission error:", err);
+        setError(err instanceof Error ? err.message : "An unexpected network error occurred during login.");
       } finally {
         setIsLoading(false);
       }
@@ -96,10 +105,10 @@ export function AuthForm({ mode }: AuthFormProps) {
         const registerPayload = {
             name: (values as RegisterFormValues).name,
             email: values.email,
-            password: values.password, // Password will be hashed on backend
+            password: values.password, 
             contactNo: (values as RegisterFormValues).contactNo,
             address: (values as RegisterFormValues).address,
-            role: 'user', // Default role for new registrations
+            role: 'user', 
         };
 
         const response = await fetch('/api/users/register', {
@@ -115,16 +124,15 @@ export function AuthForm({ mode }: AuthFormProps) {
             title: "Registration Successful",
             description: "You can now log in with your new account.",
           });
-          // Log in the user with AuthContext after successful backend registration
           const registeredUser : User = {
-            id: result.user.id, // Use ID from backend
+            id: result.user.id, 
             name: result.user.name,
             email: result.user.email,
             role: result.user.role,
             contactNo: result.user.contactNo,
             address: result.user.address,
           };
-          contextLogin(registeredUser); // This will redirect
+          contextLogin(registeredUser); 
         } else {
           setError(result.message || "Registration failed. Please try again.");
         }
@@ -165,7 +173,7 @@ export function AuthForm({ mode }: AuthFormProps) {
                       <FormItem>
                         <FormLabel>Full Name</FormLabel>
                         <FormControl>
-                          <Input placeholder="John Doe" {...field} disabled={isLoading} />
+                          <Input placeholder="John Doe" {...field} value={field.value || ''} disabled={isLoading} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -180,7 +188,7 @@ export function AuthForm({ mode }: AuthFormProps) {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="m@example.com" {...field} disabled={isLoading} />
+                      <Input type="email" placeholder="m@example.com" {...field} value={field.value || ''} disabled={isLoading} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -193,7 +201,7 @@ export function AuthForm({ mode }: AuthFormProps) {
                   <FormItem>
                     <FormLabel>Password</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="••••••••" {...field} disabled={isLoading} />
+                      <Input type="password" placeholder="••••••••" {...field} value={field.value || ''} disabled={isLoading} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -208,7 +216,7 @@ export function AuthForm({ mode }: AuthFormProps) {
                       <FormItem>
                         <FormLabel>Confirm Password</FormLabel>
                         <FormControl>
-                          <Input type="password" placeholder="••••••••" {...field} disabled={isLoading} />
+                          <Input type="password" placeholder="••••••••" {...field} value={field.value || ''} disabled={isLoading} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -221,7 +229,7 @@ export function AuthForm({ mode }: AuthFormProps) {
                       <FormItem>
                         <FormLabel>Contact Number (Optional)</FormLabel>
                         <FormControl>
-                          <Input type="tel" placeholder="Your contact number" {...field} disabled={isLoading} />
+                          <Input type="tel" placeholder="Your contact number" {...field} value={field.value || ''} disabled={isLoading} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -234,7 +242,7 @@ export function AuthForm({ mode }: AuthFormProps) {
                       <FormItem>
                         <FormLabel>Address (Optional)</FormLabel>
                         <FormControl>
-                          <Input placeholder="Your address" {...field} disabled={isLoading} />
+                          <Input placeholder="Your address" {...field} value={field.value || ''} disabled={isLoading} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -268,12 +276,10 @@ export function AuthForm({ mode }: AuthFormProps) {
             )}
           </div>
            <p className="text-xs text-muted-foreground pt-2">
-             Demo: user@example.com or admin@example.com (any password for login)
+             Demo: user@example.com or admin@example.com (any password for login for mock users if backend login fails)
            </p>
         </CardFooter>
       </Card>
     </div>
   );
 }
-
-    
