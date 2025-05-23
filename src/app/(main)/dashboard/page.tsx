@@ -1,3 +1,4 @@
+
 "use client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -8,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ROUTES } from "@/lib/constants";
 import { TrendingUp, History, CalendarClock, AlertTriangle, CheckCircle2, Clock, DollarSign, FileText } from "lucide-react";
+import FormattedDate from "@/components/custom/FormattedDate";
 
 const mockUserLoans: UserLoan[] = [
   { id: "loan1", loanType: "Personal Loan", amount: 5000, status: "Approved", nextPaymentDate: "2024-08-15", nextPaymentAmount: 250 },
@@ -81,7 +83,7 @@ export default function DashboardPage() {
                   <CardContent className="space-y-1 text-sm">
                     <p>Amount: <span className="font-semibold">${loan.amount.toLocaleString()}</span></p>
                     {loan.nextPaymentDate && (
-                      <p className="flex items-center"><CalendarClock className="mr-2 h-4 w-4 text-muted-foreground" /> Next Payment: {new Date(loan.nextPaymentDate).toLocaleDateString()}</p>
+                      <p className="flex items-center"><CalendarClock className="mr-2 h-4 w-4 text-muted-foreground" /> Next Payment: <FormattedDate dateString={loan.nextPaymentDate} /></p>
                     )}
                     {loan.nextPaymentAmount && (
                        <p>Next Payment Amount: <span className="font-semibold">${loan.nextPaymentAmount.toLocaleString()}</span></p>
@@ -114,7 +116,7 @@ export default function DashboardPage() {
             <TableBody>
               {mockPaymentHistory.map((payment) => (
                 <TableRow key={payment.id}>
-                  <TableCell>{new Date(payment.date).toLocaleDateString()}</TableCell>
+                  <TableCell><FormattedDate dateString={payment.date} /></TableCell>
                   <TableCell>${payment.amount.toLocaleString()}</TableCell>
                   <TableCell className="text-right">
                     <Badge variant={payment.status === 'Paid' ? 'default' : payment.status === 'Missed' ? 'destructive' : 'secondary'} className="capitalize text-xs">

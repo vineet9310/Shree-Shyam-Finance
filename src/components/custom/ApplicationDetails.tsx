@@ -1,8 +1,10 @@
+
 "use client";
 import type { LoanApplication } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { FileText, Link as LinkIcon, UserCircle, CalendarDays, DollarSign, Briefcase, ShieldQuestion, Info } from "lucide-react";
+import FormattedDate from "@/components/custom/FormattedDate";
 
 interface ApplicationDetailsProps {
   application: LoanApplication;
@@ -27,7 +29,7 @@ export function ApplicationDetails({ application }: ApplicationDetailsProps) {
           </div>
           <div>
             <h3 className="font-semibold mb-1 flex items-center"><CalendarDays className="mr-2 h-5 w-5 text-muted-foreground" />Application Timeline</h3>
-            <p><strong className="text-muted-foreground">Submitted:</strong> {new Date(application.submittedDate).toLocaleDateString()}</p>
+            <p><strong className="text-muted-foreground">Submitted:</strong> <FormattedDate dateString={application.submittedDate} /></p>
             <p><strong className="text-muted-foreground">Status:</strong> <Badge variant={application.status === "Approved" ? "default" : application.status === "Rejected" ? "destructive" : "secondary"} className="capitalize">{application.status}</Badge></p>
           </div>
         </div>

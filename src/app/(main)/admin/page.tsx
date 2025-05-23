@@ -1,3 +1,4 @@
+
 "use client";
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -9,6 +10,7 @@ import type { LoanApplication, LoanApplicationStatus } from "@/lib/types";
 import { getMockApplications } from '@/components/custom/LoanApplicationClient'; // Import the mock data
 import { Eye, ShieldCheck, Clock, AlertTriangle, CheckCircle2, FileText, UserCircle, DollarSign } from "lucide-react";
 import { ROUTES } from '@/lib/constants';
+import FormattedDate from "@/components/custom/FormattedDate";
 
 const StatusBadge = ({ status }: { status: LoanApplicationStatus }) => {
   let variant: "default" | "secondary" | "destructive" | "outline" = "outline";
@@ -73,7 +75,7 @@ export default function AdminDashboardPage() {
                   <TableRow key={app.id}>
                     <TableCell className="font-medium">{app.fullName}</TableCell>
                     <TableCell>${app.loanAmount.toLocaleString()}</TableCell>
-                    <TableCell>{new Date(app.submittedDate).toLocaleDateString()}</TableCell>
+                    <TableCell><FormattedDate dateString={app.submittedDate} /></TableCell>
                     <TableCell><StatusBadge status={app.status} /></TableCell>
                     <TableCell className="text-right">
                       <Button asChild variant="outline" size="sm">

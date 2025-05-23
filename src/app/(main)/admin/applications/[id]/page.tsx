@@ -1,3 +1,4 @@
+
 "use client";
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -18,7 +19,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 
 // Utility to convert File to Base64 Data URI
@@ -65,6 +73,10 @@ export default function AdminApplicationDetailsPage() {
                 // If it's already metadata (e.g. from a previous load where File objects aren't persisted)
                 // This scenario needs careful handling in a real app. For mock, assume we always have files if needed.
                 // For now, if it's not a File, we can't generate a dataUri.
+                // Check if it's already in the {name, dataUri} format from a previous load simulation
+                if (typeof (file as any).name === 'string' && typeof (file as any).dataUri === 'string') {
+                  return file as { name: string; dataUri: string };
+                }
                 return { name: (file as any).name || 'unknown_file', dataUri: ''}; // Or filter out
               })
             );
