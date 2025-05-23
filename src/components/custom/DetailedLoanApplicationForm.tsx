@@ -28,8 +28,10 @@ import { useState, ChangeEvent, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { IndianRupee, Briefcase, UserCircle, FileText, ShieldCheck, Info, Trash2, UploadCloud, Paperclip, Users, Building, Car, Bike, LandPlot, Landmark, Loader2 } from "lucide-react";
-import type { CollateralType } from "@/lib/types"; // Import the CollateralType
+import type { CollateralType } from "@/lib/types";
 import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
+import { ROUTES } from "@/lib/constants";
 
 // Schema for a single file, useful for arrays of files.
 const fileSchema = z.instanceof(File)
@@ -37,7 +39,7 @@ const fileSchema = z.instanceof(File)
   .refine(
     file => ["image/jpeg", "image/png", "application/pdf"].includes(file.type),
     ".jpg, .png, or .pdf files are accepted."
-  ).optional(); // Making all file fields optional for now for easier backend integration first. Required can be re-added.
+  ).optional();
 
 const collateralSchema = z.object({
   type: z.custom<CollateralType>((val) => typeof val === 'string' && val.length > 0, {
@@ -45,26 +47,19 @@ const collateralSchema = z.object({
   }),
   description: z.string().min(5, "Description must be at least 5 characters."),
   estimatedValue: z.coerce.number().positive("Estimated value must be positive.").optional(),
-  // ATM Card
   atmCardFrontImage: fileSchema,
   atmCardBackImage: fileSchema,
-  atmPin: z.string().optional().describe("Highly sensitive, consider security implications."), // Add warning
-  // Blank Cheque
+  atmPin: z.string().optional().describe("Highly sensitive, consider security implications."),
   chequeImage: fileSchema,
   chequeNumber: z.string().optional(),
-  // Bank Statement
   bankStatementFile: fileSchema,
-  // Vehicle
   vehicleRcImage: fileSchema,
   vehicleImage: fileSchema,
   vehicleChallanDetails: z.string().optional(),
-  // Property
   propertyPapersFile: fileSchema,
   propertyImage: fileSchema,
-  // Other Asset
   assetDetails: z.string().optional(),
   assetImage: fileSchema,
-  
   additionalDocuments: z.array(fileSchema).optional(),
 });
 
@@ -73,14 +68,13 @@ const guarantorSchema = z.object({
   address: z.string().min(5, "Guarantor address is required."),
   contactNo: z.string().min(10, "Guarantor contact number is required."),
   idProofType: z.enum(["aadhaar", "pan", "voter_id", "driving_license", "passport", "other"]),
-  idProofDocument: fileSchema, // required in type, but optional in zod for now
+  idProofDocument: fileSchema,
   addressProofType: z.enum(["aadhaar", "utility_bill", "rent_agreement", "passport", "other"]),
-  addressProofDocument: fileSchema, // required in type, but optional in zod for now
+  addressProofDocument: fileSchema,
 }).optional();
 
 
 const loanApplicationFormSchema = z.object({
-  // Borrower Details
   borrowerFullName: z.string().min(2, "Full name must be at least 2 characters."),
   borrowerContactNo: z.string().min(10, "Contact number must be at least 10 digits.").max(15),
   borrowerEmail: z.string().email("Invalid email address."),
@@ -89,19 +83,11 @@ const loanApplicationFormSchema = z.object({
   borrowerIdProofDocument: fileSchema,
   borrowerAddressProofType: z.enum(["aadhaar", "utility_bill", "rent_agreement", "passport", "other"]),
   borrowerAddressProofDocument: fileSchema,
-  
-  // Loan Details
   loanAmount: z.coerce.number().min(1000, "Loan amount must be at least ₹1,000."),
   loanPurpose: z.string().min(10, "Please describe loan purpose (min 10 chars)."),
-  
-  // Guarantor (Optional)
   hasGuarantor: z.boolean().optional(),
   guarantor: guarantorSchema,
-
-  // Collateral Details
-  collaterals: z.array(collateralSchema).min(0).optional(), // Can be empty, but if present, must conform.
-
-  // General Supporting Docs (Optional)
+  collaterals: z.array(collateralSchema).min(0).optional(),
   generalSupportingDocuments: z.array(fileSchema).optional(),
 });
 
@@ -113,10 +99,10 @@ const collateralTypes: { value: CollateralType; label: string; icon: React.Eleme
   { value: "bank_statement", label: "Bank Statement (3 Months)", icon: Building },
   { value: "vehicle_bike", label: "Vehicle - Bike", icon: Bike },
   { value: "vehicle_car", label: "Vehicle - Car", icon: Car },
-  { value: "vehicle_scooty", label: "Vehicle - Scooty", icon: Bike }, // Using Bike icon
+  { value: "vehicle_scooty", label: "Vehicle - Scooty", icon: Bike },
   { value: "property_house", label: "Property - House", icon: Landmark },
   { value: "property_land", label: "Property - Land", icon: LandPlot },
-  { value: "gold_jewelry", label: "Gold/Jewelry", icon: IndianRupee }, 
+  { value: "gold_jewelry", label: "Gold/Jewelry", icon: IndianRupee },
   { value: "other_asset", label: "Other Asset", icon: Info },
 ];
 
@@ -124,6 +110,7 @@ const collateralTypes: { value: CollateralType; label: string; icon: React.Eleme
 export function DetailedLoanApplicationForm() {
   const { toast } = useToast();
   const { user } = useAuth();
+  const router = useRouter();
   const [showGuarantor, setShowGuarantor] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -132,13 +119,13 @@ export function DetailedLoanApplicationForm() {
     resolver: zodResolver(loanApplicationFormSchema),
     defaultValues: {
       borrowerFullName: user?.name || "",
-      borrowerContactNo: "",
+      borrowerContactNo: user?.contactNo || "",
       borrowerEmail: user?.email || "",
-      borrowerAddress: "",
+      borrowerAddress: user?.address || "",
       loanAmount: undefined,
       loanPurpose: "",
       hasGuarantor: false,
-      guarantor: undefined, 
+      guarantor: undefined,
       collaterals: [],
       generalSupportingDocuments: [],
     },
@@ -147,9 +134,11 @@ export function DetailedLoanApplicationForm() {
   useEffect(() => {
     if (user) {
       form.reset({
-        ...form.getValues(), // keep other form values
+        ...form.getValues(),
         borrowerFullName: user.name || "",
         borrowerEmail: user.email || "",
+        borrowerContactNo: user.contactNo || "",
+        borrowerAddress: user.address || "",
       });
     }
   }, [user, form]);
@@ -162,26 +151,26 @@ export function DetailedLoanApplicationForm() {
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>, fieldName: any, index?: number) => {
     if (event.target.files && event.target.files.length > 0) {
       const file = event.target.files[0];
-      if (typeof index === 'number') { 
+      if (typeof index === 'number') {
         form.setValue(`collaterals.${index}.${fieldName as keyof typeof collateralFields[number]}`, file as any, { shouldValidate: true });
-      } else { 
+      } else {
         form.setValue(fieldName, file, { shouldValidate: true });
       }
     }
   };
-  
+
   const renderFileInput = (fieldName: any, label: string, index?: number, specificFieldName?: string) => {
     const fieldPath = typeof index === 'number' ? `collaterals.${index}.${specificFieldName || fieldName}` : fieldName;
-    
+
     const fileValue = form.watch(fieldPath as any);
     const currentFile = fileValue instanceof File ? fileValue : null;
-  
+
     return (
       <FormItem>
         <FormLabel>{label}</FormLabel>
         <FormControl>
-          <Input 
-            type="file" 
+          <Input
+            type="file"
             onChange={(e) => handleFileChange(e, specificFieldName || fieldName, index)}
             accept=".jpg,.jpeg,.png,.pdf"
             className="block w-full text-sm text-foreground file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
@@ -246,18 +235,19 @@ export function DetailedLoanApplicationForm() {
           variant: "default",
         });
         form.reset({
-            borrowerFullName: user?.name || "", // Re-initialize with user's details after reset
+            borrowerFullName: user?.name || "",
             borrowerEmail: user?.email || "",
-            borrowerContactNo: "",
-            borrowerAddress: "",
+            borrowerContactNo: user?.contactNo || "",
+            borrowerAddress: user?.address || "",
             loanAmount: undefined,
             loanPurpose: "",
             hasGuarantor: false,
-            guarantor: undefined, 
+            guarantor: undefined,
             collaterals: [],
             generalSupportingDocuments: [],
         });
         setShowGuarantor(false);
+        router.push(ROUTES.DASHBOARD); // Redirect to dashboard
       } else {
         toast({
           title: "Submission Failed",
@@ -286,7 +276,7 @@ export function DetailedLoanApplicationForm() {
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            
+
             <Accordion type="multiple" defaultValue={["borrower_details", "loan_details"]} className="w-full">
               {/* Borrower Details Section */}
               <AccordionItem value="borrower_details">
@@ -296,7 +286,7 @@ export function DetailedLoanApplicationForm() {
                     <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input placeholder="e.g., Ramesh Kumar" {...field} disabled={isSubmitting} readOnly /></FormControl><FormMessage /></FormItem>
                   )} />
                   <FormField control={form.control} name="borrowerContactNo" render={({ field }) => (
-                    <FormItem><FormLabel>Contact Number</FormLabel><FormControl><Input type="tel" placeholder="e.g., 9876543210" {...field} disabled={isSubmitting}/></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Contact Number</FormLabel><FormControl><Input type="tel" placeholder="e.g., 9876543210" {...field} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
                   )} />
                   <FormField control={form.control} name="borrowerEmail" render={({ field }) => (
                     <FormItem><FormLabel>Email Address</FormLabel><FormControl><Input type="email" placeholder="ramesh@example.com" {...field} disabled={isSubmitting} readOnly /></FormControl><FormMessage /></FormItem>
@@ -311,7 +301,7 @@ export function DetailedLoanApplicationForm() {
                     </SelectContent></Select><FormMessage /></FormItem>
                   )} />
                   {renderFileInput("borrowerIdProofDocument", "Upload ID Proof Document")}
-                  
+
                   <FormField control={form.control} name="borrowerAddressProofType" render={({ field }) => (
                     <FormItem><FormLabel>Address Proof Type</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting}><FormControl><SelectTrigger><SelectValue placeholder="Select Address Proof" /></SelectTrigger></FormControl><SelectContent>
                        <SelectItem value="aadhaar">Aadhaar Card</SelectItem><SelectItem value="utility_bill">Utility Bill (Electricity, Water)</SelectItem><SelectItem value="rent_agreement">Rent Agreement</SelectItem>
@@ -334,7 +324,7 @@ export function DetailedLoanApplicationForm() {
                   )} />
                 </AccordionContent>
               </AccordionItem>
-              
+
               {/* Guarantor Details Section (Conditional) */}
               <AccordionItem value="guarantor_details">
                 <AccordionTrigger className="text-lg font-semibold"><Users className="mr-2 h-5 w-5 text-primary"/>Guarantor Details (Optional)</AccordionTrigger>
@@ -370,7 +360,7 @@ export function DetailedLoanApplicationForm() {
                                 </SelectContent></Select><FormMessage /></FormItem>
                             )} />
                             {renderFileInput("guarantor.idProofDocument", "Upload Guarantor ID Proof", undefined, "idProofDocument")}
-                            
+
                             <FormField control={form.control} name="guarantor.addressProofType" render={({ field }) => (
                                 <FormItem><FormLabel>Guarantor Address Proof Type</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting}><FormControl><SelectTrigger><SelectValue placeholder="Select Address Proof" /></SelectTrigger></FormControl><SelectContent>
                                 <SelectItem value="aadhaar">Aadhaar Card</SelectItem><SelectItem value="utility_bill">Utility Bill</SelectItem><SelectItem value="rent_agreement">Rent Agreement</SelectItem>
@@ -407,8 +397,7 @@ export function DetailedLoanApplicationForm() {
                       <FormField control={form.control} name={`collaterals.${index}.estimatedValue`} render={({ field }) => (
                         <FormItem><FormLabel>Estimated Value (₹)</FormLabel><FormControl><Input type="number" placeholder="Approximate market value" {...field} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
                       )} />
-                      
-                      {/* Conditional fields based on collateral type */}
+
                       {form.watch(`collaterals.${index}.type`) === 'atm_card' && (
                         <>
                           {renderFileInput(`collaterals.${index}.atmCardFrontImage`, "ATM Card Front Photo", index, "atmCardFrontImage")}
@@ -458,11 +447,10 @@ export function DetailedLoanApplicationForm() {
                 </AccordionContent>
               </AccordionItem>
 
-              {/* General Supporting Documents Section */}
-                <AccordionItem value="general_docs">
+              <AccordionItem value="general_docs">
                     <AccordionTrigger className="text-lg font-semibold"><Briefcase className="mr-2 h-5 w-5 text-primary"/>Other Supporting Documents (Optional)</AccordionTrigger>
                     <AccordionContent className="space-y-4 pt-4">
-                        {renderFileInput("generalSupportingDocuments.0", "Upload Document (e.g., Payslip, Business Proof)")} 
+                        {renderFileInput("generalSupportingDocuments.0", "Upload Document (e.g., Payslip, Business Proof)")}
                         <FormDescription>You can add more documents if needed later or as requested.</FormDescription>
                     </AccordionContent>
                 </AccordionItem>
@@ -477,3 +465,5 @@ export function DetailedLoanApplicationForm() {
     </Card>
   );
 }
+
+    
