@@ -16,45 +16,68 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: 'Email and password are required' }, { status: 400 });
     }
 
-    console.log(`[Login API] Attempting login for email: ${email.toLowerCase()}`);
+    const lowercasedEmail = email.toLowerCase();
+    console.log(`[Login API] Attempting login for email: ${lowercasedEmail}`);
+    console.log(`[Login API] Plain text password received (length): ${password.length}, first 3 chars: "${password.substring(0,3)}"`);
 
     // Explicitly select passwordHash to ensure it's fetched
-    const user = await UserModel.findOne({ email: email.toLowerCase() }).select('+passwordHash');
+    const user = await UserModel.findOne({ email: lowercasedEmail }).select('+passwordHash');
 
     if (!user) {
-      console.log(`[Login API] User not found for email: ${email.toLowerCase()}`);
-      return NextResponse.json({ success: false, message: 'Invalid credentials' }, { status: 401 });
+      console.log(`[Login API] User not found for email: ${lowercasedEmail}`);
+      return NextResponse.json({ success: false, message: 'Invalid credentials (user not found)' }, { status: 401 });
+    }
+    
+    console.log(`[Login API] User found for ${lowercasedEmail}.`);
+
+    if (!user.passwordHash) {
+        console.error(`[Login API] LOGIN_FAIL: User ${lowercasedEmail} found, but passwordHash field is MISSING or null.`);
+        return NextResponse.json({ success: false, message: 'Account configuration error (missing hash). Please contact support.' }, { status: 500 });
+    }
+    
+    if (typeof user.passwordHash !== 'string') {
+        console.error(`[Login API] LOGIN_FAIL: User ${lowercasedEmail} found, but passwordHash is NOT A STRING. Type: ${typeof user.passwordHash}`);
+        return NextResponse.json({ success: false, message: 'Account configuration error (hash type). Please contact support.' }, { status: 500 });
     }
 
-    console.log(`[Login API] User found for ${email.toLowerCase()}. Checking passwordHash.`);
-    console.log(`[Login API] Stored passwordHash is: "${user.passwordHash}" (Type: ${typeof user.passwordHash}, Length: ${user.passwordHash?.length})`);
-
-
-    // More robust check for passwordHash
-    if (!user.passwordHash || typeof user.passwordHash !== 'string' || user.passwordHash.length < 10) { // bcrypt hashes are typically ~60 chars
-        console.error(`[Login API] LOGIN_FAIL: User ${email.toLowerCase()} found, but passwordHash field is missing, not a string, or too short.`);
-        return NextResponse.json({ success: false, message: 'Account configuration error. Please contact support.' }, { status: 500 });
+    if (user.passwordHash.length < 10) { // bcrypt hashes are typically ~60 chars
+        console.error(`[Login API] LOGIN_FAIL: User ${lowercasedEmail} found, but passwordHash field is too short. Length: ${user.passwordHash.length}`);
+        return NextResponse.json({ success: false, message: 'Account configuration error (hash length). Please contact support.' }, { status: 500 });
     }
 
-    console.log(`[Login API] Comparing form password "${password.substring(0, 3)}..." (length: ${password.length}) with stored hash for user ${email.toLowerCase()}.`);
-    const isMatch = await bcrypt.compare(password, user.passwordHash);
-    console.log(`[Login API] bcrypt.compare result for ${email.toLowerCase()}: ${isMatch}`);
+    console.log(`[Login API] Stored passwordHash for ${lowercasedEmail} (type: ${typeof user.passwordHash}, length: ${user.passwordHash.length}): "${user.passwordHash.substring(0,10)}..."`);
+
+    let isMatch = false;
+    try {
+        // Ensure both `password` (plain text) and `user.passwordHash` (from DB) are strings
+        if (typeof password !== 'string') {
+            console.error(`[Login API] bcrypt.compare error: Plain text password is not a string. Type: ${typeof password}`);
+            return NextResponse.json({ success: false, message: 'Error during password verification (input type).' }, { status: 500 });
+        }
+        isMatch = await bcrypt.compare(password, user.passwordHash);
+    } catch (compareError) {
+        console.error(`[Login API] bcrypt.compare threw an error for ${lowercasedEmail}:`, compareError);
+        return NextResponse.json({ success: false, message: 'Error during password verification (compare fn).' }, { status: 500 });
+    }
+    
+    console.log(`[Login API] bcrypt.compare result for ${lowercasedEmail}: ${isMatch}`);
 
     if (!isMatch) {
-      console.log(`[Login API] Password mismatch for user: ${email.toLowerCase()}`);
-      return NextResponse.json({ success: false, message: 'Invalid credentials' }, { status: 401 });
+      console.log(`[Login API] Password mismatch for user: ${lowercasedEmail}`);
+      return NextResponse.json({ success: false, message: 'Invalid credentials (password mismatch)' }, { status: 401 });
     }
 
     // User authenticated successfully
-    const userResponse = user.toObject(); // Excludes passwordHash due to schema transform
+    // The .toObject() method will use the transform defined in UserSchema to remove passwordHash for the response
+    const userResponse = user.toObject(); 
 
-    console.log(`[Login API] Login successful for user: ${email.toLowerCase()}`);
+    console.log(`[Login API] Login successful for user: ${lowercasedEmail}`);
     return NextResponse.json({ success: true, message: 'Login successful', user: userResponse }, { status: 200 });
 
   } catch (error: any) {
-    console.error('[Login API] Login error:', error);
+    console.error('[Login API] Outer catch block error:', error);
     // Log the full error object for more details, especially for unexpected errors
-    console.error('[Login API] Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+    // console.error('[Login API] Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
     return NextResponse.json({ success: false, message: error.message || 'An internal server error occurred during login.' }, { status: 500 });
   }
 }

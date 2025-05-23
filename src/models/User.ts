@@ -24,6 +24,7 @@ const UserSchema: Schema = new Schema(
       required: [true, 'Please provide an email for this user.'],
       unique: true,
       match: [/.+@.+\..+/, 'Please enter a valid email address'],
+      lowercase: true, // Ensure email is stored in lowercase
     },
     passwordHash: { // Store hashed passwords, not plain text
       type: String,
@@ -51,7 +52,7 @@ const UserSchema: Schema = new Schema(
     toJSON: {
         virtuals: true,
         transform: function(doc, ret) {
-            ret.id = ret._id;
+            ret.id = ret._id.toString(); // Ensure id is a string
             delete ret._id;
             delete ret.__v;
             delete ret.passwordHash; // Don't send password hash to client
@@ -60,22 +61,25 @@ const UserSchema: Schema = new Schema(
     toObject: {
         virtuals: true,
         transform: function(doc, ret) {
-            ret.id = ret._id;
+            ret.id = ret._id.toString(); // Ensure id is a string
             delete ret._id;
             delete ret.__v;
-            delete ret.passwordHash;
+            delete ret.passwordHash; // Don't send password hash to client when converting to object for response
         }
     }
   }
 );
 
 // Add a virtual 'id' property to get the _id as a string
-UserSchema.virtual('id').get(function() {
-  return this._id.toHexString();
-});
+// This is redundant if toJSON/toObject virtuals are correctly transforming _id to id as string.
+// However, explicitly defining it doesn't hurt.
+if (!UserSchema.virtuals['id']) {
+    UserSchema.virtual('id').get(function(this: UserDocument) {
+        return this._id.toHexString();
+    });
+}
 
 
 const UserModel = models.User || mongoose.model<UserDocument>('User', UserSchema);
 
 export default UserModel as Model<UserDocument>;
-

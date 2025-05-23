@@ -4,10 +4,6 @@ import mongoose, { Schema, Document, models, Model } from 'mongoose';
 import type { LoanApplication as LoanApplicationType, Guarantor as GuarantorType, CollateralDocument as CollateralDocumentType } from '@/lib/types';
 
 // Interface for Mongoose Document
-// Note: Omit 'id' because Mongoose Document already has it (as _id and virtual id)
-// Omit 'borrowerUserId' if it's always populated as an object in LoanApplicationType,
-// or ensure the base type and Mongoose type are compatible.
-// For 'guarantor' and 'submittedCollateral', we'll use specific Mongoose sub-document types.
 export interface LoanApplicationDocument extends Omit<LoanApplicationType, 'id' | 'borrowerUserId' | 'guarantor' | 'submittedCollateral' | 'processedDocuments' | 'applicationDate' | 'approvedDate' | 'disbursementDate' | 'firstPaymentDueDate' | 'maturityDate' | 'lastPaymentDate' | 'nextPaymentDueDate' | 'createdAt' | 'updatedAt'>, Document {
   borrowerUserId: mongoose.Types.ObjectId;
   guarantor?: GuarantorSchemaType;
@@ -30,10 +26,10 @@ const GuarantorSchema = new Schema<GuarantorType>({
   address: { type: String, required: true },
   contactNo: { type: String, required: true },
   idProofType: { type: String, enum: ["aadhaar", "pan", "voter_id", "driving_license", "passport", "other"], required: true },
-  idProofDocumentName: String, // Changed from idProofDocumentUrl to store name
+  idProofDocumentName: String, 
   idProofOtherDetails: String,
   addressProofType: { type: String, enum: ["aadhaar", "utility_bill", "rent_agreement", "passport", "other"], required: true },
-  addressProofDocumentName: String, // Changed from addressProofDocumentUrl to store name
+  addressProofDocumentName: String, 
   addressProofOtherDetails: String,
   relationshipToBorrower: String,
 }, { _id: false });
@@ -47,30 +43,27 @@ const CollateralDocumentSchema = new Schema<Omit<CollateralDocumentType, 'atmCar
   description: { type: String, required: true },
   
   atmPin: String, 
-  atmCardFrontImageName: String, // Storing name
-  atmCardBackImageName: String,  // Storing name
+  atmCardFrontImageName: String, 
+  atmCardBackImageName: String,  
   
-  chequeImageName: String, // Storing name
+  chequeImageName: String, 
   chequeNumber: String,
   chequeBankName: String,
 
-  bankStatementFileName: String, // Storing name
+  bankStatementFileName: String, 
 
-  vehicleRcImageName: String, // Storing name
-  vehicleImageName: String, // Storing name
+  vehicleRcImageName: String, 
+  vehicleImageName: String, 
   vehicleChallanDetails: String, 
-  // vehiclePapersUrl: String, // If you have a separate field for this URL
 
-  propertyPapersFileName: String, // Storing name
-  propertyImageName: String, // Storing name
+  propertyPapersFileName: String, 
+  propertyImageName: String, 
 
   assetDetails: String, 
-  assetImageName: String, // Storing name
+  assetImageName: String, 
 
   estimatedValue: Number,
-  // documentUrls: [String], // If storing multiple generic URLs
   notes: String,
-  // additionalDocumentNames: [String], // For storing names of additional uploaded docs
 }, { _id: false });
 
 export type CollateralDocumentSchemaType = mongoose.InferSchemaType<typeof CollateralDocumentSchema>;
@@ -122,18 +115,16 @@ const LoanApplicationSchema: Schema<LoanApplicationDocument> = new Schema(
     nextPaymentDueDate: Date,
     nextPaymentAmount: Number,
 
-    // Fields for storing original document names from the form submission
     borrowerIdProofDocumentName: String,
     borrowerAddressProofDocumentName: String,
-    // Guarantor and Collateral document names are handled within their respective sub-schemas
   },
   {
     timestamps: true, 
     toJSON: {
-        virtuals: true, // Ensure virtuals are included
-        getters: true, // Ensure getters are applied
+        virtuals: true, 
+        getters: true, 
         transform: function(doc, ret) {
-            ret.id = ret._id.toString(); // Explicitly set id as string
+            ret.id = ret._id.toString(); 
             delete ret._id;
             delete ret.__v;
         }
@@ -150,7 +141,6 @@ const LoanApplicationSchema: Schema<LoanApplicationDocument> = new Schema(
   }
 );
 
-// Ensure virtual 'id' is defined if not automatically handled by toJSON/toObject in all cases
 if (!LoanApplicationSchema.virtuals['id']) {
   LoanApplicationSchema.virtual('id').get(function(this: LoanApplicationDocument) {
     return this._id.toHexString();
@@ -161,5 +151,3 @@ if (!LoanApplicationSchema.virtuals['id']) {
 const LoanApplicationModel = (models.LoanApplication as Model<LoanApplicationDocument>) || mongoose.model<LoanApplicationDocument>('LoanApplication', LoanApplicationSchema);
 
 export default LoanApplicationModel;
-
-    
