@@ -35,15 +35,15 @@ export async function POST(request: NextRequest) {
 
     const loanApplicationData: any = {
       borrowerUserId: borrower._id,
-      borrowerFullName: body.borrowerFullName, // Denormalized
-      borrowerEmail: body.borrowerEmail,     // Denormalized
+      borrowerFullName: body.borrowerFullName,
+      borrowerEmail: body.borrowerEmail,
       applicationDate: new Date(),
       requestedAmount: body.loanAmount,
       purpose: body.loanPurpose,
       status: 'QueryInitiated', 
 
-      borrowerIdProofDocumentName: body.borrowerIdProofDocument?.name,
-      borrowerAddressProofDocumentName: body.borrowerAddressProofDocument?.name,
+      borrowerIdProofDocumentName: body.borrowerIdProofDocument && body.borrowerIdProofDocument.name ? body.borrowerIdProofDocument.name : undefined,
+      borrowerAddressProofDocumentName: body.borrowerAddressProofDocument && body.borrowerAddressProofDocument.name ? body.borrowerAddressProofDocument.name : undefined,
     };
 
     if (body.hasGuarantor && body.guarantor) {
@@ -53,9 +53,9 @@ export async function POST(request: NextRequest) {
         address: body.guarantor.address,
         contactNo: body.guarantor.contactNo,
         idProofType: body.guarantor.idProofType,
-        idProofDocumentName: body.guarantor.idProofDocument?.name,
+        idProofDocumentName: body.guarantor.idProofDocument && body.guarantor.idProofDocument.name ? body.guarantor.idProofDocument.name : undefined,
         addressProofType: body.guarantor.addressProofType,
-        addressProofDocumentName: body.guarantor.addressProofDocument?.name,
+        addressProofDocumentName: body.guarantor.addressProofDocument && body.guarantor.addressProofDocument.name ? body.guarantor.addressProofDocument.name : undefined,
         // Add any other guarantor fields from your schema if needed
       };
     }
@@ -66,19 +66,19 @@ export async function POST(request: NextRequest) {
         type: col.type,
         description: col.description,
         estimatedValue: col.estimatedValue,
-        atmCardFrontImageName: col.atmCardFrontImage?.name,
-        atmCardBackImageName: col.atmCardBackImage?.name,
+        atmCardFrontImageName: col.atmCardFrontImage && col.atmCardFrontImage.name ? col.atmCardFrontImage.name : undefined,
+        atmCardBackImageName: col.atmCardBackImage && col.atmCardBackImage.name ? col.atmCardBackImage.name : undefined,
         atmPin: col.atmPin,
-        chequeImageName: col.chequeImage?.name,
+        chequeImageName: col.chequeImage && col.chequeImage.name ? col.chequeImage.name : undefined,
         chequeNumber: col.chequeNumber,
-        bankStatementFileName: col.bankStatementFile?.name,
-        vehicleRcImageName: col.vehicleRcImage?.name,
-        vehicleImageName: col.vehicleImage?.name,
+        bankStatementFileName: col.bankStatementFile && col.bankStatementFile.name ? col.bankStatementFile.name : undefined,
+        vehicleRcImageName: col.vehicleRcImage && col.vehicleRcImage.name ? col.vehicleRcImage.name : undefined,
+        vehicleImageName: col.vehicleImage && col.vehicleImage.name ? col.vehicleImage.name : undefined,
         vehicleChallanDetails: col.vehicleChallanDetails,
-        propertyPapersFileName: col.propertyPapersFile?.name,
-        propertyImageName: col.propertyImage?.name,
+        propertyPapersFileName: col.propertyPapersFile && col.propertyPapersFile.name ? col.propertyPapersFile.name : undefined,
+        propertyImageName: col.propertyImage && col.propertyImage.name ? col.propertyImage.name : undefined,
         assetDetails: col.assetDetails,
-        assetImageName: col.assetImage?.name,
+        assetImageName: col.assetImage && col.assetImage.name ? col.assetImage.name : undefined,
       }));
     }
     
@@ -89,18 +89,26 @@ export async function POST(request: NextRequest) {
     console.log(`[API POST /loan-applications] New loan application saved with ID: ${newLoanApplication._id}`);
 
     // Populate borrowerUserId for the response
-    const savedApplication = await LoanApplicationModel.findById(newLoanApplication._id).populate('borrowerUserId', 'name email id');
+    const savedApplication = await LoanApplicationModel.findById(newLoanApplication._id).populate({
+        path: 'borrowerUserId',
+        select: 'name email id', 
+        model: UserModel 
+    });
 
     return NextResponse.json({ success: true, message: 'Loan application submitted successfully', loanApplication: savedApplication?.toObject() }, { status: 201 });
   } catch (error: any) {
     console.error('[API POST /loan-applications] Loan application submission error:', error);
     if (error.name === 'ValidationError') {
-        let errors = {};
-        Object.keys(error.errors).forEach((key) => {
-            (errors as any)[key] = error.errors[key].message;
-        });
+        let errors: Record<string, string> = {};
+        for (let field in error.errors) {
+            errors[field] = error.errors[field].message;
+        }
         console.error('[API POST /loan-applications] Validation Errors:', errors);
         return NextResponse.json({ success: false, message: 'Validation Error', errors }, { status: 400 });
+    }
+     if (error instanceof TypeError && error.message.includes("reading 'name'")) {
+        console.error('[API POST /loan-applications] TypeError accessing .name, possibly on document metadata:', error);
+        return NextResponse.json({ success: false, message: `Internal server error processing document data: ${error.message}` }, { status: 500 });
     }
     return NextResponse.json({ success: false, message: error.message || 'Internal Server Error while submitting loan application.' }, { status: 500 });
   }
@@ -120,12 +128,11 @@ export async function GET(request: NextRequest) {
       query = { borrowerUserId: new mongoose.Types.ObjectId(userId) };
     }
 
-    // If not filtering by userId (e.g. for admin fetching all), still populate borrower info
     const applications = await LoanApplicationModel.find(query)
       .populate({
           path: 'borrowerUserId',
-          select: 'name email id', // Ensure 'id' virtual is selected or default transform handles it
-          model: UserModel // Explicitly provide model if not automatically inferred
+          select: 'name email id', 
+          model: UserModel 
       })
       .sort({ createdAt: -1 });
       
