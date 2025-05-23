@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useEffect } from 'react';
 import Link from 'next/link';
@@ -11,6 +12,7 @@ import {
   Menu,
   Shield,
   Home,
+  UsersRound, // Added for Manage Users
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -28,11 +30,12 @@ import { cn } from '@/lib/utils';
 
 const navItemsBase = [
   { href: ROUTES.DASHBOARD, label: 'Dashboard', icon: LayoutDashboard },
-  { href: ROUTES.APPLY_LOAN, label: 'Apply for Loan', icon: FilePlus2 },
+  { href: ROUTES.APPLY_LOAN, label: 'Apply for New Loan', icon: FilePlus2 }, // Updated label
 ];
 
 const navItemsAdmin = [
   { href: ROUTES.ADMIN_DASHBOARD, label: 'Admin Overview', icon: Shield },
+  { href: ROUTES.ADMIN_USERS, label: 'Manage Users', icon: UsersRound }, // New admin item
 ];
 
 interface NavLinkProps {
@@ -82,7 +85,9 @@ export default function MainAppLayout({
     );
   }
 
-  const currentNavItems = user.role === 'admin' ? [...navItemsBase, ...navItemsAdmin] : navItemsBase;
+  const currentNavItems = user.role === 'admin' 
+    ? [...navItemsBase.filter(item => item.href !== ROUTES.APPLY_LOAN), ...navItemsAdmin] // Admins might not apply for loans themselves
+    : navItemsBase;
   
   const SidebarContentComp = () => (
     <div className="flex h-full max-h-screen flex-col">
@@ -97,7 +102,7 @@ export default function MainAppLayout({
               href={item.href}
               label={item.label}
               icon={item.icon}
-              isActive={pathname === item.href}
+              isActive={pathname.startsWith(item.href)} // Use startsWith for nested routes
               onClick={() => setOpen(false)}
             />
           ))}

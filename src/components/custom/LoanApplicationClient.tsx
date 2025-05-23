@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -23,7 +24,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import type { LoanApplicationData } from "@/lib/types";
+// import type { LoanApplicationData } from "@/lib/types"; // Using LoanApplication_Old for this file to keep it distinct
+import type { LoanApplication_Old as LoanApplicationData } from "@/lib/types";
 import { useState, ChangeEvent } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { UploadCloud, DollarSign, Briefcase, UserCircle, FileText, ShieldQuestion, Trash2 } from "lucide-react";
@@ -53,7 +55,7 @@ type LoanFormValues = z.infer<typeof formSchema>;
 // This would typically be stored in a central store or fetched.
 let mockApplications: any[] = []; 
 
-export function LoanApplicationClient() {
+export function LoanApplicationClient_Old() { // Renamed to avoid conflict
   const { toast } = useToast();
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
@@ -95,19 +97,20 @@ export function LoanApplicationClient() {
     // or send them as multipart/form-data.
     // For mock purposes, we'll just log and show a toast.
     
-    const newApplication = {
+    const newApplication: LoanApplicationData = { // Using the old type for this specific mock
       id: String(Date.now()), // Mock ID
       ...values,
-      supportingDocuments: values.supportingDocuments?.map(file => ({ name: file.name, type: file.type, size: file.size })), // Store file metadata
+      // Ensure supportingDocuments are correctly transformed if needed by LoanApplicationData type
+      supportingDocuments: values.supportingDocuments?.map(file => ({ name: file.name, type: file.type, size: file.size })) as any, // Adjust if type expects File[]
       status: 'Pending',
       submittedDate: new Date().toISOString(),
     };
     mockApplications.push(newApplication); // Add to mock in-memory store
-    console.log("Mock applications (for admin view):", mockApplications);
+    console.log("Mock applications (for admin view - OLD FORM):", mockApplications);
 
 
     toast({
-      title: "Application Submitted!",
+      title: "Application Submitted (Old Form)!",
       description: "Your loan application has been successfully submitted. We will review it shortly.",
       variant: "default",
     });
@@ -118,7 +121,7 @@ export function LoanApplicationClient() {
   return (
     <Card className="w-full max-w-2xl mx-auto shadow-xl">
       <CardHeader>
-        <CardTitle className="text-2xl flex items-center gap-2"><FileText className="h-7 w-7 text-primary" />Loan Application</CardTitle>
+        <CardTitle className="text-2xl flex items-center gap-2"><FileText className="h-7 w-7 text-primary" />Loan Application (Old)</CardTitle>
         <CardDescription>Fill out the form below to apply for a loan. All fields are important for processing your application.</CardDescription>
       </CardHeader>
       <CardContent>
@@ -274,7 +277,7 @@ export function LoanApplicationClient() {
 
 
             <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" disabled={form.formState.isSubmitting}>
-              {form.formState.isSubmitting ? "Submitting..." : "Submit Application"}
+              {form.formState.isSubmitting ? "Submitting..." : "Submit Application (Old)"}
             </Button>
           </form>
         </Form>

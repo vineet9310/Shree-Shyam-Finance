@@ -1,9 +1,10 @@
-import { LoanApplicationClient } from "@/components/custom/LoanApplicationClient";
+
+import { DetailedLoanApplicationForm } from "@/components/custom/DetailedLoanApplicationForm";
 
 export default function ApplyLoanPage() {
   return (
     <div>
-      <LoanApplicationClient />
+      <DetailedLoanApplicationForm />
     </div>
   );
 }
