@@ -3,8 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import type { LoanApplication, LoanApplicationStatus } from '@/lib/types';
-// Removed: import { getMockApplications } from '@/components/custom/LoanApplicationClient';
+import type { LoanApplication } from '@/lib/types';
 import { ApplicationDetails } from '@/components/custom/ApplicationDetails';
 import { RiskAssessmentClient } from '@/components/custom/RiskAssessmentClient';
 import { ArrowLeft, CheckCircle, XCircle, Edit3, Loader2, AlertTriangleIcon } from "lucide-react";
@@ -35,43 +34,46 @@ const isValidMongoIdClientSide = (id: string | null | undefined): boolean => {
   return /^[0-9a-fA-F]{24}$/.test(id);
 };
 
-// Utility to convert File to Base64 Data URI (Placeholder - not fully used without actual file uploads)
-const fileToDataURI = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      resolve(reader.result as string);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-};
-
-
 export default function AdminApplicationDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const { toast } = useToast();
   const [application, setApplication] = useState<LoanApplication | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true); // Start with true
   const [error, setError] = useState<string | null>(null);
 
   const applicationId = params.id as string;
 
   useEffect(() => {
-    if (!isValidMongoIdClientSide(applicationId)) {
-      setError("Invalid Application ID in URL.");
-      setIsLoading(false);
-      setApplication(null); // Ensure application is null
+    // If applicationId is not yet available from the router, keep loading.
+    if (!applicationId) {
+      setIsLoading(true);
+      setError(null); // Clear any previous error
+      setApplication(null);
       return;
     }
 
+    // If applicationId is the literal string "[id]", it's an invalid navigation.
+    if (applicationId === "[id]") {
+        setError("Invalid page URL. Please select a specific application to view from the dashboard.");
+        setIsLoading(false);
+        setApplication(null);
+        return;
+    }
+
+    if (!isValidMongoIdClientSide(applicationId)) {
+      setError("Invalid Application ID format in URL.");
+      setIsLoading(false);
+      setApplication(null);
+      return;
+    }
+
+    // Proceed with fetching only if ID is valid and not the placeholder
     setIsLoading(true);
-    setError(null);
+    setError(null); // Clear previous errors before fetching
     fetch(`/api/loan-applications/${applicationId}`)
       .then(res => {
         if (!res.ok) {
-          // Try to parse error message from backend if available
           return res.json().then(errData => {
             throw new Error(errData.message || `Failed to fetch application. Status: ${res.status}`);
           });
@@ -80,16 +82,24 @@ export default function AdminApplicationDetailsPage() {
       })
       .then(data => {
         if (data.success && data.application) {
-          // Placeholder for document processing - adapt when file uploads are implemented
-          // For now, RiskAssessmentClient might not have actual document content.
-          const appWithProcessedDocs = {
-            ...data.application,
-            // Example: if your LoanApplication type from API contains file metadata
-            // and you need to simulate data URIs for RiskAssessmentClient
-            processedDocuments: data.application.submittedCollateral?.filter((doc: any) => doc.someDocumentUrl)
-              .map((doc: any) => ({ name: doc.description || 'document', dataUri: doc.someDocumentUrl || '' })) || []
-          };
-          setApplication(appWithProcessedDocs);
+          const appData = data.application;
+          // Map fields carefully for ApplicationDetails and RiskAssessmentClient
+          setApplication({
+            ...appData,
+            // Fields expected by ApplicationDetails component
+            fullName: appData.borrowerFullName || (appData.borrowerUserId as any)?.name || 'N/A',
+            email: appData.borrowerEmail || (appData.borrowerUserId as any)?.email || 'N/A',
+            loanAmount: appData.requestedAmount, // ApplicationDetails uses loanAmount
+            loanPurpose: appData.purpose,       // ApplicationDetails uses loanPurpose
+            submittedDate: appData.applicationDate, // ApplicationDetails uses submittedDate
+            income: appData.income || 0, // Ensure income is present
+            employmentStatus: appData.employmentStatus || 'N/A', // Ensure present
+            creditScore: appData.creditScore || 0, // Ensure present
+            // processedDocuments for RiskAssessmentClient
+            // The API currently does not return processedDocuments.
+            // This will be an empty array unless API is updated.
+            processedDocuments: appData.processedDocuments || [],
+          });
         } else {
           setError(data.message || 'Could not fetch application details');
           setApplication(null);
@@ -105,10 +115,9 @@ export default function AdminApplicationDetailsPage() {
       });
   }, [applicationId]);
 
-  const updateApplicationStatus = (status: LoanApplicationStatus) => {
+  const updateApplicationStatus = (status: LoanApplication['status']) => {
     if (application) {
       // TODO: Implement API call to update status
-      // For now, just update client state and show toast
       console.log(`TODO: API call to update status to ${status} for app ID ${application.id}`);
       setApplication({ ...application, status });
       toast({
@@ -118,6 +127,11 @@ export default function AdminApplicationDetailsPage() {
     }
   };
 
+  // Initial loading state if applicationId isn't available yet and no error has occurred
+  if (!applicationId && !error && isLoading) {
+     return <div className="flex justify-center items-center min-h-[calc(100vh-10rem)]"><Loader2 className="h-8 w-8 animate-spin text-primary mr-2" /><p>Loading application ID...</p></div>;
+  }
+  
   if (isLoading) {
     return <div className="flex justify-center items-center min-h-[calc(100vh-10rem)]"><Loader2 className="h-8 w-8 animate-spin text-primary mr-2" /><p>Loading application details...</p></div>;
   }
@@ -146,7 +160,7 @@ export default function AdminApplicationDetailsPage() {
         <Alert variant="destructive">
             <AlertTriangleIcon className="h-4 w-4" />
             <AlertTitle>Application Not Found</AlertTitle>
-            <AlertDescription>The requested loan application could not be found or an error occurred.</AlertDescription>
+            <AlertDescription>The requested loan application could not be found or an error occurred after attempting to load.</AlertDescription>
         </Alert>
       </div>
     );
@@ -158,21 +172,7 @@ export default function AdminApplicationDetailsPage() {
         <ArrowLeft className="mr-2 h-4 w-4" /> Back to Applications
       </Button>
       
-      {/* The ApplicationDetails component needs a 'fullName' and 'email' from the application object */}
-      {/* It also expects 'loanAmount', 'loanPurpose', etc. */}
-      {/* Let's ensure we pass what it needs based on LoanApplication type. */}
-      <ApplicationDetails 
-        application={{
-          ...application,
-          // Ensure these fields are present and correctly typed for ApplicationDetails
-          fullName: application.borrowerFullName || 'N/A', 
-          email: application.borrowerEmail || 'N/A',
-          loanAmount: application.requestedAmount,
-          loanPurpose: application.purpose,
-          submittedDate: application.applicationDate,
-          // Ensure other fields expected by ApplicationDetails are mapped if names differ
-        }} 
-      />
+      <ApplicationDetails application={application} />
       
       <RiskAssessmentClient application={application} />
 
