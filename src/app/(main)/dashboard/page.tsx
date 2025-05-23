@@ -52,50 +52,57 @@ export default function DashboardPage() {
   const [userLoanApplications, setUserLoanApplications] = useState<LoanApplication[]>([]);
   const [paymentHistory, setPaymentHistory] = useState<PaymentHistoryEntry[]>([]);
   const [isLoadingLoans, setIsLoadingLoans] = useState(true);
+  const [errorLoans, setErrorLoans] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     const fetchUserLoans = async () => {
       if (!user?.id) {
         setIsLoadingLoans(false);
+        setUserLoanApplications([]); // Clear applications if no user
         return;
       }
       setIsLoadingLoans(true);
+      setErrorLoans(null);
       try {
-        const response = await fetch('/api/loan-applications');
+        // Fetch applications specifically for the current user
+        const response = await fetch(`/api/loan-applications?userId=${user.id}`);
         if (!response.ok) {
-          throw new Error('Failed to fetch loan applications');
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to fetch loan applications for user');
         }
         const data = await response.json();
         if (data.success && data.applications) {
-          const filteredLoans = data.applications.filter(
-            (app: LoanApplication) => {
-                const borrowerId = (typeof app.borrowerUserId === 'string') ? app.borrowerUserId : (app.borrowerUserId as any)?.id;
-                return borrowerId === user.id;
-            }
-          );
-          setUserLoanApplications(filteredLoans);
+          setUserLoanApplications(data.applications);
         } else {
-          throw new Error(data.message || 'Could not parse loan applications');
+          throw new Error(data.message || 'Could not parse user loan applications');
         }
       } catch (err: any) {
+        console.error("Error fetching user loans:", err);
+        setErrorLoans(err.message);
         toast({
           title: "Error loading loan applications",
           description: err.message || "Could not load your loan applications.",
           variant: "destructive",
         });
+        setUserLoanApplications([]); // Clear on error
       } finally {
         setIsLoadingLoans(false);
       }
     };
 
     fetchUserLoans();
-    setPaymentHistory([]);
+    // Reset payment history (actual fetching would be separate)
+    setPaymentHistory([]); 
 
-  }, [user, toast]);
+  }, [user, toast]); // user.id could be added, but user object change should be enough
 
-  const activeLoans = userLoanApplications.filter(app => app.status === 'Active' || app.status === 'Overdue');
-  const applicationQueries = userLoanApplications.filter(app => app.status === 'QueryInitiated' || app.status === 'PendingAdminVerification' || app.status === 'AdditionalInfoRequired');
+  const applicationQueries = userLoanApplications.filter(
+    app => app.status === 'QueryInitiated' || app.status === 'PendingAdminVerification' || app.status === 'AdditionalInfoRequired'
+  );
+  const activeLoans = userLoanApplications.filter(
+    app => app.status === 'Active' || app.status === 'Overdue'
+  );
 
 
   return (
@@ -124,18 +131,23 @@ export default function DashboardPage() {
               <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
               <p>Loading your applications...</p>
             </div>
+          ) : errorLoans ? (
+            <div className="flex flex-col items-center justify-center py-8 text-destructive">
+              <AlertTriangle className="h-8 w-8 mb-2" />
+              <p className="font-semibold">Failed to load applications</p>
+              <p className="text-sm">{errorLoans}</p>
+            </div>
           ) : applicationQueries.length > 0 ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {applicationQueries.map((app) => (
                 <Card key={app.id} className="bg-card-foreground/5">
                   <CardHeader>
-                    <CardTitle className="text-lg">{app.purpose.substring(0,30)}{app.purpose.length > 30 ? "..." : ""}</CardTitle>
+                    <CardTitle className="text-lg truncate" title={app.purpose}>{app.purpose.substring(0,30)}{app.purpose.length > 30 ? "..." : ""}</CardTitle>
                     <StatusBadge status={app.status} />
                   </CardHeader>
                   <CardContent className="space-y-1 text-sm">
                     <p>Amount Requested: <span className="font-semibold">₹{app.requestedAmount.toLocaleString()}</span></p>
                     <p className="flex items-center text-xs text-muted-foreground"><Clock className="mr-1 h-3 w-3" /> Applied: <FormattedDate dateString={app.applicationDate} /></p>
-                    {/* Add a View/Edit button here later */}
                      <Button variant="outline" size="sm" className="mt-2 w-full" disabled> 
                         <Eye className="mr-2 h-4 w-4" /> View/Edit (Soon)
                      </Button>
@@ -156,17 +168,23 @@ export default function DashboardPage() {
           <CardDescription>Your current active loans and their statuses.</CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoadingLoans ? (
+           {isLoadingLoans ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
               <p>Loading your active loans...</p>
+            </div>
+          ) : errorLoans ? (
+             <div className="flex flex-col items-center justify-center py-8 text-destructive">
+              <AlertTriangle className="h-8 w-8 mb-2" />
+              <p className="font-semibold">Failed to load active loans</p>
+              <p className="text-sm">{errorLoans}</p>
             </div>
           ) : activeLoans.length > 0 ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {activeLoans.map((loan) => (
                 <Card key={loan.id} className="bg-card-foreground/5">
                   <CardHeader>
-                    <CardTitle className="text-lg">{loan.purpose.substring(0,30)}{loan.purpose.length > 30 ? "..." : ""}</CardTitle>
+                    <CardTitle className="text-lg truncate" title={loan.purpose}>{loan.purpose.substring(0,30)}{loan.purpose.length > 30 ? "..." : ""}</CardTitle>
                     <StatusBadge status={loan.status} />
                   </CardHeader>
                   <CardContent className="space-y-1 text-sm">

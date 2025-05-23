@@ -4,91 +4,105 @@ import mongoose, { Schema, Document, models, Model } from 'mongoose';
 import type { LoanApplication as LoanApplicationType, Guarantor as GuarantorType, CollateralDocument as CollateralDocumentType } from '@/lib/types';
 
 // Interface for Mongoose Document
-export interface LoanApplicationDocument extends Omit<LoanApplicationType, 'id' | 'borrowerUserId' | 'guarantor' | 'submittedCollateral' | 'processedDocuments'>, Document {
-  id: string; // Mongoose _id
-  borrowerUserId: mongoose.Types.ObjectId; // Link to User model
-  guarantor?: GuarantorSchemaType; // Embed or reference
-  submittedCollateral: CollateralDocumentSchemaType[]; // Embed or reference
-  // processedDocuments will likely be derived or stored differently
+// Note: Omit 'id' because Mongoose Document already has it (as _id and virtual id)
+// Omit 'borrowerUserId' if it's always populated as an object in LoanApplicationType,
+// or ensure the base type and Mongoose type are compatible.
+// For 'guarantor' and 'submittedCollateral', we'll use specific Mongoose sub-document types.
+export interface LoanApplicationDocument extends Omit<LoanApplicationType, 'id' | 'borrowerUserId' | 'guarantor' | 'submittedCollateral' | 'processedDocuments' | 'applicationDate' | 'approvedDate' | 'disbursementDate' | 'firstPaymentDueDate' | 'maturityDate' | 'lastPaymentDate' | 'nextPaymentDueDate' | 'createdAt' | 'updatedAt'>, Document {
+  borrowerUserId: mongoose.Types.ObjectId;
+  guarantor?: GuarantorSchemaType;
+  submittedCollateral: CollateralDocumentSchemaType[];
+  applicationDate: Date;
+  approvedDate?: Date;
+  disbursementDate?: Date;
+  firstPaymentDueDate?: Date;
+  maturityDate?: Date;
+  lastPaymentDate?: Date;
+  nextPaymentDueDate?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
 
-// Sub-schema for Guarantor
+
+// Sub-schema for Guarantor - aligning with form fields for document names
 const GuarantorSchema = new Schema<GuarantorType>({
-  // id is not needed as it's part of LoanApplication or handled by Mongoose if a separate collection
-  // loanApplicationId: { type: Schema.Types.ObjectId, ref: 'LoanApplication' }, // If separate collection
   fullName: { type: String, required: true },
   address: { type: String, required: true },
   contactNo: { type: String, required: true },
-  idProofType: { type: String, required: true },
-  idProofDocumentUrl: String, // URL to stored document
+  idProofType: { type: String, enum: ["aadhaar", "pan", "voter_id", "driving_license", "passport", "other"], required: true },
+  idProofDocumentName: String, // Changed from idProofDocumentUrl to store name
   idProofOtherDetails: String,
-  addressProofType: { type: String, required: true },
-  addressProofDocumentUrl: String, // URL to stored document
+  addressProofType: { type: String, enum: ["aadhaar", "utility_bill", "rent_agreement", "passport", "other"], required: true },
+  addressProofDocumentName: String, // Changed from addressProofDocumentUrl to store name
   addressProofOtherDetails: String,
   relationshipToBorrower: String,
-}, { _id: false }); // _id: false if embedded
+}, { _id: false });
 
 export type GuarantorSchemaType = mongoose.InferSchemaType<typeof GuarantorSchema>;
 
 
-// Sub-schema for CollateralDocument
-const CollateralDocumentSchema = new Schema<CollateralDocumentType>({
-  // id is not needed as it's part of LoanApplication or handled by Mongoose if a separate collection
-  // loanApplicationId: { type: Schema.Types.ObjectId, ref: 'LoanApplication' }, // If separate collection
+// Sub-schema for CollateralDocument - aligning with form fields for document names
+const CollateralDocumentSchema = new Schema<Omit<CollateralDocumentType, 'atmCardFrontImage' | 'atmCardBackImage' | 'chequeImage' | 'bankStatementFile' | 'vehicleRcImage' | 'vehicleImage' | 'propertyPapersFile' | 'propertyImage' | 'assetImage' | 'additionalDocuments'>>({
   type: { type: String, required: true }, // CollateralType
   description: { type: String, required: true },
   
-  atmPin: String, // Highly sensitive - ensure proper security if stored
-  atmCardFrontImageUrl: String,
-  atmCardBackImageUrl: String,
-  chequeImageUrl: String,
+  atmPin: String, 
+  atmCardFrontImageName: String, // Storing name
+  atmCardBackImageName: String,  // Storing name
+  
+  chequeImageName: String, // Storing name
   chequeNumber: String,
   chequeBankName: String,
-  bankStatementUrl: String,
-  vehicleRcImageUrl: String,
-  vehicleImageUrl: String,
-  vehicleChallanDetails: String,
-  vehiclePapersUrl: String,
-  propertyPapersUrl: String,
-  propertyImageUrl: String,
-  assetDetails: String,
-  assetImageUrl: String,
+
+  bankStatementFileName: String, // Storing name
+
+  vehicleRcImageName: String, // Storing name
+  vehicleImageName: String, // Storing name
+  vehicleChallanDetails: String, 
+  // vehiclePapersUrl: String, // If you have a separate field for this URL
+
+  propertyPapersFileName: String, // Storing name
+  propertyImageName: String, // Storing name
+
+  assetDetails: String, 
+  assetImageName: String, // Storing name
+
   estimatedValue: Number,
-  documentUrls: [String],
+  // documentUrls: [String], // If storing multiple generic URLs
   notes: String,
-}, { _id: false }); // _id: false if embedded
+  // additionalDocumentNames: [String], // For storing names of additional uploaded docs
+}, { _id: false });
 
 export type CollateralDocumentSchemaType = mongoose.InferSchemaType<typeof CollateralDocumentSchema>;
 
 
-const LoanApplicationSchema: Schema = new Schema(
+const LoanApplicationSchema: Schema<LoanApplicationDocument> = new Schema(
   {
     borrowerUserId: {
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
     },
-    guarantor: GuarantorSchema, // Embedded
+    guarantor: GuarantorSchema, 
     applicationDate: { type: Date, default: Date.now, required: true },
     requestedAmount: { type: Number, required: true },
     purpose: { type: String, required: true },
     
-    submittedCollateral: [CollateralDocumentSchema], // Embedded array
+    submittedCollateral: [CollateralDocumentSchema], 
     
     status: {
       type: String,
       enum: ['QueryInitiated', 'PendingAdminVerification', 'AdditionalInfoRequired', 'Approved', 'Rejected', 'Active', 'PaidOff', 'Overdue', 'Defaulted'],
       default: 'QueryInitiated',
+      required: true,
     },
     adminVerificationNotes: String,
-    adminAssignedTo: String, // Could be ObjectId ref to an Admin User
+    adminAssignedTo: String, 
     
     approvedAmount: Number,
     interestRate: Number,
-    interestType: String, // 'simple' | 'compound_monthly'
-    repaymentFrequency: String, // 'daily' | 'weekly' | 'monthly' | 'custom'
+    interestType: String, 
+    repaymentFrequency: String, 
     loanTermMonths: Number,
     processingFee: Number,
     otherCharges: [{ description: String, amount: Number }],
@@ -98,7 +112,6 @@ const LoanApplicationSchema: Schema = new Schema(
     firstPaymentDueDate: Date,
     maturityDate: Date,
     
-    // Financial Tracking
     principalDisbursed: { type: Number, default: 0 },
     currentPrincipalOutstanding: { type: Number, default: 0 },
     currentInterestOutstanding: { type: Number, default: 0 },
@@ -109,26 +122,27 @@ const LoanApplicationSchema: Schema = new Schema(
     nextPaymentDueDate: Date,
     nextPaymentAmount: Number,
 
-    // Temporary fields for file names if not uploading full files yet
+    // Fields for storing original document names from the form submission
     borrowerIdProofDocumentName: String,
     borrowerAddressProofDocumentName: String,
-    // Add similar fields for guarantor and collateral documents if needed
-    // This is a placeholder until full file upload strategy is implemented
+    // Guarantor and Collateral document names are handled within their respective sub-schemas
   },
   {
-    timestamps: true, // Adds createdAt and updatedAt
+    timestamps: true, 
     toJSON: {
-        virtuals: true,
+        virtuals: true, // Ensure virtuals are included
+        getters: true, // Ensure getters are applied
         transform: function(doc, ret) {
-            ret.id = ret._id;
+            ret.id = ret._id.toString(); // Explicitly set id as string
             delete ret._id;
             delete ret.__v;
         }
     },
     toObject: {
         virtuals: true,
+        getters: true,
         transform: function(doc, ret) {
-            ret.id = ret._id;
+            ret.id = ret._id.toString();
             delete ret._id;
             delete ret.__v;
         }
@@ -136,12 +150,16 @@ const LoanApplicationSchema: Schema = new Schema(
   }
 );
 
-// Add a virtual 'id' property to get the _id as a string
-LoanApplicationSchema.virtual('id').get(function() {
-  return this._id.toHexString();
-});
+// Ensure virtual 'id' is defined if not automatically handled by toJSON/toObject in all cases
+if (!LoanApplicationSchema.virtuals['id']) {
+  LoanApplicationSchema.virtual('id').get(function(this: LoanApplicationDocument) {
+    return this._id.toHexString();
+  });
+}
 
 
-const LoanApplicationModel = models.LoanApplication || mongoose.model<LoanApplicationDocument>('LoanApplication', LoanApplicationSchema);
+const LoanApplicationModel = (models.LoanApplication as Model<LoanApplicationDocument>) || mongoose.model<LoanApplicationDocument>('LoanApplication', LoanApplicationSchema);
 
-export default LoanApplicationModel as Model<LoanApplicationDocument>;
+export default LoanApplicationModel;
+
+    
