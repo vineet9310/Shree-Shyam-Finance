@@ -4,10 +4,10 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import type { LoanApplication, LoanApplicationStatus } from '@/lib/types';
-import { getMockApplications } from '@/components/custom/LoanApplicationClient'; // Import the mock data
+// Removed: import { getMockApplications } from '@/components/custom/LoanApplicationClient';
 import { ApplicationDetails } from '@/components/custom/ApplicationDetails';
 import { RiskAssessmentClient } from '@/components/custom/RiskAssessmentClient';
-import { ArrowLeft, CheckCircle, XCircle, Edit3 } from "lucide-react";
+import { ArrowLeft, CheckCircle, XCircle, Edit3, Loader2, AlertTriangleIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   AlertDialog,
@@ -27,9 +27,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
+// Helper function for client-side basic ID validation
+const isValidMongoIdClientSide = (id: string | null | undefined): boolean => {
+  if (!id || typeof id !== 'string') return false;
+  return /^[0-9a-fA-F]{24}$/.test(id);
+};
 
-// Utility to convert File to Base64 Data URI
+// Utility to convert File to Base64 Data URI (Placeholder - not fully used without actual file uploads)
 const fileToDataURI = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -48,83 +54,102 @@ export default function AdminApplicationDetailsPage() {
   const { toast } = useToast();
   const [application, setApplication] = useState<LoanApplication | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const applicationId = params.id as string;
 
   useEffect(() => {
-    if (applicationId) {
-      setIsLoading(true);
-      const mockApps = getMockApplications() as LoanApplication[]; // This is how it was typed in LoanApplicationClient
-      const foundApp = mockApps.find(app => app.id === applicationId);
-      
-      if (foundApp) {
-        // Simulate processing documents if they exist from form submission
-        // The form stores File objects in `supportingDocuments` (if any)
-        // The AI flow expects `processedDocuments` with data URIs.
-        const processDocs = async () => {
-          if (foundApp.supportingDocuments && Array.isArray(foundApp.supportingDocuments)) {
-            const processedDocs = await Promise.all(
-              (foundApp.supportingDocuments as unknown as File[]).map(async (file) => {
-                // Check if it's actually a File object, not just metadata
-                if (file instanceof File) { 
-                  const dataUri = await fileToDataURI(file);
-                  return { name: file.name, dataUri };
-                }
-                // If it's already metadata (e.g. from a previous load where File objects aren't persisted)
-                // This scenario needs careful handling in a real app. For mock, assume we always have files if needed.
-                // For now, if it's not a File, we can't generate a dataUri.
-                // Check if it's already in the {name, dataUri} format from a previous load simulation
-                if (typeof (file as any).name === 'string' && typeof (file as any).dataUri === 'string') {
-                  return file as { name: string; dataUri: string };
-                }
-                return { name: (file as any).name || 'unknown_file', dataUri: ''}; // Or filter out
-              })
-            );
-            // Filter out docs that couldn't be processed
-            return processedDocs.filter(doc => doc.dataUri !== '');
-          }
-          return [];
-        };
-
-        processDocs().then(processedDocuments => {
-          setApplication({ ...foundApp, processedDocuments });
-          setIsLoading(false);
-        }).catch(err => {
-          console.error("Error processing documents:", err);
-          setApplication(foundApp); // Set app without processed docs or with partial
-          setIsLoading(false);
-        });
-
-      } else {
-        setIsLoading(false);
-        router.push('/admin/applications'); // Redirect to list page
-      }
+    if (!isValidMongoIdClientSide(applicationId)) {
+      setError("Invalid Application ID in URL.");
+      setIsLoading(false);
+      setApplication(null); // Ensure application is null
+      return;
     }
+
+    setIsLoading(true);
+    setError(null);
+    fetch(`/api/loan-applications/${applicationId}`)
+      .then(res => {
+        if (!res.ok) {
+          // Try to parse error message from backend if available
+          return res.json().then(errData => {
+            throw new Error(errData.message || `Failed to fetch application. Status: ${res.status}`);
+          });
+        }
+        return res.json();
+      })
+      .then(data => {
+        if (data.success && data.application) {
+          // Placeholder for document processing - adapt when file uploads are implemented
+          // For now, RiskAssessmentClient might not have actual document content.
+          const appWithProcessedDocs = {
+            ...data.application,
+            // Example: if your LoanApplication type from API contains file metadata
+            // and you need to simulate data URIs for RiskAssessmentClient
+            processedDocuments: data.application.submittedCollateral?.filter((doc: any) => doc.someDocumentUrl)
+              .map((doc: any) => ({ name: doc.description || 'document', dataUri: doc.someDocumentUrl || '' })) || []
+          };
+          setApplication(appWithProcessedDocs);
+        } else {
+          setError(data.message || 'Could not fetch application details');
+          setApplication(null);
+        }
+      })
+      .catch(err => {
+        console.error("Error fetching application details:", err);
+        setError(err.message || "An unexpected error occurred while fetching the application.");
+        setApplication(null);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
   }, [applicationId]);
 
   const updateApplicationStatus = (status: LoanApplicationStatus) => {
     if (application) {
-      // In a real app, this would be an API call.
-      // For mock: update the status in the mockApplications array.
-      const mockApps = getMockApplications();
-      const appIndex = mockApps.findIndex(app => app.id === application.id);
-      if (appIndex !== -1) {
-        mockApps[appIndex].status = status;
-      }
+      // TODO: Implement API call to update status
+      // For now, just update client state and show toast
+      console.log(`TODO: API call to update status to ${status} for app ID ${application.id}`);
       setApplication({ ...application, status });
       toast({
-        title: `Application ${status}`,
-        description: `Loan application for ${application.fullName} has been ${status.toLowerCase()}.`,
+        title: `Application status would be ${status}`,
+        description: `(Backend update not yet implemented) Loan application for ${application.borrowerFullName || 'N/A'} would be ${status.toLowerCase()}.`,
       });
     }
   };
 
   if (isLoading) {
-    return <div className="flex justify-center items-center min-h-[calc(100vh-10rem)]"><p>Loading application details...</p></div>;
+    return <div className="flex justify-center items-center min-h-[calc(100vh-10rem)]"><Loader2 className="h-8 w-8 animate-spin text-primary mr-2" /><p>Loading application details...</p></div>;
+  }
+
+  if (error) {
+     return (
+      <div className="space-y-4 p-4">
+         <Button variant="outline" onClick={() => router.back()} className="mb-4">
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Applications
+          </Button>
+        <Alert variant="destructive">
+          <AlertTriangleIcon className="h-4 w-4" />
+          <AlertTitle>Error Loading Application</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      </div>
+    );
   }
 
   if (!application) {
-    return <div className="flex justify-center items-center min-h-[calc(100vh-10rem)]"><p>Application not found.</p></div>;
+    return (
+       <div className="space-y-4 p-4">
+         <Button variant="outline" onClick={() => router.back()} className="mb-4">
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Applications
+          </Button>
+        <Alert variant="destructive">
+            <AlertTriangleIcon className="h-4 w-4" />
+            <AlertTitle>Application Not Found</AlertTitle>
+            <AlertDescription>The requested loan application could not be found or an error occurred.</AlertDescription>
+        </Alert>
+      </div>
+    );
   }
 
   return (
@@ -133,14 +158,28 @@ export default function AdminApplicationDetailsPage() {
         <ArrowLeft className="mr-2 h-4 w-4" /> Back to Applications
       </Button>
       
-      <ApplicationDetails application={application} />
+      {/* The ApplicationDetails component needs a 'fullName' and 'email' from the application object */}
+      {/* It also expects 'loanAmount', 'loanPurpose', etc. */}
+      {/* Let's ensure we pass what it needs based on LoanApplication type. */}
+      <ApplicationDetails 
+        application={{
+          ...application,
+          // Ensure these fields are present and correctly typed for ApplicationDetails
+          fullName: application.borrowerFullName || 'N/A', 
+          email: application.borrowerEmail || 'N/A',
+          loanAmount: application.requestedAmount,
+          loanPurpose: application.purpose,
+          submittedDate: application.applicationDate,
+          // Ensure other fields expected by ApplicationDetails are mapped if names differ
+        }} 
+      />
       
       <RiskAssessmentClient application={application} />
 
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="text-xl flex items-center gap-2"><Edit3 className="h-6 w-6 text-primary"/>Application Actions</CardTitle>
-          <CardDescription>Approve or reject this loan application.</CardDescription>
+          <CardDescription>Approve or reject this loan application (Backend for status update not yet implemented).</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col sm:flex-row gap-4">
           <AlertDialog>
@@ -153,7 +192,7 @@ export default function AdminApplicationDetailsPage() {
               <AlertDialogHeader>
                 <AlertDialogTitle>Confirm Approval</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Are you sure you want to approve this loan application for {application.fullName}? This action cannot be undone easily.
+                  Are you sure you want to approve this loan application for {application.borrowerFullName || 'N/A'}? This action cannot be undone easily.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -175,7 +214,7 @@ export default function AdminApplicationDetailsPage() {
               <AlertDialogHeader>
                 <AlertDialogTitle>Confirm Rejection</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Are you sure you want to reject this loan application for {application.fullName}? This action cannot be undone easily.
+                  Are you sure you want to reject this loan application for {application.borrowerFullName || 'N/A'}? This action cannot be undone easily.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -186,7 +225,6 @@ export default function AdminApplicationDetailsPage() {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
-
         </CardContent>
       </Card>
     </div>
