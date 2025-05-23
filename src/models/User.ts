@@ -55,7 +55,8 @@ const UserSchema: Schema = new Schema(
             ret.id = ret._id.toString(); // Ensure id is a string
             delete ret._id;
             delete ret.__v;
-            delete ret.passwordHash; // Don't send password hash to client
+            // DO NOT delete ret.passwordHash here if admin needs to see it.
+            // It will be selectively removed in API responses where needed (e.g., login).
         }
     },
     toObject: {
@@ -64,7 +65,7 @@ const UserSchema: Schema = new Schema(
             ret.id = ret._id.toString(); // Ensure id is a string
             delete ret._id;
             delete ret.__v;
-            delete ret.passwordHash; // Don't send password hash to client when converting to object for response
+            // DO NOT delete ret.passwordHash here if admin needs to see it.
         }
     }
   }

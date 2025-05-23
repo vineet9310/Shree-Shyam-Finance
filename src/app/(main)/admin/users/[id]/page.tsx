@@ -17,7 +17,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import type { User } from '@/lib/types';
-import { ArrowLeft, Edit, Trash2, UserCircle, Mail, Shield, Phone, HomeIcon, Loader2, AlertTriangleIcon } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, UserCircle, Mail, Shield, Phone, HomeIcon, Loader2, AlertTriangleIcon, KeyRound } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ROUTES } from '@/lib/constants';
 import FormattedDate from '@/components/custom/FormattedDate';
@@ -170,17 +170,26 @@ export default function AdminUserDetailPage() {
                 <p className="text-foreground">{user.addressProofType || 'N/A'}</p>
               </div>
             </div>
+            {user.passwordHash && (
+              <div className="flex items-center gap-2 md:col-span-2">
+                <KeyRound className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <p className="font-medium text-muted-foreground">Password Hash (Sensitive)</p>
+                  <p className="text-foreground break-all text-xs">{user.passwordHash}</p>
+                </div>
+              </div>
+            )}
           </div>
           <div className="pt-2">
             <p className="text-xs text-muted-foreground">
               Registered on: <FormattedDate dateString={user.createdAt} options={{ year: 'numeric', month: 'long', day: 'numeric' }} />
             </p>
           </div>
-           <Alert className="mt-4">
+           <Alert variant="destructive" className="mt-4">
             <AlertTriangleIcon className="h-4 w-4" />
-            <AlertTitle>Password Security</AlertTitle>
+            <AlertTitle>Security Warning</AlertTitle>
             <AlertDescription>
-              For security reasons, user passwords are not displayed. If a user forgets their password, please advise them to use a "Forgot Password" feature (if implemented) or assist them in resetting it through a secure channel.
+              Displaying password hashes is a security risk. This is shown based on your request. In a production system, passwords or their hashes should never be displayed. Implement a secure password reset mechanism instead.
             </AlertDescription>
           </Alert>
         </CardContent>

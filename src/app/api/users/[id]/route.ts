@@ -16,13 +16,16 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   try {
     await dbConnect();
 
-    // Find user by ID and explicitly exclude passwordHash
-    const user = await UserModel.findById(id).select('-passwordHash');
+    // Find user by ID and explicitly select passwordHash to ensure it's fetched
+    // The User model's toObject/toJSON transform will now keep it unless deleted by API logic.
+    const user = await UserModel.findById(id).select('+passwordHash');
 
     if (!user) {
       return NextResponse.json({ success: false, message: 'User not found' }, { status: 404 });
     }
 
+    // For this admin endpoint, we are returning the user object which might include passwordHash
+    // as per the updated User model's toObject transform.
     return NextResponse.json({ success: true, user: user.toObject() }, { status: 200 });
   } catch (error: any) {
     console.error(`Error fetching user with ID ${id}:`, error);

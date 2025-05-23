@@ -68,8 +68,11 @@ export async function POST(request: NextRequest) {
     }
 
     // User authenticated successfully
-    // The .toObject() method will use the transform defined in UserSchema to remove passwordHash for the response
+    // The .toObject() method will use the transform defined in UserSchema
     const userResponse = user.toObject(); 
+    
+    // CRUCIAL: Delete passwordHash before sending response to client for login
+    delete userResponse.passwordHash;
 
     console.log(`[Login API] Login successful for user: ${lowercasedEmail}`);
     return NextResponse.json({ success: true, message: 'Login successful', user: userResponse }, { status: 200 });
