@@ -3,11 +3,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import UserModel from '@/models/User';
-import bcrypt from 'bcryptjs'; 
+import bcrypt from 'bcryptjs';
 
 export async function POST(request: NextRequest) {
   try {
-    await dbConnect(); 
+    await dbConnect();
 
     const body = await request.json();
     const { name, email, password, role, contactNo, address, idProofType, addressProofType } = body;
@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: 'Name, email, and password are required' }, { status: 400 });
     }
 
-    const existingUser = await UserModel.findOne({ email: email.toLowerCase() }); 
+    const existingUser = await UserModel.findOne({ email: email.toLowerCase() });
     if (existingUser) {
       return NextResponse.json({ success: false, message: 'User with this email already exists' }, { status: 409 });
     }
@@ -34,16 +34,17 @@ export async function POST(request: NextRequest) {
     if (address) newUserPayload.address = address;
     if (idProofType) newUserPayload.idProofType = idProofType;
     if (addressProofType) newUserPayload.addressProofType = addressProofType;
-    
+
     const newUser = new UserModel(newUserPayload);
     await newUser.save();
-    
-    const userResponse = newUser.toObject(); 
+
+    const userResponse = newUser.toObject();
+    console.log("[API /users/register] User registered successfully, response object:", JSON.stringify(userResponse, null, 2));
 
     return NextResponse.json({ success: true, message: 'User registered successfully', user: userResponse }, { status: 201 });
 
   } catch (error: any) {
-    console.error('Registration error:', error); 
+    console.error('[API /users/register] Registration error:', error);
 
     let errorMessage = 'An internal server error occurred during registration.';
     let statusCode = 500;
@@ -55,16 +56,16 @@ export async function POST(request: NextRequest) {
       });
       return NextResponse.json({ success: false, message: 'Validation Error', errors }, { status: 400 });
     }
-    
+
     if (error.code === 11000) {
       errorMessage = 'An account with this email already exists. Please use a different email.';
-      statusCode = 409; 
+      statusCode = 409;
     } else if (error instanceof Error) {
       errorMessage = error.message;
     } else if (typeof error === 'string') {
       errorMessage = error;
     }
-    
+
     return NextResponse.json({ success: false, message: errorMessage }, { status: statusCode });
   }
 }

@@ -44,23 +44,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (storedUser && storedUser.id && (isValidMongoDbObjectId(storedUser.id) || isMockUserId(storedUser.id))) {
           setUser(storedUser);
         } else {
-          console.warn("Invalid user data in localStorage, clearing.");
+          console.warn("[AuthContext] Invalid user data in localStorage, clearing. Stored ID:", storedUser?.id);
           localStorage.removeItem('rivaayat-user');
         }
       }
     } catch (error) {
-      console.error("Failed to parse user from localStorage", error);
+      console.error("[AuthContext] Failed to parse user from localStorage", error);
       localStorage.removeItem('rivaayat-user');
     }
     setLoading(false);
   }, []);
 
   const login = (userData: User) => {
-    // Check if the userData.id looks like a MongoDB ObjectId (24 char hex string)
-    // This typically means it's coming from a successful registration flow.
-    const isPotentiallyValidMongoId = userData.id && isValidMongoDbObjectId(userData.id);
+    console.log('[AuthContext] login function called with userData:', JSON.stringify(userData, null, 2));
 
-    if (isPotentiallyValidMongoId) {
+    if (!userData || !userData.id) {
+      console.error('[AuthContext] Login attempt with invalid userData (missing id):', JSON.stringify(userData, null, 2));
+      // Optionally, set an error state or show a toast to the user
+      return;
+    }
+
+    // Validate the ID of the incoming userData
+    const isIdValidMongo = isValidMongoDbObjectId(userData.id);
+    console.log(`[AuthContext] Validating userData.id: "${userData.id}". Is valid Mongo ObjectId? ${isIdValidMongo}`);
+
+    if (isIdValidMongo) {
+      console.log('[AuthContext] Logging in with validated MongoDB ID:', userData.id);
       setUser(userData);
       localStorage.setItem('rivaayat-user', JSON.stringify(userData));
       if (userData.role === 'admin') {
@@ -71,21 +80,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // If not a direct valid ID, check against the hardcoded mock users (for demo/testing)
-    const foundMockUser = mockUsers.find(u => u.email.toLowerCase() === userData.email.toLowerCase());
-    if (foundMockUser) {
-      // Use the complete mock user object, including its predefined ID
-      setUser(foundMockUser); 
-      localStorage.setItem('rivaayat-user', JSON.stringify(foundMockUser));
-      if (foundMockUser.role === 'admin') {
-        router.push(ROUTES.ADMIN_DASHBOARD);
-      } else {
-        router.push(ROUTES.DASHBOARD);
+    // Check against hardcoded mock users (for demo/testing) ONLY if ID wasn't a valid Mongo ID
+    console.log('[AuthContext] userData.id not a valid MongoID, checking mock users.');
+    if (typeof userData.email === 'string' && userData.email.length > 0) {
+      const foundMockUser = mockUsers.find(u => u.email.toLowerCase() === userData.email.toLowerCase());
+      if (foundMockUser) {
+        console.log('[AuthContext] Found mock user:', JSON.stringify(foundMockUser, null, 2));
+        setUser(foundMockUser);
+        localStorage.setItem('rivaayat-user', JSON.stringify(foundMockUser));
+        if (foundMockUser.role === 'admin') {
+          router.push(ROUTES.ADMIN_DASHBOARD);
+        } else {
+          router.push(ROUTES.DASHBOARD);
+        }
+        return;
       }
-      return;
+    } else {
+      console.warn('[AuthContext] userData.email is not a valid string for mock user lookup:', userData.email);
     }
-    
-    console.warn(`Login attempt for ${userData.email}: User not found in mocks and no valid ID provided. Login will not proceed for this session. A backend login API is required for these users.`);
+
+    console.warn(`[AuthContext] Login attempt for email "${userData.email}" (ID: "${userData.id}"): User not found in mocks and ID was not a valid MongoDB ObjectId. Login will not proceed for this session. A backend login API is required for these users if they are registered.`);
   };
 
   const logout = () => {

@@ -51,7 +51,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export function AuthForm({ mode }: AuthFormProps) {
-  const { login: contextLogin } = useAuth(); 
+  const { login: contextLogin } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -59,11 +59,11 @@ export function AuthForm({ mode }: AuthFormProps) {
 
   const formSchema = mode === "login" ? loginSchema : registerSchema;
   type FormValues = typeof mode extends "login" ? LoginFormValues : RegisterFormValues;
-  
+
   const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema as any), 
-    defaultValues: mode === 'login' 
-      ? { email: "", password: "" } 
+    resolver: zodResolver(formSchema as any),
+    defaultValues: mode === 'login'
+      ? { email: "", password: "" }
       : { name: "", email: "", password: "", confirmPassword: "", contactNo: "", address: "" },
   });
 
@@ -82,20 +82,23 @@ export function AuthForm({ mode }: AuthFormProps) {
         const result = await response.json();
 
         if (response.ok && result.success && result.user) {
-          const loggedInUser: User = {
+          console.log("[AuthForm:Login] Login API success, user from API:", JSON.stringify(result.user, null, 2));
+          const loggedInUser: User = { // Ensure this mapping matches your User type and API response
             id: result.user.id,
             name: result.user.name,
             email: result.user.email,
             role: result.user.role,
             contactNo: result.user.contactNo,
             address: result.user.address,
+            // Make sure all fields required by User type are present or optional
           };
-          contextLogin(loggedInUser); // This will handle redirection
+          console.log("[AuthForm:Login] Calling contextLogin with:", JSON.stringify(loggedInUser, null, 2));
+          contextLogin(loggedInUser);
         } else {
           setError(result.message || "Login failed. Please check your credentials.");
         }
       } catch (err) {
-        console.error("Login submission error:", err);
+        console.error("[AuthForm:Login] Login submission error:", err);
         setError(err instanceof Error ? err.message : "An unexpected network error occurred during login.");
       } finally {
         setIsLoading(false);
@@ -105,10 +108,10 @@ export function AuthForm({ mode }: AuthFormProps) {
         const registerPayload = {
             name: (values as RegisterFormValues).name,
             email: values.email,
-            password: values.password, 
+            password: values.password,
             contactNo: (values as RegisterFormValues).contactNo,
             address: (values as RegisterFormValues).address,
-            role: 'user', 
+            role: 'user',
         };
 
         const response = await fetch('/api/users/register', {
@@ -118,26 +121,30 @@ export function AuthForm({ mode }: AuthFormProps) {
         });
 
         const result = await response.json();
+        console.log("[AuthForm:Register] Register API response:", JSON.stringify(result, null, 2));
+
 
         if (response.ok && result.success && result.user) {
           toast({
             title: "Registration Successful",
             description: "You can now log in with your new account.",
           });
+           console.log("[AuthForm:Register] User from API:", JSON.stringify(result.user, null, 2));
           const registeredUser : User = {
-            id: result.user.id, 
+            id: result.user.id,
             name: result.user.name,
             email: result.user.email,
             role: result.user.role,
             contactNo: result.user.contactNo,
             address: result.user.address,
           };
-          contextLogin(registeredUser); 
+          console.log("[AuthForm:Register] Constructed registeredUser object:", JSON.stringify(registeredUser, null, 2));
+          contextLogin(registeredUser);
         } else {
           setError(result.message || "Registration failed. Please try again.");
         }
       } catch (err) {
-        console.error("Registration submission error:", err);
+        console.error("[AuthForm:Register] Registration submission error:", err);
         setError(err instanceof Error ? err.message : "An unexpected network error occurred.");
       } finally {
         setIsLoading(false);
