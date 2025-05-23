@@ -67,28 +67,34 @@ const collateralSchema = z.object({
 });
 
 const guarantorSchema = z.object({
-  fullName: z.string().min(2, "Guarantor name is required."),
-  address: z.string().min(5, "Guarantor address is required."),
-  contactNo: z.string().min(10, "Guarantor contact number is required."),
-  idProofType: z.enum(["aadhaar", "pan", "voter_id", "driving_license", "passport", "other"]),
-  idProofDocument: fileSchema,
-  addressProofType: z.enum(["aadhaar", "utility_bill", "rent_agreement", "passport", "other"]),
-  addressProofDocument: fileSchema,
+  fullName: z.string().min(2, "Guarantor full name is required (min 2 chars)."),
+  address: z.string().min(5, "Guarantor address is required (min 5 chars)."),
+  contactNo: z.string().min(10, "Guarantor contact no. is required (min 10 digits).").max(15, "Guarantor contact no. too long (max 15 digits)."),
+  idProofType: z.enum(["aadhaar", "pan", "voter_id", "driving_license", "passport", "other"], { 
+    required_error: "Guarantor ID proof type is required.",
+    invalid_type_error: "Please select a valid ID proof type for the guarantor."
+  }),
+  idProofDocument: fileSchema, // Already optional
+  addressProofType: z.enum(["aadhaar", "utility_bill", "rent_agreement", "passport", "other"], {
+    required_error: "Guarantor address proof type is required.",
+    invalid_type_error: "Please select a valid address proof type for the guarantor."
+  }),
+  addressProofDocument: fileSchema, // Already optional
 }).optional();
 
 
 const loanApplicationFormSchema = z.object({
-  borrowerFullName: z.string().min(1, "Full name is required."), // Changed from min(2) to min(1) temporarily if prefill is an issue
+  borrowerFullName: z.string().min(1, "Full name is required."),
   borrowerContactNo: z.string().min(10, "Contact number must be at least 10 digits.").max(15),
   borrowerEmail: z.string().email("Invalid email address."),
   borrowerAddress: z.string().min(10, "Address must be at least 10 characters."),
-  borrowerIdProofType: z.enum(["aadhaar", "pan", "voter_id", "driving_license", "passport", "other"], { required_error: "ID proof type is required."}),
+  borrowerIdProofType: z.enum(["aadhaar", "pan", "voter_id", "driving_license", "passport", "other"], { required_error: "Your ID proof type is required."}),
   borrowerIdProofDocument: fileSchema,
-  borrowerAddressProofType: z.enum(["aadhaar", "utility_bill", "rent_agreement", "passport", "other"], { required_error: "Address proof type is required." }),
+  borrowerAddressProofType: z.enum(["aadhaar", "utility_bill", "rent_agreement", "passport", "other"], { required_error: "Your address proof type is required." }),
   borrowerAddressProofDocument: fileSchema,
   loanAmount: z.preprocess(
     (val) => (val === "" ? undefined : Number(val)), 
-    z.number({ required_error: "Loan amount is required."}).min(1000, "Loan amount must be at least ₹1,000.")
+    z.number({invalid_type_error: "Loan amount must be a number.", required_error: "Loan amount is required."}).min(1000, "Loan amount must be at least ₹1,000.")
   ),
   loanPurpose: z.string().min(10, "Please describe loan purpose (min 10 chars)."),
   hasGuarantor: z.boolean().optional(),
@@ -152,27 +158,25 @@ export function DetailedLoanApplicationForm() {
   useEffect(() => {
     if (user) {
       console.log("[DetailedLoanApplicationForm] useEffect - Resetting form with user data:", user);
-      form.reset({
-        // Keep other form values if user navigates away and back, unless they are user-specific
-        ...form.getValues(),
+      form.reset({ 
         borrowerFullName: user.name || "",
         borrowerEmail: user.email || "",
-        borrowerContactNo: user.contactNo || form.getValues('borrowerContactNo') || "", // Prefer user context, then form, then empty
-        borrowerAddress: user.address || form.getValues('borrowerAddress') || "",
-        // Reset other fields to initial state or persisted state from form.getValues() if needed
-        borrowerIdProofType: form.getValues('borrowerIdProofType') || undefined,
-        borrowerAddressProofType: form.getValues('borrowerAddressProofType') || undefined,
-        loanAmount: form.getValues('loanAmount') || ('' as any),
-        loanPurpose: form.getValues('loanPurpose') || "",
-        hasGuarantor: form.getValues('hasGuarantor') || false,
-        guarantor: form.getValues('guarantor') || { fullName: "", address: "", contactNo: "", idProofType: undefined, idProofDocument: undefined, addressProofType: undefined, addressProofDocument: undefined },
-        collaterals: form.getValues('collaterals') || [],
-        generalSupportingDocuments: form.getValues('generalSupportingDocuments') || [],
-
+        borrowerContactNo: user.contactNo || "", 
+        borrowerAddress: user.address || "",
+        borrowerIdProofType: undefined, 
+        borrowerAddressProofType: undefined, 
+        loanAmount: '' as any,
+        loanPurpose: "",
+        hasGuarantor: false,
+        guarantor: { fullName: "", address: "", contactNo: "", idProofType: undefined, idProofDocument: undefined, addressProofType: undefined, addressProofDocument: undefined },
+        collaterals: [],
+        generalSupportingDocuments: [],
       });
+      // Explicitly set showGuarantor to false as well when user changes, to reset its state
+      setShowGuarantor(false); 
     } else {
         console.log("[DetailedLoanApplicationForm] useEffect - User is null, resetting to initial defaults.");
-        form.reset({ // Reset form to initial defaults if user becomes null
+        form.reset({ 
             borrowerFullName: "",
             borrowerEmail: "",
             borrowerContactNo: "",
@@ -186,8 +190,9 @@ export function DetailedLoanApplicationForm() {
             collaterals: [],
             generalSupportingDocuments: [],
         });
+        setShowGuarantor(false);
     }
-  }, [user, form]);
+  }, [user, form.reset]);
 
   const { fields: collateralFields, append: appendCollateral, remove: removeCollateral } = useFieldArray({
     control: form.control,
@@ -230,13 +235,38 @@ export function DetailedLoanApplicationForm() {
   };
 
   const onInvalid = (errors: any) => {
-    console.error("[DetailedLoanApplicationForm] Form validation failed:", errors);
+    console.error("[DetailedLoanApplicationForm] Form validation failed (raw errors object):", JSON.stringify(errors, null, 2));
+
     let errorMessages = "Please check the form for errors: ";
     const fieldsWithErrors = Object.keys(errors);
+
     if (fieldsWithErrors.length > 0) {
-        errorMessages += fieldsWithErrors.map(field => `${field}: ${errors[field]?.message || 'Invalid'}`).join(', ');
+      const messages = fieldsWithErrors.map(field => {
+        const fieldError = errors[field];
+        if (fieldError) {
+          if (field === 'guarantor' && fieldError.type === undefined && typeof fieldError === 'object') {
+            const guarantorErrorMessages = Object.keys(fieldError)
+              .map(gfKey => fieldError[gfKey]?.message ? `Guarantor ${gfKey.replace(/([A-Z])/g, ' $1').toLowerCase()}: ${fieldError[gfKey].message}` : null)
+              .filter(Boolean)
+              .join('; ');
+            return guarantorErrorMessages || `${field}: Invalid data`;
+          }
+          return `${field.replace(/([A-Z])/g, ' $1').toLowerCase()}: ${fieldError.message || 'Invalid data'}`;
+        }
+        return null;
+      }).filter(Boolean);
+      
+      if (messages.length > 0) {
+        errorMessages += messages.join('; ');
+      } else if (errors.root?.message) {
+         errorMessages += errors.root.message;
+      } else {
+        errorMessages = "Please fill all required fields correctly and try again.";
+      }
+    } else if (errors.root?.message) { // Catch root level errors from superRefine if any
+       errorMessages = errors.root.message;
     } else {
-        errorMessages = "Please fill all required fields correctly.";
+      errorMessages = "An unknown validation error occurred. Please check all fields.";
     }
 
     toast({
@@ -249,7 +279,6 @@ export function DetailedLoanApplicationForm() {
 
   async function onSubmit(values: LoanApplicationFormValues) {
     console.log("[DetailedLoanApplicationForm] onSubmit triggered.");
-    // console.log("[DetailedLoanApplicationForm] Form errors (should be empty if this runs):", form.formState.errors); // Already handled by onInvalid
     console.log("[DetailedLoanApplicationForm] Raw values from form:", JSON.stringify(values, null, 2));
 
 
@@ -264,36 +293,37 @@ export function DetailedLoanApplicationForm() {
     }
     setIsSubmitting(true);
 
-    // Ensure the submission payload uses the authenticated user's email and name
-    // This is a safeguard. The form.reset in useEffect should handle pre-filling.
-    const submissionValues = {
+    const submissionValues: LoanApplicationFormValues = {
         ...values,
         borrowerEmail: user.email, 
-        borrowerFullName: user.name || values.borrowerFullName, // If user.name is somehow null/undefined from context
+        borrowerFullName: user.name || values.borrowerFullName, 
     };
+
+    if (submissionValues.hasGuarantor === false || !submissionValues.hasGuarantor) {
+      // If no guarantor, ensure the guarantor object is not sent or is undefined
+      delete (submissionValues as any).guarantor; // Or set to undefined if API expects it for no guarantor
+    }
+    
     console.log("[DetailedLoanApplicationForm] Values being sent to API:", JSON.stringify(submissionValues, null, 2));
 
 
-    // Prepare a separate object for JSON stringification to API,
-    // processing File objects to just their metadata (name, type, size)
-    // as actual File objects cannot be directly JSON.stringified.
     const apiPayload: any = { ...submissionValues };
 
-    const processFileField = (file: File | undefined) => file ? { name: file.name, type: file.type, size: file.size } : undefined;
+    const processFileField = (file: File | undefined | null) => file instanceof File ? { name: file.name, type: file.type, size: file.size } : undefined;
 
-    if (values.borrowerIdProofDocument) {
-        apiPayload.borrowerIdProofDocument = processFileField(values.borrowerIdProofDocument);
-    }
-    if (values.borrowerAddressProofDocument) {
-        apiPayload.borrowerAddressProofDocument = processFileField(values.borrowerAddressProofDocument);
-    }
+    apiPayload.borrowerIdProofDocument = processFileField(values.borrowerIdProofDocument);
+    apiPayload.borrowerAddressProofDocument = processFileField(values.borrowerAddressProofDocument);
+    
     if (values.hasGuarantor && values.guarantor) {
         apiPayload.guarantor = {
             ...values.guarantor,
             idProofDocument: processFileField(values.guarantor?.idProofDocument),
             addressProofDocument: processFileField(values.guarantor?.addressProofDocument),
         };
+    } else {
+      delete apiPayload.guarantor; // Ensure it's not sent if hasGuarantor is false
     }
+
     if (values.collaterals) {
         apiPayload.collaterals = values.collaterals.map((col, index) => ({
             ...col,
@@ -317,7 +347,7 @@ export function DetailedLoanApplicationForm() {
       const response = await fetch('/api/loan-applications', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(apiPayload), // Send processed payload
+        body: JSON.stringify(apiPayload), 
       });
       const result = await response.json();
 
@@ -583,3 +613,4 @@ export function DetailedLoanApplicationForm() {
     </Card>
   );
 }
+
