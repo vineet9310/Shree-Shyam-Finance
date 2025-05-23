@@ -19,9 +19,16 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const mockUsers: User[] = [
   { id: 'mockuser1', email: 'user@example.com', name: 'Test User', role: 'user' },
   { id: 'mockadmin1', email: 'admin@example.com', name: 'Admin User', role: 'admin' },
-  // Added your specific admin email to the mock list for easier admin testing via mock login
   { id: 'mockadmin_vineet', email: 'vineetbeniwal9310@gmail.com', name: 'Vineet Beniwal (Admin)', role: 'admin' },
 ];
+
+const isValidMongoDbObjectId = (id: string): boolean => {
+  return /^[0-9a-fA-F]{24}$/.test(id);
+};
+
+const isMockUserId = (id: string): boolean => {
+  return mockUsers.some(mockUser => mockUser.id === id);
+};
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -30,9 +37,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
-      const storedUser = localStorage.getItem('rivaayat-user');
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
+      const storedUserString = localStorage.getItem('rivaayat-user');
+      if (storedUserString) {
+        const storedUser = JSON.parse(storedUserString) as User;
+        // Validate the ID from localStorage
+        if (storedUser && storedUser.id && (isValidMongoDbObjectId(storedUser.id) || isMockUserId(storedUser.id))) {
+          setUser(storedUser);
+        } else {
+          console.warn("Invalid user data in localStorage, clearing.");
+          localStorage.removeItem('rivaayat-user');
+        }
       }
     } catch (error) {
       console.error("Failed to parse user from localStorage", error);
@@ -44,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = (userData: User) => {
     // Check if the userData.id looks like a MongoDB ObjectId (24 char hex string)
     // This typically means it's coming from a successful registration flow.
-    const isPotentiallyValidMongoId = userData.id && /^[0-9a-fA-F]{24}$/.test(userData.id);
+    const isPotentiallyValidMongoId = userData.id && isValidMongoDbObjectId(userData.id);
 
     if (isPotentiallyValidMongoId) {
       setUser(userData);
@@ -70,14 +84,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       return;
     }
-
-    // If the user is not in the mock list and didn't come with a valid ID (e.g., from registration),
-    // this login attempt is for a user potentially in the DB but not covered by mocks.
-    // We should NOT create a new user or a fake ID (like Date.now()) here.
-    // This requires a proper backend login API to verify credentials and fetch the user's real DB ID.
-    console.warn(`Login attempt for ${userData.email}: User not found in mocks and no valid ID provided. A backend login API is required for these users. Login will not proceed for this session.`);
-    // Optionally: Show a toast or message to the user indicating login failure.
-    // For now, it effectively fails "silently" for this specific path to prevent bad ID propagation.
+    
+    console.warn(`Login attempt for ${userData.email}: User not found in mocks and no valid ID provided. Login will not proceed for this session. A backend login API is required for these users.`);
   };
 
   const logout = () => {
