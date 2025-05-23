@@ -31,7 +31,7 @@ export default function HomePage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
+    <div className="flex min-h-screen w-full flex-col items-center justify-center bg-background p-4">
       <div className="max-w-md text-center space-y-8">
         <AppLogo className="justify-center" iconClassName="h-12 w-12" textClassName="text-4xl" />
         
