@@ -4,7 +4,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import LoanApplicationModel from '@/models/LoanApplication';
 import UserModel from '@/models/User';
+import NotificationModel from '@/models/Notification'; // Import NotificationModel
 import mongoose from 'mongoose';
+import type { LoanApplicationStatus } from '@/lib/types';
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   const { id } = params;
@@ -53,10 +55,11 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   }
 
   try {
-    const { status } = await request.json();
+    const { status } : { status: LoanApplicationStatus } = await request.json();
     console.log(`[API PUT /loan-applications/${id}] New status received: ${status}`);
 
-    if (!status || !['Approved', 'Rejected', 'PendingAdminVerification', 'AdditionalInfoRequired', 'QueryInitiated', 'Active', 'PaidOff', 'Overdue', 'Defaulted'].includes(status)) {
+    const validStatuses: LoanApplicationStatus[] = ['Approved', 'Rejected', 'PendingAdminVerification', 'AdditionalInfoRequired', 'QueryInitiated', 'Active', 'PaidOff', 'Overdue', 'Defaulted'];
+    if (!status || !validStatuses.includes(status)) {
       console.log(`[API PUT /loan-applications/${id}] Invalid status value: ${status}`);
       return NextResponse.json({ success: false, message: 'Invalid status value' }, { status: 400 });
     }
@@ -64,24 +67,22 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     await dbConnect();
     console.log(`[API PUT /loan-applications/${id}] Database connected. Finding application to update.`);
 
-    const application = await LoanApplicationModel.findById(id);
+    const application = await LoanApplicationModel.findById(id).populate('borrowerUserId', 'name email'); // Populate for notification
 
     if (!application) {
       console.log(`[API PUT /loan-applications/${id}] Application not found for update.`);
       return NextResponse.json({ success: false, message: 'Application not found' }, { status: 404 });
     }
-
+    
+    const oldStatus = application.status;
     const updateData: any = { status };
 
-    if (status === 'Approved') {
+    if (status === 'Approved' && oldStatus !== 'Approved') {
       updateData.approvedDate = new Date();
-      // If approvedAmount is not already set, set it to requestedAmount
       if (application.approvedAmount == null || application.approvedAmount === 0) {
         updateData.approvedAmount = application.requestedAmount;
       }
-      // Optionally, set disbursementDate if approving also means disbursed immediately
-      // updateData.disbursementDate = new Date();
-      // updateData.status = 'Active'; // Or keep 'Approved' until disbursed
+      // updateData.status = 'Active'; // Or keep 'Approved' until disbursed. Let's keep it 'Approved'.
     }
     
     console.log(`[API PUT /loan-applications/${id}] Update data:`, updateData);
@@ -98,11 +99,31 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     if (!updatedApplication) {
         console.log(`[API PUT /loan-applications/${id}] Failed to update application or application not found after update attempt.`);
-        // This case should ideally not happen if findById found it earlier, but as a safeguard:
         return NextResponse.json({ success: false, message: 'Application not found or failed to update' }, { status: 404 });
     }
     
     console.log(`[API PUT /loan-applications/${id}] Application status updated successfully. New details:`, JSON.stringify(updatedApplication.toObject(), null, 2));
+
+    // Create notification if status changed
+    if (oldStatus !== updatedApplication.status && updatedApplication.borrowerUserId) {
+      let notificationMessage = `Your loan application (ID: ...${updatedApplication.id.slice(-6)}) status has been updated to ${updatedApplication.status}.`;
+      if (updatedApplication.status === 'Approved') {
+        notificationMessage = `Congratulations! Your loan application for ${updatedApplication.purpose.substring(0,20)}... has been approved.`;
+      } else if (updatedApplication.status === 'Rejected') {
+        notificationMessage = `We regret to inform you that your loan application for ${updatedApplication.purpose.substring(0,20)}... has been rejected.`;
+      }
+      
+      const newNotification = new NotificationModel({
+        recipientUserId: updatedApplication.borrowerUserId._id, // Must be ObjectId
+        loanApplicationId: updatedApplication._id, // Must be ObjectId
+        message: notificationMessage,
+        type: 'loan_status_updated',
+        linkTo: `/dashboard/application/${updatedApplication.id}`,
+      });
+      await newNotification.save();
+      console.log(`[API PUT /loan-applications/${id}] Notification created for user ${updatedApplication.borrowerUserId._id} regarding application ${updatedApplication._id}`);
+    }
+
     return NextResponse.json({ success: true, application: updatedApplication.toObject(), message: 'Application status updated successfully' });
 
   } catch (error: any) {
