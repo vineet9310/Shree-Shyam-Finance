@@ -35,8 +35,8 @@ export async function POST(request: NextRequest) {
 
     const loanApplicationData: any = {
       borrowerUserId: borrower._id,
-      borrowerFullName: body.borrowerFullName,
-      borrowerEmail: body.borrowerEmail,
+      borrowerFullName: body.borrowerFullName, // Directly from form, aligned with user context
+      borrowerEmail: body.borrowerEmail,     // Directly from form, aligned with user context
       applicationDate: new Date(),
       requestedAmount: body.loanAmount,
       purpose: body.loanPurpose,
@@ -82,6 +82,7 @@ export async function POST(request: NextRequest) {
       }));
     }
     
+    // Enhanced log: Show the complete object being sent to Mongoose
     console.log('[API POST /loan-applications] Constructed loanApplicationData for saving:', JSON.stringify(loanApplicationData, null, 2));
 
     const newLoanApplication = new LoanApplicationModel(loanApplicationData);
@@ -131,7 +132,7 @@ export async function GET(request: NextRequest) {
     const applications = await LoanApplicationModel.find(query)
       .populate({
           path: 'borrowerUserId',
-          select: 'name email id', 
+          select: 'name email id', // ensure id is populated
           model: UserModel 
       })
       .sort({ createdAt: -1 });
