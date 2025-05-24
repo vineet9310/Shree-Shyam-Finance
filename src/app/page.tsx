@@ -37,14 +37,13 @@ export default function HomePage() {
       <div className="max-w-md text-center space-y-8">
         <AppLogo className="justify-center" iconClassName="h-12 w-12" textClassName="text-4xl" />
         
-        <div className="relative w-full max-w-xs h-48 mx-auto">
+        <div className="relative w-full max-w-md h-72 mx-auto rounded-lg overflow-hidden shadow-xl">
           <Image 
             src={shyamImage} 
-            alt="Rivaayat Finance illustration" 
+            alt={`${APP_NAME} illustration`}
             layout="fill" 
             objectFit="cover" 
-            className="rounded-lg shadow-xl"
-            priority // Add priority if it's a an LCP element
+            priority 
           />
         </div>
 
