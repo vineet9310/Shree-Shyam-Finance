@@ -64,7 +64,7 @@ body {
     --card: 205 52% 17%; /* from #143041 */
     --card-foreground: 40 30% 95%; 
 
-    --popover: 225 41% 8%; /* from #0C0F1E */
+    --popover: 205 52% 17%; /* from #143041, same as card */
     --popover-foreground: 40 30% 95%;
 
     --primary: 40 100% 70%; /* from #FFC868 - Yellow */
@@ -79,28 +79,28 @@ body {
     --accent: 22 75% 56%; /* from #E2773A - Orange */
     --accent-foreground: 225 41% 8%; /* from #0C0F1E - Dark blue for text on orange */
 
-    --destructive: 0 70% 55%; /* Standard red */
-    --destructive-foreground: 0 0% 98%; 
+    --destructive: 0 70% 55%; /* Standard red, good for dark themes */
+    --destructive-foreground: 0 0% 98%; /* Standard light text for destructive */
 
-    --border: 198 49% 20%; /* Slightly darker version of secondary for borders */
+    --border: 198 49% 20%; /* Slightly darker version of secondary for borders, like #1A3F4C */
     --input: 205 52% 17%; /* from #143041 - Input background */
     --ring: 40 100% 70%; /* Yellow for focus rings */
 
-    --chart-1: 40 100% 70%; /* Yellow */
-    --chart-2: 22 75% 56%; /* Orange */
-    --chart-3: 198 49% 35%; /* Lighter teal */
-    --chart-4: 205 52% 30%; /* Lighter dark desaturated blue */
-    --chart-5: 7 16% 60%;   /* Muted brown for text */
+    --chart-1: 40 100% 70%; /* Yellow #FFC868 */
+    --chart-2: 22 75% 56%; /* Orange #E2773A */
+    --chart-3: 198 49% 35%; /* Lighter teal/blue from #214F5F */
+    --chart-4: 205 52% 30%; /* Lighter dark desaturated blue from #143041 */
+    --chart-5: 7 16% 60%;   /* Muted brown text from #6B504C */
 
     /* Sidebar specific theme vars */
-    --sidebar-background: 225 41% 8%; 
-    --sidebar-foreground: 40 30% 92%;
-    --sidebar-primary: 40 100% 70%; /* Active item yellow */
-    --sidebar-primary-foreground: 225 41% 8%; 
-    --sidebar-accent: 205 52% 17%; /* Hover state - darker blue from palette */
-    --sidebar-accent-foreground: 40 30% 95%;
-    --sidebar-border: 205 52% 17%;
-    --sidebar-ring: 40 100% 70%;
+    --sidebar-background: 225 41% 8%; /* #0C0F1E */
+    --sidebar-foreground: 40 30% 92%; /* Light off-white for sidebar text */
+    --sidebar-primary: 40 100% 70%; /* Active item yellow #FFC868 */
+    --sidebar-primary-foreground: 225 41% 8%; /* Text on active item - #0C0F1E */
+    --sidebar-accent: 205 52% 17%; /* Hover state - #143041 */
+    --sidebar-accent-foreground: 40 30% 95%; /* Text on hover */
+    --sidebar-border: 205 52% 17%; /* Sidebar border - #143041 */
+    --sidebar-ring: 40 100% 70%; /* Focus ring - #FFC868 */
   }
 }
 
