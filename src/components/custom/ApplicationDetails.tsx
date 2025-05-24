@@ -5,6 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { FileText, UserCircle, CalendarDays, IndianRupee, Briefcase, ShieldQuestion, Info, Paperclip, Users as UsersIcon } from "lucide-react";
 import FormattedDate from "@/components/custom/FormattedDate";
+import { useToast } from "@/hooks/use-toast";
+import { FormDescription } from "@/components/ui/form"; // Added for the note
 
 interface ApplicationDetailsProps {
   application: LoanApplication;
@@ -19,6 +21,8 @@ const formatDocumentName = (prefix: string, name?: string) => {
 };
 
 export function ApplicationDetails({ application }: ApplicationDetailsProps) {
+  const { toast } = useToast(); // Initialize useToast
+
   const allDocumentNames: { label: string; value: string }[] = [];
 
   // Borrower documents
@@ -60,15 +64,6 @@ export function ApplicationDetails({ application }: ApplicationDetailsProps) {
     });
   }
   
-  // General supporting documents (if we add this field to the model later)
-  // Example:
-  // if (application.generalSupportingDocuments && application.generalSupportingDocuments.length > 0) {
-  //   application.generalSupportingDocuments.forEach((doc, index) => {
-  //     if (doc.name) allDocumentNames.push({ label: `General Document ${index + 1}`, value: doc.name });
-  //   });
-  // }
-
-
   return (
     <Card className="shadow-lg">
       <CardHeader>
@@ -149,14 +144,30 @@ export function ApplicationDetails({ application }: ApplicationDetailsProps) {
         <div className="space-y-2">
           <h3 className="font-semibold flex items-center"><Info className="mr-2 h-5 w-5 text-muted-foreground" />Uploaded Document Names</h3>
           {allDocumentNames.length > 0 ? (
-            <ul className="list-disc list-inside pl-5 space-y-1 text-sm">
-              {allDocumentNames.map((doc, index) => (
-                <li key={index}>
-                  <strong className="text-muted-foreground">{doc.label}:</strong> {doc.value}
-                  {/* Later, if doc.value becomes a URL: <a href={doc.value} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline ml-1">(View)</a> */}
-                </li>
-              ))}
-            </ul>
+            <>
+              <ul className="list-disc list-inside pl-5 space-y-1 text-sm">
+                {allDocumentNames.map((doc, index) => (
+                  <li key={index}>
+                    <strong className="text-muted-foreground">{doc.label}:</strong>{' '}
+                    <span
+                      className="text-primary hover:underline cursor-pointer"
+                      onClick={() => {
+                        toast({
+                          title: "Document Viewing Placeholder",
+                          description: `Viewing for "${doc.value}" is a placeholder. Actual document viewing feature is pending file storage implementation.`,
+                          variant: "default",
+                        });
+                      }}
+                    >
+                      {doc.value}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <FormDescription className="mt-2 text-xs">
+                Note: This section lists the names of documents submitted with the application. Actual document viewing functionality will be available once file storage and retrieval are fully implemented.
+              </FormDescription>
+            </>
           ) : (
             <p className="text-sm text-muted-foreground">No document names found in this application record.</p>
           )}
