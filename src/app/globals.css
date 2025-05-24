@@ -8,7 +8,7 @@ body {
 
 @layer base {
   :root {
-    /* Default Light Theme (Fallback - App is set to dark by default) */
+    /* Default Light Theme (Fallback) */
     --background: 0 0% 100%; 
     --foreground: 222 47% 11%;
 
@@ -90,7 +90,7 @@ body {
     --chart-2: 22 75% 56%; /* Orange */
     --chart-3: 198 49% 35%; /* Lighter teal */
     --chart-4: 205 52% 30%; /* Lighter dark desaturated blue */
-    --chart-5: 7 16% 60%;   /* Muted brown */
+    --chart-5: 7 16% 60%;   /* Muted brown for text */
 
     /* Sidebar specific theme vars */
     --sidebar-background: 225 41% 8%; 
