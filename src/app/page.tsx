@@ -42,7 +42,7 @@ export default function HomePage() {
             src={shyamImage} 
             alt={`${APP_NAME} illustration`}
             layout="fill" 
-            objectFit="cover" 
+            objectFit="contain" 
             priority 
           />
         </div>
