@@ -57,50 +57,50 @@ body {
   }
 
   .dark {
-    /* New Yellow/Orange Dark Theme - NO BLACK */
-    --background: 220 15% 22%; /* Dark desaturated blue - not black */
-    --foreground: 40 20% 95%; /* Light, slightly warm off-white */
+    /* New theme based on user provided palette */
+    --background: 225 41% 8%; /* from #0C0F1E */
+    --foreground: 40 30% 95%; /* Light off-white, inspired by #FFC868 but more readable */
 
-    --card: 220 15% 28%; /* Slightly lighter dark gray for cards */
-    --card-foreground: 40 20% 95%; 
+    --card: 205 52% 17%; /* from #143041 */
+    --card-foreground: 40 30% 95%; 
 
-    --popover: 220 15% 20%; /* Darker for popovers */
-    --popover-foreground: 40 20% 95%;
+    --popover: 225 41% 8%; /* from #0C0F1E */
+    --popover-foreground: 40 30% 95%;
 
-    --primary: 50 95% 55%; /* Vibrant Yellow */
-    --primary-foreground: 50 40% 20%; /* Dark, desaturated yellow/brown for text on yellow */
+    --primary: 40 100% 70%; /* from #FFC868 - Yellow */
+    --primary-foreground: 225 41% 8%; /* from #0C0F1E - Dark blue for text on yellow */
 
-    --secondary: 220 15% 30%; /* Darker gray for secondary elements */
-    --secondary-foreground: 40 20% 92%; /* Lighter gray for secondary text */
+    --secondary: 198 49% 25%; /* from #214F5F - Teal/Blue */
+    --secondary-foreground: 40 30% 92%; /* Lighter off-white for text on secondary */
 
-    --muted: 220 10% 40%; /* Muted dark gray */
-    --muted-foreground: 220 10% 75%; /* Grayer text for muted */
+    --muted: 205 52% 17%; /* from #143041 - Dark desaturated blue for muted backgrounds */
+    --muted-foreground: 7 16% 60%; /* Lighter version of #6B504C brown for muted text */
 
-    --accent: 30 90% 50%; /* Rich Orange */
-    --accent-foreground: 30 40% 20%; /* Dark, desaturated orange/brown for text on orange */
+    --accent: 22 75% 56%; /* from #E2773A - Orange */
+    --accent-foreground: 225 41% 8%; /* from #0C0F1E - Dark blue for text on orange */
 
-    --destructive: 0 70% 55%; /* A red that works on dark background */
-    --destructive-foreground: 0 0% 98%; /* White text on destructive */
+    --destructive: 0 70% 55%; /* Standard red */
+    --destructive-foreground: 0 0% 98%; 
 
-    --border: 220 15% 32%; /* Subtle border, slightly lighter than card */
-    --input: 220 15% 28%; /* Input background, similar to card */
-    --ring: 50 95% 60%; /* Ring color, based on primary yellow */
+    --border: 198 49% 20%; /* Slightly darker version of secondary for borders */
+    --input: 205 52% 17%; /* from #143041 - Input background */
+    --ring: 40 100% 70%; /* Yellow for focus rings */
 
-    --chart-1: 50 95% 55%; /* Primary Yellow */
-    --chart-2: 50 90% 65%; /* Lighter Yellow */
-    --chart-3: 30 90% 50%; /* Accent Orange */
-    --chart-4: 30 85% 60%; /* Lighter Orange */
-    --chart-5: 200 50% 50%; /* Contrasting Desaturated Blue */
+    --chart-1: 40 100% 70%; /* Yellow */
+    --chart-2: 22 75% 56%; /* Orange */
+    --chart-3: 198 49% 35%; /* Lighter teal */
+    --chart-4: 205 52% 30%; /* Lighter dark desaturated blue */
+    --chart-5: 7 16% 60%;   /* Muted brown */
 
     /* Sidebar specific theme vars */
-    --sidebar-background: 220 15% 20%; 
-    --sidebar-foreground: 40 20% 92%;
-    --sidebar-primary: 50 95% 55%; /* Active item yellow */
-    --sidebar-primary-foreground: 50 40% 20%; /* Dark desaturated yellow/brown for text on yellow */
-    --sidebar-accent: 220 15% 30%; /* Hover - slightly lighter than sidebar bg */
-    --sidebar-accent-foreground: 40 20% 95%;
-    --sidebar-border: 220 15% 25%;
-    --sidebar-ring: 50 95% 60%;
+    --sidebar-background: 225 41% 8%; 
+    --sidebar-foreground: 40 30% 92%;
+    --sidebar-primary: 40 100% 70%; /* Active item yellow */
+    --sidebar-primary-foreground: 225 41% 8%; 
+    --sidebar-accent: 205 52% 17%; /* Hover state - darker blue from palette */
+    --sidebar-accent-foreground: 40 30% 95%;
+    --sidebar-border: 205 52% 17%;
+    --sidebar-ring: 40 100% 70%;
   }
 }
 
