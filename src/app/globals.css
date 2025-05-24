@@ -57,33 +57,33 @@ body {
   }
 
   .dark {
-    /* New Yellow/Orange Dark Theme */
-    --background: 220 15% 10%; /* Very dark desaturated blue/charcoal */
+    /* New Yellow/Orange Dark Theme - NO BLACK */
+    --background: 220 15% 22%; /* Dark desaturated blue - not black */
     --foreground: 40 20% 95%; /* Light, slightly warm off-white */
 
-    --card: 220 15% 15%; /* Slightly lighter dark gray for cards */
+    --card: 220 15% 28%; /* Slightly lighter dark gray for cards */
     --card-foreground: 40 20% 95%; 
 
-    --popover: 220 15% 12%; /* Darker for popovers */
+    --popover: 220 15% 20%; /* Darker for popovers */
     --popover-foreground: 40 20% 95%;
 
     --primary: 50 95% 55%; /* Vibrant Yellow */
-    --primary-foreground: 50 95% 10%; /* Dark text for yellow elements */
+    --primary-foreground: 50 40% 20%; /* Dark, desaturated yellow/brown for text on yellow */
 
-    --secondary: 220 15% 18%; /* Darker gray for secondary elements */
+    --secondary: 220 15% 30%; /* Darker gray for secondary elements */
     --secondary-foreground: 40 20% 92%; /* Lighter gray for secondary text */
 
-    --muted: 220 10% 30%; /* Muted dark gray */
-    --muted-foreground: 220 10% 65%; /* Grayer text for muted */
+    --muted: 220 10% 40%; /* Muted dark gray */
+    --muted-foreground: 220 10% 75%; /* Grayer text for muted */
 
     --accent: 30 90% 50%; /* Rich Orange */
-    --accent-foreground: 30 90% 10%; /* Dark text for orange accent */
+    --accent-foreground: 30 40% 20%; /* Dark, desaturated orange/brown for text on orange */
 
     --destructive: 0 70% 55%; /* A red that works on dark background */
     --destructive-foreground: 0 0% 98%; /* White text on destructive */
 
-    --border: 220 15% 20%; /* Subtle border, slightly lighter than card */
-    --input: 220 15% 15%; /* Input background, similar to card */
+    --border: 220 15% 32%; /* Subtle border, slightly lighter than card */
+    --input: 220 15% 28%; /* Input background, similar to card */
     --ring: 50 95% 60%; /* Ring color, based on primary yellow */
 
     --chart-1: 50 95% 55%; /* Primary Yellow */
@@ -93,13 +93,13 @@ body {
     --chart-5: 200 50% 50%; /* Contrasting Desaturated Blue */
 
     /* Sidebar specific theme vars */
-    --sidebar-background: 220 15% 12%; 
+    --sidebar-background: 220 15% 20%; 
     --sidebar-foreground: 40 20% 92%;
     --sidebar-primary: 50 95% 55%; /* Active item yellow */
-    --sidebar-primary-foreground: 50 95% 10%; /* Dark text on yellow */
-    --sidebar-accent: 220 15% 20%; /* Hover - slightly lighter than sidebar bg */
+    --sidebar-primary-foreground: 50 40% 20%; /* Dark desaturated yellow/brown for text on yellow */
+    --sidebar-accent: 220 15% 30%; /* Hover - slightly lighter than sidebar bg */
     --sidebar-accent-foreground: 40 20% 95%;
-    --sidebar-border: 220 15% 18%;
+    --sidebar-border: 220 15% 25%;
     --sidebar-ring: 50 95% 60%;
   }
 }
