@@ -57,50 +57,50 @@ body {
   }
 
   .dark {
-    /* CatalyzeAI Dark Theme */
-    --background: 220 20% 7%; /* Very dark blue, almost black */
-    --foreground: 210 40% 96%; /* Light gray / Off-white */
+    /* New Yellow/Orange Dark Theme */
+    --background: 220 15% 10%; /* Very dark desaturated blue/charcoal */
+    --foreground: 40 20% 95%; /* Light, slightly warm off-white */
 
-    --card: 220 20% 12%; /* Dark blue-gray for cards */
-    --card-foreground: 210 40% 96%; 
+    --card: 220 15% 15%; /* Slightly lighter dark gray for cards */
+    --card-foreground: 40 20% 95%; 
 
-    --popover: 220 20% 10%; /* Darker for popovers */
-    --popover-foreground: 210 40% 96%;
+    --popover: 220 15% 12%; /* Darker for popovers */
+    --popover-foreground: 40 20% 95%;
 
-    --primary: 145 65% 45%; /* Vibrant Green */
-    --primary-foreground: 220 20% 5%; /* Dark text for green elements */
+    --primary: 50 95% 55%; /* Vibrant Yellow */
+    --primary-foreground: 50 95% 10%; /* Dark text for yellow elements */
 
-    --secondary: 220 20% 18%; /* Darker blue for secondary elements (like the Real Estate card) */
-    --secondary-foreground: 210 40% 92%; /* Lighter gray for secondary text */
+    --secondary: 220 15% 18%; /* Darker gray for secondary elements */
+    --secondary-foreground: 40 20% 92%; /* Lighter gray for secondary text */
 
-    --muted: 220 20% 14%; /* Muted dark blue */
-    --muted-foreground: 210 40% 60%; /* Grayer text for muted */
+    --muted: 220 10% 30%; /* Muted dark gray */
+    --muted-foreground: 220 10% 65%; /* Grayer text for muted */
 
-    --accent: 145 65% 45%; /* Vibrant Green (same as primary) */
-    --accent-foreground: 220 20% 5%; /* Dark text for accent */
+    --accent: 30 90% 50%; /* Rich Orange */
+    --accent-foreground: 30 90% 10%; /* Dark text for orange accent */
 
     --destructive: 0 70% 55%; /* A red that works on dark background */
     --destructive-foreground: 0 0% 98%; /* White text on destructive */
 
-    --border: 220 20% 15%; /* Subtle border, slightly lighter than card */
-    --input: 220 20% 10%; /* Input background, similar to popover */
-    --ring: 145 65% 50%; /* Ring color, based on primary green */
+    --border: 220 15% 20%; /* Subtle border, slightly lighter than card */
+    --input: 220 15% 15%; /* Input background, similar to card */
+    --ring: 50 95% 60%; /* Ring color, based on primary yellow */
 
-    --chart-1: 145 60% 40%;
-    --chart-2: 160 60% 35%;
-    --chart-3: 200 70% 50%;
-    --chart-4: 210 70% 40%;
-    --chart-5: 30 70% 50%;
+    --chart-1: 50 95% 55%; /* Primary Yellow */
+    --chart-2: 50 90% 65%; /* Lighter Yellow */
+    --chart-3: 30 90% 50%; /* Accent Orange */
+    --chart-4: 30 85% 60%; /* Lighter Orange */
+    --chart-5: 200 50% 50%; /* Contrasting Desaturated Blue */
 
-    /* Sidebar specific theme vars for CatalyzeAI Dark Theme */
-    --sidebar-background: 220 20% 10%; /* Slightly lighter than main bg, or same as popover */
-    --sidebar-foreground: 210 40% 92%;
-    --sidebar-primary: 145 65% 45%; /* Active item green */
-    --sidebar-primary-foreground: 220 20% 5%; /* Dark text on green */
-    --sidebar-accent: 220 20% 15%; /* Hover - slightly lighter than sidebar bg */
-    --sidebar-accent-foreground: 210 40% 96%;
-    --sidebar-border: 220 20% 13%;
-    --sidebar-ring: 145 65% 50%;
+    /* Sidebar specific theme vars */
+    --sidebar-background: 220 15% 12%; 
+    --sidebar-foreground: 40 20% 92%;
+    --sidebar-primary: 50 95% 55%; /* Active item yellow */
+    --sidebar-primary-foreground: 50 95% 10%; /* Dark text on yellow */
+    --sidebar-accent: 220 15% 20%; /* Hover - slightly lighter than sidebar bg */
+    --sidebar-accent-foreground: 40 20% 95%;
+    --sidebar-border: 220 15% 18%;
+    --sidebar-ring: 50 95% 60%;
   }
 }
 
