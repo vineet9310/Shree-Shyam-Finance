@@ -17,8 +17,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Rivaayat Finance',
-  description: 'Modern finance solutions by Rivaayat Finance',
+  title: 'Shree Shyam Finance',
+  description: 'Modern finance solutions by Shree Shyam Finance',
 };
 
 export default function RootLayout({

@@ -1,4 +1,4 @@
-# **App Name**: Rivaayat Finance
+# **App Name**: Shree Shyam Finance
 
 ## Core Features:
 

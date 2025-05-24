@@ -1,3 +1,4 @@
+
 "use client";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -7,6 +8,7 @@ import { useEffect } from "react";
 import { APP_NAME, ROUTES } from "@/lib/constants";
 import { AppLogo } from "@/components/custom/AppLogo";
 import Image from "next/image";
+import shyamImage from '@/assets/Shyam.jpg'; // Import the local image
 
 export default function HomePage() {
   const { user, loading } = useAuth();
@@ -24,8 +26,8 @@ export default function HomePage() {
 
   if (loading || user) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <p className="text-foreground">Loading Rivaayat Finance...</p>
+      <div className="flex min-h-screen w-full items-center justify-center bg-background">
+        <p className="text-foreground">Loading {APP_NAME}...</p>
       </div>
     );
   }
@@ -37,12 +39,12 @@ export default function HomePage() {
         
         <div className="relative w-full max-w-xs h-48 mx-auto">
           <Image 
-            src="https://placehold.co/600x400.png" 
-            alt="Financial Planning" 
+            src={shyamImage} 
+            alt="Rivaayat Finance illustration" 
             layout="fill" 
             objectFit="cover" 
             className="rounded-lg shadow-xl"
-            data-ai-hint="finance planning"
+            priority // Add priority if it's a an LCP element
           />
         </div>
 
@@ -56,12 +58,12 @@ export default function HomePage() {
           <Button asChild size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground">
             <Link href={ROUTES.LOGIN}>Login</Link>
           </Button>
-          <Button asChild variant="outline" size="lg" className="border-accent text-accent hover:bg-accent/10">
+          <Button asChild variant="outline" size="lg" className="border-accent text-accent-foreground hover:bg-accent hover:text-accent-foreground/90">
             <Link href={ROUTES.REGISTER}>Register</Link>
           </Button>
         </div>
          <p className="text-xs text-muted-foreground pt-8">
-          Demo credentials: user@example.com or admin@example.com (any password)
+           For login: Admins use `vineetbeniwal9310@gmail.com` (bypass). Other users, register first.
         </p>
       </div>
     </div>

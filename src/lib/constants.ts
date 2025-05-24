@@ -1,5 +1,5 @@
 
-export const APP_NAME = "Rivaayat Finance";
+export const APP_NAME = "Shree Shyam Finance";
 
 export const ROUTES = {
   HOME: "/",
