@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { FileText, UserCircle, CalendarDays, IndianRupee, Briefcase, ShieldQuestion, Info, Paperclip, Users as UsersIcon } from "lucide-react";
 import FormattedDate from "@/components/custom/FormattedDate";
 import { useToast } from "@/hooks/use-toast";
-import { FormDescription } from "@/components/ui/form"; // Added for the note
 
 interface ApplicationDetailsProps {
   application: LoanApplication;
@@ -164,9 +163,9 @@ export function ApplicationDetails({ application }: ApplicationDetailsProps) {
                   </li>
                 ))}
               </ul>
-              <FormDescription className="mt-2 text-xs">
+              <p className="mt-2 text-xs text-muted-foreground">
                 Note: This section lists the names of documents submitted with the application. Actual document viewing functionality will be available once file storage and retrieval are fully implemented.
-              </FormDescription>
+              </p>
             </>
           ) : (
             <p className="text-sm text-muted-foreground">No document names found in this application record.</p>
