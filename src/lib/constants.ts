@@ -11,6 +11,5 @@ export const ROUTES = {
   ADMIN_APPLICATION_DETAIL: (id: string) => `/admin/applications/${id}`,
   ADMIN_USERS: "/admin/users",
   ADMIN_USER_DETAIL: (id: string) => `/admin/users/${id}`,
-  USER_APPLICATION_DETAIL: (id: string) => `/dashboard/application/${id}`, // New route
+  USER_APPLICATION_DETAIL: (id: string) => `/dashboard/application/${id}`, 
 };
-
