@@ -8,7 +8,7 @@ body {
 
 @layer base {
   :root {
-    /* Default Light Theme (Fallback) */
+    /* Default Light Theme (Fallback or if you switch off dark mode) */
     --background: 0 0% 100%; 
     --foreground: 222 47% 11%;
 
@@ -57,50 +57,50 @@ body {
   }
 
   .dark {
-    /* New theme based on user provided palette */
-    --background: 225 41% 8%; /* from #0C0F1E */
-    --foreground: 40 30% 95%; /* Light off-white, inspired by #FFC868 but more readable */
+    /* New theme based on user provided screenshot */
+    --background: 225 40% 6%; /* Very dark blue (near black from screenshot) */
+    --foreground: 210 40% 95%; /* Bright off-white for headings and primary text */
 
-    --card: 205 52% 17%; /* from #143041 */
-    --card-foreground: 40 30% 95%; 
+    --card: 225 30% 9%; /* Slightly lighter dark blue for cards */
+    --card-foreground: 210 40% 95%; 
 
-    --popover: 205 52% 17%; /* from #143041, same as card */
-    --popover-foreground: 40 30% 95%;
+    --popover: 225 30% 9%; 
+    --popover-foreground: 210 40% 95%;
 
-    --primary: 40 100% 70%; /* from #FFC868 - Yellow */
-    --primary-foreground: 225 41% 8%; /* from #0C0F1E - Dark blue for text on yellow */
+    --primary: 42 100% 65%; /* Vibrant Yellow/Gold from login button */
+    --primary-foreground: 225 40% 6%; /* Dark text (matching background) for on-primary elements */
 
-    --secondary: 198 49% 25%; /* from #214F5F - Teal/Blue */
-    --secondary-foreground: 40 30% 92%; /* Lighter off-white for text on secondary */
+    --secondary: 225 25% 12%; /* Darker blue, a bit lighter than background */
+    --secondary-foreground: 210 30% 85%; /* Slightly dimmer light text */
 
-    --muted: 205 52% 17%; /* from #143041 - Dark desaturated blue for muted backgrounds */
-    --muted-foreground: 7 16% 60%; /* Lighter version of #6B504C brown for muted text */
+    --muted: 225 25% 12%; 
+    --muted-foreground: 210 20% 75%; /* Dimmer off-white/light gray for paragraphs */
 
-    --accent: 22 75% 56%; /* from #E2773A - Orange */
-    --accent-foreground: 225 41% 8%; /* from #0C0F1E - Dark blue for text on orange */
+    --accent: 42 100% 65%; /* Yellow/Gold for accent (e.g., outline button border) */
+    --accent-foreground: 42 100% 65%; /* Yellow/Gold text for outline buttons with dark background */
 
-    --destructive: 0 70% 55%; /* Standard red, good for dark themes */
-    --destructive-foreground: 0 0% 98%; /* Standard light text for destructive */
+    --destructive: 0 70% 55%; 
+    --destructive-foreground: 0 0% 98%; 
 
-    --border: 198 49% 20%; /* Slightly darker version of secondary for borders, like #1A3F4C */
-    --input: 205 52% 17%; /* from #143041 - Input background */
-    --ring: 40 100% 70%; /* Yellow for focus rings */
+    --border: 225 20% 15%; /* Subtle border, slightly lighter than card background */
+    --input: 225 30% 9%; /* Input background same as card */
+    --ring: 42 100% 65%; /* Yellow/Gold for focus rings */
 
-    --chart-1: 40 100% 70%; /* Yellow #FFC868 */
-    --chart-2: 22 75% 56%; /* Orange #E2773A */
-    --chart-3: 198 49% 35%; /* Lighter teal/blue from #214F5F */
-    --chart-4: 205 52% 30%; /* Lighter dark desaturated blue from #143041 */
-    --chart-5: 7 16% 60%;   /* Muted brown text from #6B504C */
+    --chart-1: 42 100% 70%; /* Yellow */
+    --chart-2: 30 100% 65%; /* Orange (if needed, or use yellow variations) */
+    --chart-3: 210 40% 60%; /* A lighter blue variant */
+    --chart-4: 210 40% 45%; /* A medium blue variant */
+    --chart-5: 210 20% 75%;   /* Muted foreground for some chart elements */
 
     /* Sidebar specific theme vars */
-    --sidebar-background: 225 41% 8%; /* #0C0F1E */
-    --sidebar-foreground: 40 30% 92%; /* Light off-white for sidebar text */
-    --sidebar-primary: 40 100% 70%; /* Active item yellow #FFC868 */
-    --sidebar-primary-foreground: 225 41% 8%; /* Text on active item - #0C0F1E */
-    --sidebar-accent: 205 52% 17%; /* Hover state - #143041 */
-    --sidebar-accent-foreground: 40 30% 95%; /* Text on hover */
-    --sidebar-border: 205 52% 17%; /* Sidebar border - #143041 */
-    --sidebar-ring: 40 100% 70%; /* Focus ring - #FFC868 */
+    --sidebar-background: 225 40% 6%; 
+    --sidebar-foreground: 210 30% 85%; 
+    --sidebar-primary: 42 100% 65%; 
+    --sidebar-primary-foreground: 225 40% 6%; 
+    --sidebar-accent: 225 30% 10%; /* Hover state for sidebar items */
+    --sidebar-accent-foreground: 42 100% 70%; /* Text on hover, slightly brighter yellow */
+    --sidebar-border: 225 20% 15%; 
+    --sidebar-ring: 42 100% 65%; 
   }
 }
 
