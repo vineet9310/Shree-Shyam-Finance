@@ -8,97 +8,97 @@ body {
 
 @layer base {
   :root {
-    /* Default Light Theme (Fallback or if you switch off dark mode) */
-    --background: 0 0% 100%; 
-    --foreground: 222 47% 11%;
+    /* New theme based on user provided palette */
+    --background: 65 45% 86%; /* #ECEFCA - Very light yellow/cream */
+    --foreground: 210 40% 25%; /* Darkest desaturated blue - for text */
 
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card: 210 25% 70%; /* Lighter desaturated blue - for cards */
+    --card-foreground: 210 40% 25%; /* Darkest blue text on cards */
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover: 210 25% 70%; /* Lighter desaturated blue - for popovers */
+    --popover-foreground: 210 40% 25%; /* Darkest blue text on popovers */
 
-    --primary: 215 33% 25%; 
-    --primary-foreground: 0 0% 98%;
+    --primary: 210 35% 45%; /* Medium desaturated blue - primary interactive color */
+    --primary-foreground: 210 40% 95%; /* Very light text for contrast on primary */
 
-    --secondary: 0 0% 96.1%; 
-    --secondary-foreground: 222 47% 11%;
+    --secondary: 210 30% 78%; /* Softer, lighter blue for secondary elements */
+    --secondary-foreground: 210 40% 25%; /* Darkest blue text on secondary */
 
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 222 47% 44%; 
+    --muted: 210 25% 82%; /* Even lighter blue for muted backgrounds */
+    --muted-foreground: 210 35% 40%; /* Slightly lighter dark blue for muted text */
 
-    --accent: 0 0% 96.1%;
-    --accent-foreground: 222 47% 11%;
+    --accent: 210 35% 45%; /* Using primary blue as accent */
+    --accent-foreground: 210 40% 95%; /* Light text on accent */
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 72% 51%; /* Standard destructive red */
+    --destructive-foreground: 0 0% 98%; /* Light text on destructive */
 
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 215 33% 25%; 
+    --border: 210 25% 60%; /* A medium-light blue for borders */
+    --input: 210 25% 78%; /* Light blue for input backgrounds, slightly different from card */
+    --ring: 210 35% 45%; /* Primary blue for focus rings */
 
-    --chart-1: 215 33% 30%;
-    --chart-2: 215 33% 40%;
-    --chart-3: 40 20% 65%;
-    --chart-4: 40 25% 55%;
-    --chart-5: 200 30% 50%;
+    --chart-1: 210 35% 45%; /* Primary blue */
+    --chart-2: 210 30% 55%; /* Slightly lighter primary */
+    --chart-3: 65 40% 70%;  /* Muted version of the background cream */
+    --chart-4: 210 25% 60%; /* A muted blue */
+    --chart-5: 210 40% 35%; /* Darker blue */
 
     --radius: 0.5rem;
 
-    /* Sidebar specific theme vars for Light Theme */
-    --sidebar-background: 0 0% 98%; 
-    --sidebar-foreground: 222 47% 11%;
-    --sidebar-primary: 215 33% 25%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 0 0% 94%; 
-    --sidebar-accent-foreground: 222 47% 11%;
-    --sidebar-border: 0 0% 90%;
-    --sidebar-ring: 215 33% 35%;
+    /* Sidebar specific theme vars for new Light Theme */
+    --sidebar-background: 65 40% 90%; /* Slightly darker cream/off-white for sidebar */
+    --sidebar-foreground: 210 40% 25%; /* Darkest blue text */
+    --sidebar-primary: 210 35% 45%; /* Primary blue for active items */
+    --sidebar-primary-foreground: 210 40% 95%; /* Light text on active items */
+    --sidebar-accent: 65 35% 82%; /* Lighter cream for hover, or a muted blue: 210 30% 80% */
+    --sidebar-accent-foreground: 210 40% 25%; /* Dark text on hover */
+    --sidebar-border: 210 25% 75%; /* Border for sidebar */
+    --sidebar-ring: 210 35% 45%; /* Ring for focus */
   }
 
   .dark {
-    /* New theme based on user provided screenshot */
-    --background: 225 40% 6%; /* Very dark blue (near black from screenshot) */
-    --foreground: 210 40% 95%; /* Bright off-white for headings and primary text */
+    /* Keeping a dark theme definition, can be refined later if needed */
+    --background: 225 40% 6%; 
+    --foreground: 210 40% 95%; 
 
-    --card: 225 30% 9%; /* Slightly lighter dark blue for cards */
+    --card: 225 30% 9%; 
     --card-foreground: 210 40% 95%; 
 
     --popover: 225 30% 9%; 
     --popover-foreground: 210 40% 95%;
 
-    --primary: 42 100% 65%; /* Vibrant Yellow/Gold from login button */
-    --primary-foreground: 225 40% 6%; /* Dark text (matching background) for on-primary elements */
+    --primary: 42 100% 65%; 
+    --primary-foreground: 225 40% 6%; 
 
-    --secondary: 225 25% 12%; /* Darker blue, a bit lighter than background */
-    --secondary-foreground: 210 30% 85%; /* Slightly dimmer light text */
+    --secondary: 225 25% 12%; 
+    --secondary-foreground: 210 30% 85%; 
 
     --muted: 225 25% 12%; 
-    --muted-foreground: 210 20% 75%; /* Dimmer off-white/light gray for paragraphs */
+    --muted-foreground: 210 20% 75%; 
 
-    --accent: 42 100% 65%; /* Yellow/Gold for accent (e.g., outline button border) */
-    --accent-foreground: 42 100% 65%; /* Yellow/Gold text for outline buttons with dark background */
+    --accent: 42 100% 65%; 
+    --accent-foreground: 42 100% 65%; 
 
     --destructive: 0 70% 55%; 
     --destructive-foreground: 0 0% 98%; 
 
-    --border: 225 20% 15%; /* Subtle border, slightly lighter than card background */
-    --input: 225 30% 9%; /* Input background same as card */
-    --ring: 42 100% 65%; /* Yellow/Gold for focus rings */
+    --border: 225 20% 15%; 
+    --input: 225 30% 9%; 
+    --ring: 42 100% 65%; 
 
-    --chart-1: 42 100% 70%; /* Yellow */
-    --chart-2: 30 100% 65%; /* Orange (if needed, or use yellow variations) */
-    --chart-3: 210 40% 60%; /* A lighter blue variant */
-    --chart-4: 210 40% 45%; /* A medium blue variant */
-    --chart-5: 210 20% 75%;   /* Muted foreground for some chart elements */
+    --chart-1: 42 100% 70%; 
+    --chart-2: 30 100% 65%; 
+    --chart-3: 210 40% 60%; 
+    --chart-4: 210 40% 45%; 
+    --chart-5: 210 20% 75%; 
 
-    /* Sidebar specific theme vars */
+    /* Sidebar specific theme vars for dark mode */
     --sidebar-background: 225 40% 6%; 
     --sidebar-foreground: 210 30% 85%; 
     --sidebar-primary: 42 100% 65%; 
     --sidebar-primary-foreground: 225 40% 6%; 
-    --sidebar-accent: 225 30% 10%; /* Hover state for sidebar items */
-    --sidebar-accent-foreground: 42 100% 70%; /* Text on hover, slightly brighter yellow */
+    --sidebar-accent: 225 30% 10%; 
+    --sidebar-accent-foreground: 42 100% 70%; 
     --sidebar-border: 225 20% 15%; 
     --sidebar-ring: 42 100% 65%; 
   }
