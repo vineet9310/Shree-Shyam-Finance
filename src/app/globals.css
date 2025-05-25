@@ -57,7 +57,8 @@ body {
   }
 
   .dark {
-    /* New theme based on user provided hex codes */
+    /* Theme based on hex codes: #01F9C6, #045D5D, #22CE83, #C2E5D3, #800080, #0C090A */
+    /* Green is now primary */
     --background: 340 11% 6%; /* #0C090A - Near Black */
     --foreground: 152 43% 83%; /* #C2E5D3 - Light Mint text */
 
@@ -67,8 +68,8 @@ body {
     --popover: 180 80% 10%; /* Darker variant of #045D5D for popovers */
     --popover-foreground: 152 43% 83%; /* Light Mint text */
 
-    --primary: 170 99% 49%; /* #01F9C6 - Bright Cyan */
-    --primary-foreground: 340 11% 6%; /* #0C090A - Near black text for contrast */
+    --primary: 152 72% 47%; /* #22CE83 - Bright Green (New Primary) */
+    --primary-foreground: 340 11% 6%; /* #0C090A - Near black text for contrast on green */
 
     --secondary: 180 90% 19%; /* #045D5D - Dark Teal */
     --secondary-foreground: 152 43% 83%; /* Light Mint text */
@@ -76,18 +77,18 @@ body {
     --muted: 180 80% 15%; /* Muted version of Dark Teal */
     --muted-foreground: 152 43% 70%; /* Dimmer Mint text */
 
-    --accent: 152 72% 47%; /* #22CE83 - Bright Green */
-    --accent-foreground: 340 11% 6%; /* #0C090A - Near black text for contrast */
+    --accent: 170 99% 49%; /* #01F9C6 - Bright Cyan (New Accent) */
+    --accent-foreground: 340 11% 6%; /* #0C090A - Near black text for contrast on cyan */
 
     --destructive: 300 100% 25%; /* #800080 - Purple */
     --destructive-foreground: 152 43% 83%; /* Light Mint text */
 
     --border: 180 90% 25%; /* Slightly lighter Dark Teal for borders */
     --input: 180 90% 19%; /* Dark Teal for input backgrounds */
-    --ring: 170 99% 49%; /* #01F9C6 - Bright Cyan for focus rings */
+    --ring: 152 72% 47%; /* #22CE83 - Bright Green for focus rings (New Primary) */
 
-    --chart-1: 170 99% 49%; /* Bright Cyan */
-    --chart-2: 152 72% 47%; /* Bright Green */
+    --chart-1: 152 72% 47%; /* Bright Green (New Primary) */
+    --chart-2: 170 99% 49%; /* Bright Cyan (New Accent) */
     --chart-3: 180 90% 22%; /* Dark Teal variant */
     --chart-4: 300 100% 30%; /* Purple variant */
     --chart-5: 152 43% 70%; /* Dimmer Mint */
@@ -95,12 +96,12 @@ body {
     /* Sidebar specific theme vars for new dark mode */
     --sidebar-background: 340 11% 6%; /* Near Black */
     --sidebar-foreground: 152 43% 83%; /* Light Mint text */
-    --sidebar-primary: 170 99% 49%; /* Bright Cyan for active items */
+    --sidebar-primary: 152 72% 47%; /* Bright Green for active items (New Primary) */
     --sidebar-primary-foreground: 340 11% 6%; /* Near Black text on active */
     --sidebar-accent: 180 80% 12%; /* Darker Teal for hover */
-    --sidebar-accent-foreground: 170 99% 55%; /* Brighter Cyan for hover text */
+    --sidebar-accent-foreground: 170 99% 55%; /* Brighter Cyan for hover text (New Accent) */
     --sidebar-border: 180 90% 15%; /* Dark Teal border */
-    --sidebar-ring: 170 99% 49%; /* Bright Cyan ring */
+    --sidebar-ring: 152 72% 47%; /* Bright Green ring (New Primary) */
   }
 }
 
