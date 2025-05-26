@@ -85,7 +85,7 @@ export function AuthForm({ mode, imageSrc }: AuthFormProps) {
       console.warn("[AuthForm:Login] Developer bypass for admin login activated for:", values.email);
       const adminUser: User = {
         id: 'mockadmin_vineet',
-        name: 'Vineet Beniwal (Admin)',
+        name: 'Vineet Beniwal',
         email: values.email,
         role: 'admin',
         contactNo: '0000000000',
@@ -186,8 +186,8 @@ export function AuthForm({ mode, imageSrc }: AuthFormProps) {
   return (
     <div className="flex h-screen w-screen overflow-hidden">
       {/* Left Panel (Form) */}
-      <div className="w-1/2 h-screen bg-card text-card-foreground flex flex-col items-center justify-center">
-        <div className="w-full max-w-md mx-auto h-full overflow-y-auto p-6 sm:p-10 md:p-16 flex flex-col justify-center">
+      <div className="w-1/2 h-screen bg-card text-card-foreground flex">
+        <div className="w-full h-full overflow-y-auto p-10">
           <div className="mb-10">
             <AppLogo iconClassName="h-10 w-10" textClassName="text-3xl" />
           </div>
