@@ -19,8 +19,10 @@ import type { User } from "@/lib/types";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import Image from 'next/image';
-import { APP_NAME, ROUTES } from "@/lib/constants"; // Using APP_NAME for welcome message
+import Image, { StaticImageData } from 'next/image';
+import { APP_NAME, ROUTES } from "@/lib/constants";
+import { AppLogo } from "@/components/custom/AppLogo";
+
 const loginSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
   password: z.string().min(1, { message: "Password is required." }),
@@ -43,7 +45,7 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 
 // Google Icon SVG
 const GoogleIcon = () => (
-  <svg version="1.1" xmlns="http://www.w.org/2000/svg" viewBox="0 0 48 48" className="w-5 h-5 mr-3">
+  <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" className="w-5 h-5 mr-3">
     <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>
     <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path>
     <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path>
@@ -52,7 +54,12 @@ const GoogleIcon = () => (
   </svg>
 );
 
-export function AuthForm({ mode }: { mode: "login" | "register" }) {
+interface AuthFormProps {
+  mode: "login" | "register";
+  imageSrc: StaticImageData | string;
+}
+
+export function AuthForm({ mode, imageSrc }: AuthFormProps) {
   const { login: contextLogin } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -175,16 +182,14 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const welcomeSubtitle = mode === "login" 
     ? `Welcome to ${APP_NAME}. Community Dashboard` 
     : `Join ${APP_NAME} to manage your finances.`;
-  const imageSrc = "/assets/Shyam.jpg";
+  
   return (
-    <div className="min-h-screen flex flex-col md:flex-row">
+    <div className="flex h-screen w-screen overflow-hidden">
       {/* Left Panel (Form) */}
-      <div className="w-full md:w-1/2 lg:w-2/5 bg-card text-card-foreground p-8 sm:p-12 flex flex-col justify-center">
-        <div className="w-full max-w-md mx-auto">
+      <div className="w-1/2 h-screen bg-card text-card-foreground flex flex-col items-center justify-center">
+        <div className="w-full max-w-md mx-auto h-full overflow-y-auto p-6 sm:p-10 md:p-16 flex flex-col justify-center">
           <div className="mb-10">
-            <Link href={ROUTES.HOME} className="text-2xl font-bold text-foreground">
-              {APP_NAME.toUpperCase().split(' ')[0] || APP_NAME.toUpperCase()}.
-            </Link>
+            <AppLogo iconClassName="h-10 w-10" textClassName="text-3xl" />
           </div>
 
           <h1 className="text-4xl sm:text-5xl font-bold text-foreground mb-3">{welcomeTitle}</h1>
@@ -192,7 +197,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
 
           {mode === "login" && (
             <>
-              <Button variant="outline" className="w-full mb-6 border-border hover:bg-muted/50 py-6 text-sm" disabled={isLoading}>
+              <Button variant="outline" className="w-full mb-6 border-border hover:bg-muted/50 py-3 text-sm" disabled={isLoading}>
                 <GoogleIcon />
                 Log in with Google
               </Button>
@@ -205,7 +210,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
           )}
 
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               {mode === "register" && (
                 <FormField
                   control={form.control}
@@ -214,7 +219,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
                     <FormItem>
                       <FormLabel className="text-xs text-muted-foreground">Full Name</FormLabel>
                       <FormControl>
-                        <Input placeholder="Your full name" {...field} value={field.value || ''} disabled={isLoading} className="bg-background border-border focus:border-primary rounded-lg py-6 placeholder:text-muted-foreground/70" />
+                        <Input placeholder="Your full name" {...field} value={field.value || ''} disabled={isLoading} className="bg-background border-border focus:border-primary rounded-lg py-3 placeholder:text-muted-foreground/70" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -228,7 +233,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
                   <FormItem>
                     <FormLabel className="text-xs text-muted-foreground">Your email</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="email@example.com" {...field} value={field.value || ''} disabled={isLoading} className="bg-background border-border focus:border-primary rounded-lg py-6 placeholder:text-muted-foreground/70"/>
+                      <Input type="email" placeholder="email@example.com" {...field} value={field.value || ''} disabled={isLoading} className="bg-background border-border focus:border-primary rounded-lg py-3 placeholder:text-muted-foreground/70"/>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -248,7 +253,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
                       )}
                     </div>
                     <FormControl>
-                      <Input type="password" placeholder="Enter your password" {...field} value={field.value || ''} disabled={isLoading} className="bg-background border-border focus:border-primary rounded-lg py-6 placeholder:text-muted-foreground/70" />
+                      <Input type="password" placeholder="Enter your password" {...field} value={field.value || ''} disabled={isLoading} className="bg-background border-border focus:border-primary rounded-lg py-3 placeholder:text-muted-foreground/70" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -263,7 +268,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
                       <FormItem>
                         <FormLabel className="text-xs text-muted-foreground">Confirm Password</FormLabel>
                         <FormControl>
-                          <Input type="password" placeholder="Confirm your password" {...field} value={field.value || ''} disabled={isLoading} className="bg-background border-border focus:border-primary rounded-lg py-6 placeholder:text-muted-foreground/70" />
+                          <Input type="password" placeholder="Confirm your password" {...field} value={field.value || ''} disabled={isLoading} className="bg-background border-border focus:border-primary rounded-lg py-3 placeholder:text-muted-foreground/70" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -276,7 +281,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
                       <FormItem>
                         <FormLabel className="text-xs text-muted-foreground">Contact Number (Optional)</FormLabel>
                         <FormControl>
-                          <Input type="tel" placeholder="Your contact number" {...field} value={field.value || ''} disabled={isLoading} className="bg-background border-border focus:border-primary rounded-lg py-6 placeholder:text-muted-foreground/70" />
+                          <Input type="tel" placeholder="Your contact number" {...field} value={field.value || ''} disabled={isLoading} className="bg-background border-border focus:border-primary rounded-lg py-3 placeholder:text-muted-foreground/70" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -289,7 +294,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
                       <FormItem>
                         <FormLabel className="text-xs text-muted-foreground">Address (Optional)</FormLabel>
                         <FormControl>
-                          <Input placeholder="Your address" {...field} value={field.value || ''} disabled={isLoading} className="bg-background border-border focus:border-primary rounded-lg py-6 placeholder:text-muted-foreground/70" />
+                          <Input placeholder="Your address" {...field} value={field.value || ''} disabled={isLoading} className="bg-background border-border focus:border-primary rounded-lg py-3 placeholder:text-muted-foreground/70" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -298,7 +303,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
                 </>
               )}
               {error && <p className="text-sm font-medium text-destructive">{error}</p>}
-              <Button type="submit" className="w-full bg-foreground hover:bg-foreground/90 text-background rounded-lg py-6 text-sm font-semibold" disabled={isLoading}>
+              <Button type="submit" className="w-full bg-foreground hover:bg-foreground/90 text-background rounded-lg py-3 text-sm font-semibold" disabled={isLoading}>
                 {isLoading ? "Processing..." : (mode === "login" ? "Log In" : "Create Account")}
               </Button>
             </form>
@@ -328,17 +333,16 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
       </div>
 
       {/* Right Panel (Image) */}
-      <div className="hidden md:flex md:w-1/2 lg:w-3/5 bg-slate-900 items-center justify-center p-8 relative overflow-hidden">
-        {/* Added h-full to ensure the parent has a height for the fill image */}
+      <div className="w-1/2 h-screen bg-slate-900 flex items-center justify-center relative overflow-hidden">
         <Image
           src={imageSrc}
           alt="Illustration related to finance"
           fill
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          sizes="50vw"
           priority
           data-ai-hint="financial abstract"
+          style={{ objectFit: 'cover', objectPosition: 'right' }}
         />
-         {/* You can add text overlays here if needed, like "Largest Space Community" from the example */}
       </div>
     </div>
   );

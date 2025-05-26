@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -58,51 +57,50 @@ body {
   }
 
   .dark {
-    /* Theme based on hex codes: #01F9C6, #045D5D, #22CE83, #C2E5D3, #800080, #0C090A */
-    /* Green is now primary */
-    --background: 340 11% 6%; /* #0C090A - Near Black */
-    --foreground: 152 43% 83%; /* #C2E5D3 - Light Mint text */
+    /* Theme based on Screenshot 2025-05-25 094557.jpg (Light Theme) */
+    --background: 0 0% 100%; /* White */
+    --foreground: 240 10% 3.9%; /* Near Black */
 
-    --card: 180 80% 10%; /* Darker variant of #045D5D for cards */
-    --card-foreground: 152 43% 83%; /* Light Mint text */
+    --card: 0 0% 100%; /* White */
+    --card-foreground: 240 10% 3.9%; /* Near Black */
 
-    --popover: 180 80% 10%; /* Darker variant of #045D5D for popovers */
-    --popover-foreground: 152 43% 83%; /* Light Mint text */
+    --popover: 0 0% 100%; /* White */
+    --popover-foreground: 240 10% 3.9%; /* Near Black */
 
-    --primary: 152 72% 47%; /* #22CE83 - Bright Green (New Primary) */
-    --primary-foreground: 340 11% 6%; /* #0C090A - Near black text for contrast on green */
+    --primary: 217 91% 59%; /* A vibrant blue for primary actions */
+    --primary-foreground: 0 0% 98%; /* White text on primary */
 
-    --secondary: 180 90% 19%; /* #045D5D - Dark Teal */
-    --secondary-foreground: 152 43% 83%; /* Light Mint text */
+    --secondary: 210 40% 96.1%; /* Light grey for secondary elements */
+    --secondary-foreground: 240 5.9% 10%; /* Dark grey text on secondary */
 
-    --muted: 180 80% 15%; /* Muted version of Dark Teal */
-    --muted-foreground: 152 43% 70%; /* Dimmer Mint text */
+    --muted: 210 40% 96.1%; /* Light grey for muted backgrounds */
+    --muted-foreground: 215.4 16.3% 46.9%; /* Medium grey for muted text */
 
-    --accent: 170 99% 49%; /* #01F9C6 - Bright Cyan (New Accent) */
-    --accent-foreground: 340 11% 6%; /* #0C090A - Near black text for contrast on cyan */
+    --accent: 210 40% 96.1%; /* Light grey for accent backgrounds */
+    --accent-foreground: 240 5.9% 10%; /* Dark grey text on accent */
 
-    --destructive: 300 100% 25%; /* #800080 - Purple */
-    --destructive-foreground: 152 43% 83%; /* Light Mint text */
+    --destructive: 0 84.2% 60.2%; /* Red */
+    --destructive-foreground: 0 0% 98%; /* White text on destructive */
 
-    --border: 180 90% 25%; /* Slightly lighter Dark Teal for borders */
-    --input: 180 90% 19%; /* Dark Teal for input backgrounds */
-    --ring: 152 72% 47%; /* #22CE83 - Bright Green for focus rings (New Primary) */
+    --border: 214.3 31.8% 91.4%; /* Light grey border */
+    --input: 214.3 31.8% 91.4%; /* Light grey for input backgrounds */
+    --ring: 217 91% 59%; /* Primary blue for focus rings */
 
-    --chart-1: 152 72% 47%; /* Bright Green (New Primary) */
-    --chart-2: 170 99% 49%; /* Bright Cyan (New Accent) */
-    --chart-3: 180 90% 22%; /* Dark Teal variant */
-    --chart-4: 300 100% 30%; /* Purple variant */
-    --chart-5: 152 43% 70%; /* Dimmer Mint */
+    --chart-1: 217 91% 59%; /* Blue */
+    --chart-2: 240 5.9% 10%; /* Dark Grey */
+    --chart-3: 142.1 76.2% 36.3%; /* Green */
+    --chart-4: 48 95.8% 65.3%; /* Yellow */
+    --chart-5: 262.1 83.3% 57.8%; /* Purple */
 
-    /* Sidebar specific theme vars for new dark mode */
-    --sidebar-background: 340 11% 6%; /* Near Black */
-    --sidebar-foreground: 152 43% 83%; /* Light Mint text */
-    --sidebar-primary: 152 72% 47%; /* Bright Green for active items (New Primary) */
-    --sidebar-primary-foreground: 340 11% 6%; /* Near Black text on active */
-    --sidebar-accent: 180 80% 12%; /* Darker Teal for hover */
-    --sidebar-accent-foreground: 170 99% 55%; /* Brighter Cyan for hover text (New Accent) */
-    --sidebar-border: 180 90% 15%; /* Dark Teal border */
-    --sidebar-ring: 152 72% 47%; /* Bright Green ring (New Primary) */
+    /* Sidebar specific theme vars for new light mode */
+    --sidebar-background: 0 0% 100%; /* White */
+    --sidebar-foreground: 240 10% 3.9%; /* Near Black */
+    --sidebar-primary: 217 91% 59%; /* Vibrant Blue for active items */
+    --sidebar-primary-foreground: 0 0% 98%; /* White text on active */
+    --sidebar-accent: 210 40% 96.1%; /* Light grey for hover */
+    --sidebar-accent-foreground: 240 5.9% 10%; /* Dark grey text on hover */
+    --sidebar-border: 214.3 31.8% 91.4%; /* Light grey border */
+    --sidebar-ring: 217 91% 59%; /* Primary blue ring */
   }
 }
 
