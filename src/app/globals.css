@@ -1,3 +1,4 @@
+/* src/app/globals.css */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -8,7 +9,7 @@ body {
 
 @layer base {
   :root {
-    /* Default Light Theme (Kept as a fallback, but dark theme is active) */
+    /* Default Light Theme (Fallback, not active as .dark is set) */
     --background: 65 45% 96%; /* Very light yellow/cream */
     --foreground: 210 40% 20%; /* Darkest desaturated blue - for text */
 
@@ -56,51 +57,52 @@ body {
     --sidebar-ring: 210 35% 45%;
   }
 
+  /* UPDATED: Dark Theme with Green as Primary Accent */
   .dark {
-    /* Theme based on Screenshot 2025-05-25 094557.jpg (Light Theme) */
-    --background: 0 0% 100%; /* White */
-    --foreground: 240 10% 3.9%; /* Near Black */
+    --background: 220 18% 12%; /* Very dark blue-gray (original dark theme background) */
+    --foreground: 210 20% 96%; /* Off-white for text (original dark theme foreground) */
 
-    --card: 0 0% 100%; /* White */
-    --card-foreground: 240 10% 3.9%; /* Near Black */
+    --card: 220 18% 18%; /* Slightly lighter dark for cards/form background */
+    --card-foreground: 210 20% 96%;
 
-    --popover: 0 0% 100%; /* White */
-    --popover-foreground: 240 10% 3.9%; /* Near Black */
+    --popover: 220 18% 18%;
+    --popover-foreground: 210 20% 96%;
 
-    --primary: 217 91% 59%; /* A vibrant blue for primary actions */
-    --primary-foreground: 0 0% 98%; /* White text on primary */
+    --primary: 140 60% 40%; /* PRIMARY: Green accent */
+    --primary-foreground: 0 0% 100%; /* White text on primary */
 
-    --secondary: 210 40% 96.1%; /* Light grey for secondary elements */
-    --secondary-foreground: 240 5.9% 10%; /* Dark grey text on secondary */
+    --secondary: 198 86% 50%; /* SECONDARY: Vibrant Teal/Cyan (the previous primary blue) */
+    --secondary-foreground: 0 0% 100%; /* White text on secondary */
 
-    --muted: 210 40% 96.1%; /* Light grey for muted backgrounds */
-    --muted-foreground: 215.4 16.3% 46.9%; /* Medium grey for muted text */
+    --muted: 220 10% 25%; /* Darker grey for muted backgrounds */
+    --muted-foreground: 210 5% 65%; /* Lighter grey for muted text */
 
-    --accent: 210 40% 96.1%; /* Light grey for accent backgrounds */
-    --accent-foreground: 240 5.9% 10%; /* Dark grey text on accent */
+    --accent: 140 60% 40%; /* ACCENT matches PRIMARY green */
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84.2% 60.2%; /* Red */
-    --destructive-foreground: 0 0% 98%; /* White text on destructive */
+    --destructive: 0 84.2% 60.2%; /* Standard red */
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%; /* Light grey border */
-    --input: 214.3 31.8% 91.4%; /* Light grey for input backgrounds */
-    --ring: 217 91% 59%; /* Primary blue for focus rings */
+    --border: 220 10% 30%; /* Darker border */
+    --input: 220 10% 25%; /* Darker input backgrounds */
+    --ring: 140 60% 40%; /* RING matches PRIMARY green */
 
-    --chart-1: 217 91% 59%; /* Blue */
-    --chart-2: 240 5.9% 10%; /* Dark Grey */
-    --chart-3: 142.1 76.2% 36.3%; /* Green */
-    --chart-4: 48 95.8% 65.3%; /* Yellow */
+    /* Chart colors (adjust if needed for the new palette) */
+    --chart-1: 140 60% 40%; /* Green */
+    --chart-2: 198 86% 50%; /* Teal/Cyan */
+    --chart-3: 210 10% 20%; /* Dark Grey */
+    --chart-4: 25 95% 55%; /* Orange */
     --chart-5: 262.1 83.3% 57.8%; /* Purple */
 
-    /* Sidebar specific theme vars for new light mode */
-    --sidebar-background: 0 0% 100%; /* White */
-    --sidebar-foreground: 240 10% 3.9%; /* Near Black */
-    --sidebar-primary: 217 91% 59%; /* Vibrant Blue for active items */
-    --sidebar-primary-foreground: 0 0% 98%; /* White text on active */
-    --sidebar-accent: 210 40% 96.1%; /* Light grey for hover */
-    --sidebar-accent-foreground: 240 5.9% 10%; /* Dark grey text on hover */
-    --sidebar-border: 214.3 31.8% 91.4%; /* Light grey border */
-    --sidebar-ring: 217 91% 59%; /* Primary blue ring */
+    /* Sidebar specific theme vars for new dark mode */
+    --sidebar-background: 220 18% 15%;
+    --sidebar-foreground: 210 20% 96%;
+    --sidebar-primary: 140 60% 40%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 10% 25%;
+    --sidebar-accent-foreground: 210 20% 96%;
+    --sidebar-border: 220 10% 30%;
+    --sidebar-ring: 140 60% 40%;
   }
 }
 

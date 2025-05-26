@@ -1,4 +1,3 @@
-
 // src/models/User.ts
 import mongoose, { Schema, Document, models, Model } from 'mongoose';
 import type { User as UserType } from '@/lib/types'; // Using existing User type for structure
@@ -8,6 +7,8 @@ export interface UserDocument extends Omit<UserType, 'id' | 'borrowerProfileId'>
   // id: string; // Mongoose _id will be transformed to id by virtual/toJSON
   borrowerProfileId?: mongoose.Types.ObjectId; // Link to BorrowerProfile model
   passwordHash?: string;
+  passwordResetOtp?: string; // Added for OTP for password reset
+  passwordResetOtpExpires?: Date; // Added for OTP expiry time
   createdAt?: Date; // Mongoose timestamps will add this
   updatedAt?: Date; // Mongoose timestamps will add this
 }
@@ -43,6 +44,15 @@ const UserSchema: Schema<UserDocument> = new Schema(
     borrowerProfileId: {
       type: Schema.Types.ObjectId,
       ref: 'BorrowerProfile',
+    },
+    // Fields for password reset OTP
+    passwordResetOtp: {
+      type: String,
+      required: false, // OTP is not always present
+    },
+    passwordResetOtpExpires: {
+      type: Date,
+      required: false, // OTP expiry is not always present
     },
   },
   {

@@ -1,7 +1,8 @@
-import type {NextConfig} from 'next';
-
-const nextConfig: NextConfig = {
+// next.config.js
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   /* config options here */
+  
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -16,8 +17,14 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
+      { // Added for Unsplash images
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+        port: '',
+        pathname: '/**',
+      },
     ],
   },
 };
 
-export default nextConfig;
+module.exports = nextConfig;

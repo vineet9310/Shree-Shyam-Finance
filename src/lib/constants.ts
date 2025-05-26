@@ -12,4 +12,5 @@ export const ROUTES = {
   ADMIN_USERS: "/admin/users",
   ADMIN_USER_DETAIL: (id: string) => `/admin/users/${id}`,
   USER_APPLICATION_DETAIL: (id: string) => `/dashboard/application/${id}`, 
+  FORGOT_PASSWORD: '/forgot-password',
 };
