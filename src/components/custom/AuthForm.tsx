@@ -1,4 +1,3 @@
-
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -22,7 +21,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import Image from 'next/image';
 import { APP_NAME, ROUTES } from "@/lib/constants"; // Using APP_NAME for welcome message
-
 const loginSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
   password: z.string().min(1, { message: "Password is required." }),
@@ -177,7 +175,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const welcomeSubtitle = mode === "login" 
     ? `Welcome to ${APP_NAME}. Community Dashboard` 
     : `Join ${APP_NAME} to manage your finances.`;
-
+  const imageSrc = "/assets/Shyam.jpg";
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
       {/* Left Panel (Form) */}
@@ -185,7 +183,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         <div className="w-full max-w-md mx-auto">
           <div className="mb-10">
             <Link href={ROUTES.HOME} className="text-2xl font-bold text-foreground">
-              {APP_NAME.toUpperCase().split(' ')[1] || APP_NAME.toUpperCase()}.
+              {APP_NAME.toUpperCase().split(' ')[0] || APP_NAME.toUpperCase()}.
             </Link>
           </div>
 
@@ -331,11 +329,12 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
 
       {/* Right Panel (Image) */}
       <div className="hidden md:flex md:w-1/2 lg:w-3/5 bg-slate-900 items-center justify-center p-8 relative overflow-hidden">
+        {/* Added h-full to ensure the parent has a height for the fill image */}
         <Image
-          src="https://placehold.co/800x1000/0C0F1E/FFC868?text=Rivaayat\nFinance" // Placeholder similar to the style
-          alt="Financial services illustration"
-          layout="fill"
-          objectFit="cover"
+          src={imageSrc}
+          alt="Illustration related to finance"
+          fill
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           priority
           data-ai-hint="financial abstract"
         />
