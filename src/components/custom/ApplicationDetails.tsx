@@ -1,174 +1,281 @@
+// src/components/custom/ApplicationDetails.tsx
 
 "use client";
 import type { LoanApplication, CollateralDocument } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { FileText, UserCircle, CalendarDays, IndianRupee, Briefcase, ShieldQuestion, Info, Paperclip, Users as UsersIcon } from "lucide-react";
+import { FileText, UserCircle, CalendarDays, IndianRupee, Briefcase, ShieldQuestion, Info, Paperclip, Users as UsersIcon, Volume2, Image as ImageIcon, XCircle } from "lucide-react"; // Added XCircle for rejected icon
 import FormattedDate from "@/components/custom/FormattedDate";
 import { useToast } from "@/hooks/use-toast";
+import { useRef } from "react"; // Import useRef for audio playback
 
 interface ApplicationDetailsProps {
   application: LoanApplication;
 }
 
-// Helper to format document names for display
-const formatDocumentName = (prefix: string, name?: string) => {
-  if (name) {
-    return { label: prefix, value: name };
+// Helper to format document names for display, now expects URL instead of name
+const formatDocumentForDisplay = (label: string, url?: string) => {
+  if (url) {
+    // Attempt to extract a friendly name from URL or use a generic one
+    const fileNameMatch = url.match(/\/([^\/?#]+)[\?#]?$/);
+    const fileName = fileNameMatch ? decodeURIComponent(fileNameMatch[1]) : 'Document';
+    const displayedName = fileName.length > 30 ? fileName.substring(0, 27) + '...' : fileName;
+    return { label: label, url: url, displayName: displayedName };
   }
   return null;
 };
 
+
 export function ApplicationDetails({ application }: ApplicationDetailsProps) {
-  const { toast } = useToast(); // Initialize useToast
+  const { toast } = useToast();
+  const rejectionAudioRef = useRef<HTMLAudioElement | null>(null);
 
-  const allDocumentNames: { label: string; value: string }[] = [];
+  const allDocumentsForDisplay: { label: string; url: string; displayName: string }[] = [];
 
-  // Borrower documents
-  if (application.borrowerIdProofDocumentName) {
-    allDocumentNames.push({ label: "Borrower ID Proof", value: application.borrowerIdProofDocumentName });
+  // Borrower documents (now checking for URLs)
+  if (application.borrowerIdProofDocumentUrl) {
+    allDocumentsForDisplay.push(formatDocumentForDisplay("Borrower ID Proof", application.borrowerIdProofDocumentUrl)!);
   }
-  if (application.borrowerAddressProofDocumentName) {
-    allDocumentNames.push({ label: "Borrower Address Proof", value: application.borrowerAddressProofDocumentName });
+  if (application.borrowerAddressProofDocumentUrl) {
+    allDocumentsForDisplay.push(formatDocumentForDisplay("Borrower Address Proof", application.borrowerAddressProofDocumentUrl)!);
   }
 
-  // Guarantor documents
+  // Guarantor documents (now checking for URLs)
   if (application.guarantor) {
-    if (application.guarantor.idProofDocumentName) {
-      allDocumentNames.push({ label: "Guarantor ID Proof", value: application.guarantor.idProofDocumentName });
+    if (application.guarantor.idProofDocumentUrl) {
+      allDocumentsForDisplay.push(formatDocumentForDisplay("Guarantor ID Proof", application.guarantor.idProofDocumentUrl)!);
     }
-    if (application.guarantor.addressProofDocumentName) {
-      allDocumentNames.push({ label: "Guarantor Address Proof", value: application.guarantor.addressProofDocumentName });
+    if (application.guarantor.addressProofDocumentUrl) {
+      allDocumentsForDisplay.push(formatDocumentForDisplay("Guarantor Address Proof", application.guarantor.addressProofDocumentUrl)!);
     }
   }
 
-  // Collateral documents
+  // Collateral documents (now checking for URLs)
   if (application.submittedCollateral && application.submittedCollateral.length > 0) {
     application.submittedCollateral.forEach((collateral, index) => {
-      const prefix = `Collateral ${index + 1} (${collateral.type.replace(/_/g, ' ')})`;
-      const collateralDocs: (ReturnType<typeof formatDocumentName>)[] = [
-        formatDocumentName(`${prefix} - ATM Front`, collateral.atmCardFrontImageName),
-        formatDocumentName(`${prefix} - ATM Back`, collateral.atmCardBackImageName),
-        formatDocumentName(`${prefix} - Cheque Image`, collateral.chequeImageName),
-        formatDocumentName(`${prefix} - Bank Statement`, collateral.bankStatementFileName),
-        formatDocumentName(`${prefix} - Vehicle RC`, collateral.vehicleRcImageName),
-        formatDocumentName(`${prefix} - Vehicle Image`, collateral.vehicleImageName),
-        formatDocumentName(`${prefix} - Property Papers`, collateral.propertyPapersFileName),
-        formatDocumentName(`${prefix} - Property Image`, collateral.propertyImageName),
-        formatDocumentName(`${prefix} - Asset Image`, collateral.assetImageName),
+      const basePrefix = `Collateral ${index + 1} (${collateral.type.replace(/_/g, ' ')})`;
+      const collateralDocs: (ReturnType<typeof formatDocumentForDisplay>)[] = [
+        formatDocumentForDisplay(`${basePrefix} - ATM Front`, collateral.atmCardFrontImageUrl),
+        formatDocumentForDisplay(`${basePrefix} - ATM Back`, collateral.atmCardBackImageUrl),
+        formatDocumentForDisplay(`${basePrefix} - Cheque Image`, collateral.chequeImageUrl),
+        formatDocumentForDisplay(`${basePrefix} - Bank Statement`, collateral.bankStatementUrl),
+        formatDocumentForDisplay(`${basePrefix} - Vehicle RC`, collateral.vehicleRcImageUrl),
+        formatDocumentForDisplay(`${basePrefix} - Vehicle Image`, collateral.vehicleImageUrl),
+        formatDocumentForDisplay(`${basePrefix} - Property Papers`, collateral.propertyPapersUrl),
+        formatDocumentForDisplay(`${basePrefix} - Property Image`, collateral.propertyImageUrl),
+        formatDocumentForDisplay(`${basePrefix} - Asset Image`, collateral.assetImageUrl),
       ];
       collateralDocs.forEach(doc => {
-        if (doc) allDocumentNames.push(doc);
+        if (doc) allDocumentsForDisplay.push(doc);
       });
+      // Also add any general document URLs if available on collateral
+      if (collateral.documentUrls && collateral.documentUrls.length > 0) {
+        collateral.documentUrls.forEach((url, docIdx) => {
+          allDocumentsForDisplay.push(formatDocumentForDisplay(`${basePrefix} - Add'l Doc ${docIdx + 1}`, url)!);
+        });
+      }
     });
   }
-  
+
+  // General Supporting Documents (now checking for URLs)
+  if (application.generalSupportingDocumentUrls && application.generalSupportingDocumentUrls.length > 0) {
+    application.generalSupportingDocumentUrls.forEach((url, index) => {
+      allDocumentsForDisplay.push(formatDocumentForDisplay(`General Document ${index + 1}`, url)!);
+    });
+  }
+
+  const playRejectionAudio = () => {
+    if (application.rejectionDetails?.audioUrl) {
+      if (rejectionAudioRef.current) {
+        rejectionAudioRef.current.src = application.rejectionDetails.audioUrl;
+        rejectionAudioRef.current.play().catch(e => console.error("Error playing audio:", e));
+        toast({ title: "Playing Audio", description: "Rejection audio is now playing." });
+      }
+    }
+  };
+
+
   return (
     <Card className="shadow-lg">
       <CardHeader>
         <CardTitle className="text-xl flex items-center gap-2">
           <FileText className="h-6 w-6 text-primary" />
-          Loan Application Details
+          ऋण आवेदन विवरण (Loan Application Details)
         </CardTitle>
-        <CardDescription>Application ID: {application.id}</CardDescription>
+        <CardDescription>आवेदन ID (Application ID): {application.id}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
           <div>
-            <h3 className="font-semibold mb-1 flex items-center"><UserCircle className="mr-2 h-5 w-5 text-muted-foreground" />Applicant Information</h3>
-            <p><strong className="text-muted-foreground">Name:</strong> {application.borrowerFullName || application.fullName}</p>
-            <p><strong className="text-muted-foreground">Email:</strong> {application.borrowerEmail || application.email}</p>
+            <h3 className="font-semibold mb-1 flex items-center"><UserCircle className="mr-2 h-5 w-5 text-muted-foreground" />आवेदक जानकारी (Applicant Information)</h3>
+            <p><strong className="text-muted-foreground">नाम (Name):</strong> {application.borrowerFullName || application.fullName}</p>
+            <p><strong className="text-muted-foreground">ईमेल (Email):</strong> {application.borrowerEmail || application.email}</p>
+            <p><strong className="text-muted-foreground">संपर्क नंबर (Contact No):</strong> {application.borrowerContactNo || 'N/A'}</p> {/* Updated */}
+            <p><strong className="text-muted-foreground">पता (Address):</strong> {application.borrowerAddress || 'N/A'}</p> {/* Updated */}
+            <p><strong className="text-muted-foreground">पहचान प्रमाण (ID Proof):</strong> {application.borrowerIdProofType || 'N/A'}</p> {/* Updated */}
+            <p><strong className="text-muted-foreground">पते का प्रमाण (Address Proof):</strong> {application.borrowerAddressProofType || 'N/A'}</p> {/* Updated */}
           </div>
           <div>
-            <h3 className="font-semibold mb-1 flex items-center"><CalendarDays className="mr-2 h-5 w-5 text-muted-foreground" />Application Timeline</h3>
-            <p><strong className="text-muted-foreground">Submitted:</strong> <FormattedDate dateString={application.applicationDate || application.submittedDate} /></p>
+            <h3 className="font-semibold mb-1 flex items-center"><CalendarDays className="mr-2 h-5 w-5 text-muted-foreground" />आवेदन समयरेखा (Application Timeline)</h3>
+            <p><strong className="text-muted-foreground">जमा किया गया (Submitted):</strong> <FormattedDate dateString={application.applicationDate || application.submittedDate} /></p>
             <div>
-                <strong className="text-muted-foreground">Status:</strong>{' '}
+                <strong className="text-muted-foreground">स्थिति (Status):</strong>{' '}
                 <Badge variant={application.status === "Approved" ? "default" : application.status === "Rejected" ? "destructive" : "secondary"} className="capitalize">{application.status}</Badge>
             </div>
             {application.approvedDate && (
-                 <p><strong className="text-muted-foreground">Approved:</strong> <FormattedDate dateString={application.approvedDate} /></p>
+                 <p><strong className="text-muted-foreground">अनुमोदित (Approved):</strong> <FormattedDate dateString={application.approvedDate} /></p>
+            )}
+            {application.disbursementDate && (
+                 <p><strong className="text-muted-foreground">वितरित (Disbursed):</strong> <FormattedDate dateString={application.disbursementDate} /></p>
+            )}
+            {application.maturityDate && (
+                 <p><strong className="text-muted-foreground">परिपक्वता (Maturity):</strong> <FormattedDate dateString={application.maturityDate} /></p>
             )}
           </div>
         </div>
 
         <div className="space-y-2">
-          <h3 className="font-semibold flex items-center"><IndianRupee className="mr-2 h-5 w-5 text-muted-foreground" />Loan Details</h3>
-          <p><strong className="text-muted-foreground">Amount Requested:</strong> ₹{application.requestedAmount?.toLocaleString() || application.loanAmount?.toLocaleString() || 'N/A'}</p>
-          <p><strong className="text-muted-foreground">Purpose:</strong> {application.purpose || application.loanPurpose}</p>
-           {application.approvedAmount && application.approvedAmount > 0 && (
-             <p><strong className="text-muted-foreground">Amount Approved:</strong> ₹{application.approvedAmount.toLocaleString()}</p>
+          <h3 className="font-semibold flex items-center"><IndianRupee className="mr-2 h-5 w-5 text-muted-foreground" />ऋण विवरण (Loan Details)</h3>
+          <p><strong className="text-muted-foreground">अनुरोधित राशि (Amount Requested):</strong> ₹{application.requestedAmount?.toLocaleString() || application.loanAmount?.toLocaleString() || 'N/A'}</p>
+          {application.approvedAmount && application.approvedAmount > 0 && (
+             <p><strong className="text-muted-foreground">अनुमोदित राशि (Amount Approved):</strong> ₹{application.approvedAmount.toLocaleString()}</p>
            )}
+          <p><strong className="text-muted-foreground">उद्देश्य (Purpose):</strong> {application.purpose || application.loanPurpose}</p>
+          {application.interestRate && <p><strong className="text-muted-foreground">ब्याज दर (Interest Rate):</strong> {application.interestRate}% ({application.interestType || 'N/A'})</p>}
+          {application.loanTermMonths && <p><strong className="text-muted-foreground">ऋण अवधि (Loan Term):</strong> {application.loanTermMonths} महीने</p>}
+          {application.repaymentFrequency && <p><strong className="text-muted-foreground">पुनर्भुगतान आवृत्ति (Repayment Frequency):</strong> {application.repaymentFrequency}</p>}
+          {application.processingFee && <p><strong className="text-muted-foreground">प्रोसेसिंग शुल्क (Processing Fee):</strong> ₹{application.processingFee.toLocaleString()}</p>}
+          {application.otherCharges && application.otherCharges.length > 0 && (
+            <div>
+              <strong className="text-muted-foreground">अन्य शुल्क (Other Charges):</strong>
+              <ul className="list-disc list-inside ml-4">
+                {application.otherCharges.map((charge, i) => (
+                  <li key={i}>{charge.description}: ₹{charge.amount.toLocaleString()}</li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
             <div>
-                <h3 className="font-semibold mb-1 flex items-center"><Briefcase className="mr-2 h-5 w-5 text-muted-foreground" />Financial Profile (User Stated)</h3>
-                <p><strong className="text-muted-foreground">Annual Income:</strong> ₹{application.income?.toLocaleString() || 'N/A'}</p>
-                <p><strong className="text-muted-foreground">Employment:</strong> {application.employmentStatus || 'N/A'}</p>
+                <h3 className="font-semibold mb-1 flex items-center"><Briefcase className="mr-2 h-5 w-5 text-muted-foreground" />वित्तीय प्रोफ़ाइल (उपयोगकर्ता द्वारा बताया गया) (Financial Profile (User Stated))</h3>
+                <p><strong className="text-muted-foreground">वार्षिक आय (Annual Income):</strong> ₹{application.income?.toLocaleString() || 'N/A'}</p>
+                <p><strong className="text-muted-foreground">रोजगार (Employment):</strong> {application.employmentStatus || 'N/A'}</p>
             </div>
             <div>
-                <h3 className="font-semibold mb-1 flex items-center"><ShieldQuestion className="mr-2 h-5 w-5 text-muted-foreground" />Credit Information (User Stated)</h3>
-                <p><strong className="text-muted-foreground">Credit Score:</strong> {application.creditScore || 'Not Provided'}</p>
+                <h3 className="font-semibold mb-1 flex items-center"><ShieldQuestion className="mr-2 h-5 w-5 text-muted-foreground" />क्रेडिट जानकारी (उपयोगकर्ता द्वारा बताया गया) (Credit Information (User Stated))</h3>
+                <p><strong className="text-muted-foreground">क्रेडिट स्कोर (Credit Score):</strong> {application.creditScore || 'प्रदान नहीं किया गया'}</p>
             </div>
         </div>
 
+        {/* Loan Repayment Details (for active/approved loans) */}
+        {(application.status === 'Active' || application.status === 'Approved' || application.status === 'PaidOff' || application.status === 'Overdue' || application.status === 'Defaulted') && (
+            <div className="space-y-2">
+                <h3 className="font-semibold flex items-center"><IndianRupee className="mr-2 h-5 w-5 text-muted-foreground" />पुनर्भुगतान अवलोकन (Repayment Overview)</h3>
+                <p><strong className="text-muted-foreground">वितरित मूलधन (Principal Disbursed):</strong> ₹{application.principalDisbursed?.toLocaleString() || 'N/A'}</p>
+                <p><strong className="text-muted-foreground">वर्तमान बकाया मूलधन (Current Principal Outstanding):</strong> ₹{application.currentPrincipalOutstanding?.toLocaleString() || 'N/A'}</p>
+                <p><strong className="text-muted-foreground">वर्तमान बकाया ब्याज (Current Interest Outstanding):</strong> ₹{application.currentInterestOutstanding?.toLocaleString() || 'N/A'}</p>
+                <p><strong className="text-muted-foreground">कुल चुकाया गया मूलधन (Total Principal Repaid):</strong> ₹{application.totalPrincipalRepaid?.toLocaleString() || 'N/A'}</p>
+                <p><strong className="text-muted-foreground">कुल चुकाया गया ब्याज (Total Interest Repaid):</strong> ₹{application.totalInterestRepaid?.toLocaleString() || 'N/A'}</p>
+                <p><strong className="text-muted-foreground">कुल चुकाए गए दंड (Total Penalties Paid):</strong> ₹{application.totalPenaltiesPaid?.toLocaleString() || 'N/A'}</p>
+                <p><strong className="text-muted-foreground">अंतिम भुगतान तिथि (Last Payment Date):</strong> <FormattedDate dateString={application.lastPaymentDate} /></p>
+                <p><strong className="text-muted-foreground">अगली भुगतान देय तिथि (Next Payment Due Date):</strong> <FormattedDate dateString={application.nextPaymentDueDate} /></p>
+                <p><strong className="text-muted-foreground">अगली भुगतान राशि (Next Payment Amount):</strong> ₹{application.nextPaymentAmount?.toLocaleString() || 'N/A'}</p>
+            </div>
+        )}
+
+
         {application.guarantor && (
             <div className="space-y-2">
-                <h3 className="font-semibold mb-1 flex items-center"><UsersIcon className="mr-2 h-5 w-5 text-muted-foreground" />Guarantor Information</h3>
-                <p><strong className="text-muted-foreground">Name:</strong> {application.guarantor.fullName}</p>
-                <p><strong className="text-muted-foreground">Contact:</strong> {application.guarantor.contactNo}</p>
-                <p><strong className="text-muted-foreground">Address:</strong> {application.guarantor.address}</p>
+                <h3 className="font-semibold mb-1 flex items-center"><UsersIcon className="mr-2 h-5 w-5 text-muted-foreground" />गारंटर जानकारी (Guarantor Information)</h3>
+                <p><strong className="text-muted-foreground">नाम (Name):</strong> {application.guarantor.fullName}</p>
+                <p><strong className="text-muted-foreground">संपर्क (Contact):</strong> {application.guarantor.contactNo}</p>
+                <p><strong className="text-muted-foreground">पता (Address):</strong> {application.guarantor.address}</p>
+                <p><strong className="text-muted-foreground">पहचान प्रमाण प्रकार (ID Proof Type):</strong> {application.guarantor.idProofType || 'N/A'}</p>
+                <p><strong className="text-muted-foreground">पते का प्रमाण प्रकार (Address Proof Type):</strong> {application.guarantor.addressProofType || 'N/A'}</p>
+                <p><strong className="text-muted-foreground">संबंध (Relationship):</strong> {application.guarantor.relationshipToBorrower || 'N/A'}</p>
             </div>
         )}
 
         {application.submittedCollateral && application.submittedCollateral.length > 0 && (
              <div className="space-y-2">
-                <h3 className="font-semibold mb-1 flex items-center"><Paperclip className="mr-2 h-5 w-5 text-muted-foreground" />Submitted Collateral</h3>
+                <h3 className="font-semibold mb-1 flex items-center"><Paperclip className="mr-2 h-5 w-5 text-muted-foreground" />जमा की गई संपार्श्विक (Submitted Collateral)</h3>
                 {application.submittedCollateral.map((collateral, index) => (
                     <div key={index} className="pl-4 border-l-2 border-muted-foreground/20 py-1 my-1">
                         <p className="font-medium">{collateral.type.replace(/_/g, ' ')}</p>
                         <p className="text-xs text-muted-foreground">{collateral.description}</p>
-                        {collateral.estimatedValue && <p className="text-xs text-muted-foreground">Value: ₹{collateral.estimatedValue.toLocaleString()}</p>}
-                        {collateral.atmPin && <p className="text-xs text-destructive">ATM PIN Provided (Sensitive)</p>}
-                        {collateral.chequeNumber && <p className="text-xs text-muted-foreground">Cheque No: {collateral.chequeNumber}</p>}
-                         {collateral.vehicleChallanDetails && <p className="text-xs text-muted-foreground">Challan: {collateral.vehicleChallanDetails}</p>}
-                         {collateral.assetDetails && <p className="text-xs text-muted-foreground">Asset Details: {collateral.assetDetails}</p>}
+                        {collateral.estimatedValue && <p className="text-xs text-muted-foreground">मूल्य (Value): ₹{collateral.estimatedValue.toLocaleString()}</p>}
+                        {collateral.atmPin && <p className="text-xs text-destructive">ATM पिन प्रदान किया गया (संवेदनशील) (ATM PIN Provided (Sensitive))</p>}
+                        {collateral.chequeNumber && <p className="text-xs text-muted-foreground">चेक नंबर (Cheque No): {collateral.chequeNumber}</p>}
+                         {collateral.vehicleChallanDetails && <p className="text-xs text-muted-foreground">चालान (Challan): {collateral.vehicleChallanDetails}</p>}
+                         {collateral.assetDetails && <p className="text-xs text-muted-foreground">संपत्ति विवरण (Asset Details): {collateral.assetDetails}</p>}
                     </div>
                 ))}
             </div>
         )}
 
+        {/* Display Rejection Details if application is rejected */}
+        {application.status === 'Rejected' && application.rejectionDetails && (
+            <div className="space-y-2">
+                <h3 className="font-semibold flex items-center text-destructive"><XCircle className="mr-2 h-5 w-5" />अस्वीकृति का कारण (Rejection Reason)</h3>
+                {application.rejectionDetails.text && (
+                    <p className="text-sm"><strong>कारण (Reason):</strong> {application.rejectionDetails.text}</p>
+                )}
+                {application.rejectionDetails.imageUrl && (
+                    <div>
+                        <p className="text-sm flex items-center gap-1"><strong>छवि (Image):</strong> <ImageIcon className="h-4 w-4 text-muted-foreground"/> <a href={application.rejectionDetails.imageUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">छवि देखें (View Image)</a></p>
+                    </div>
+                )}
+                {application.rejectionDetails.audioUrl && (
+                    <div>
+                        <p className="text-sm flex items-center gap-1"><strong>ऑडियो (Audio):</strong> <Volume2 className="h-4 w-4 text-muted-foreground"/>
+                            <button onClick={playRejectionAudio} className="text-primary hover:underline ml-1">ऑडियो चलाएँ (Play Audio)</button>
+                            <audio ref={rejectionAudioRef} src={application.rejectionDetails.audioUrl} className="hidden"></audio>
+                        </p>
+                    </div>
+                )}
+                {application.rejectionDetails.rejectedAt && (
+                    <p className="text-xs text-muted-foreground">अस्वीकृत तिथि (Rejected on): <FormattedDate dateString={application.rejectionDetails.rejectedAt} options={{ year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }} /></p>
+                )}
+                {/* Optionally display admin who rejected if populated */}
+                {/* <p className="text-xs text-muted-foreground">Rejected by: {application.rejectionDetails.adminId}</p> */}
+            </div>
+        )}
+
 
         <div className="space-y-2">
-          <h3 className="font-semibold flex items-center"><Info className="mr-2 h-5 w-5 text-muted-foreground" />Uploaded Document Names</h3>
-          {allDocumentNames.length > 0 ? (
+          <h3 className="font-semibold flex items-center"><Info className="mr-2 h-5 w-5 text-muted-foreground" />अपलोड किए गए दस्तावेज़ (Uploaded Documents)</h3>
+          {allDocumentsForDisplay.length > 0 ? (
             <>
               <ul className="list-disc list-inside pl-5 space-y-1 text-sm">
-                {allDocumentNames.map((doc, index) => (
+                {allDocumentsForDisplay.map((doc, index) => (
                   <li key={index}>
                     <strong className="text-muted-foreground">{doc.label}:</strong>{' '}
-                    <span
-                      className="text-primary hover:underline cursor-pointer"
-                      onClick={() => {
+                    <a
+                      href={doc.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline cursor-pointer break-all"
+                      onClick={(e) => {
                         toast({
-                          title: "Document Viewing Placeholder",
-                          description: `Viewing for "${doc.value}" is a placeholder. Actual document viewing feature is pending file storage implementation.`,
+                          title: "दस्तावेज़ खोल रहा है (Opening Document)",
+                          description: `"${doc.displayName}" को एक नए टैब में खोलने का प्रयास किया जा रहा है। (Attempting to open "${doc.displayName}" in a new tab.)`,
                           variant: "default",
                         });
                       }}
                     >
-                      {doc.value}
-                    </span>
+                      {doc.displayName} (देखने के लिए क्लिक करें) (Click to View)
+                    </a>
                   </li>
                 ))}
               </ul>
               <p className="mt-2 text-xs text-muted-foreground">
-                Note: This section lists the names of documents submitted with the application. Actual document viewing functionality will be available once file storage and retrieval are fully implemented.
+                ये दस्तावेज़ क्लाउडिनरी पर सुरक्षित रूप से संग्रहीत हैं। (These documents are stored securely on Cloudinary.)
               </p>
             </>
           ) : (
-            <p className="text-sm text-muted-foreground">No document names found in this application record.</p>
+            <p className="text-sm text-muted-foreground">इस आवेदन रिकॉर्ड से कोई दस्तावेज़ संलग्न नहीं है। (No documents attached to this application record.)</p>
           )}
         </div>
       </CardContent>

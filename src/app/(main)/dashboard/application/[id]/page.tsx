@@ -1,3 +1,4 @@
+// src/app/(main)/dashboard/application/[id]/page.tsx
 
 "use client";
 import { useEffect, useState } from 'react';
@@ -118,7 +119,7 @@ export default function UserApplicationDetailPage() {
       <Button variant="outline" onClick={() => router.push(ROUTES.DASHBOARD)} className="mb-4">
         <ArrowLeft className="mr-2 h-4 w-4" /> Back to Dashboard
       </Button>
-      
+
       <ApplicationDetails application={application} />
 
       {canEditApplication && (
@@ -128,7 +129,7 @@ export default function UserApplicationDetailPage() {
                 <CardDescription>You can edit your application details if needed.</CardDescription>
             </CardHeader>
             <CardFooter>
-                <Button 
+                <Button
                     onClick={() => router.push(`${ROUTES.USER_APPLICATION_DETAIL(application.id)}/edit`)} // Placeholder for edit route
                     variant="outline"
                     disabled // Edit functionality to be implemented

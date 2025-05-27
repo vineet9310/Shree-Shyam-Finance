@@ -1,3 +1,4 @@
+// src/components/custom/DetailedLoanApplicationForm.tsx
 
 "use client";
 
@@ -33,13 +34,20 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { ROUTES } from "@/lib/constants";
 
-// Schema for a single file, useful for arrays of files.
-const fileSchema = z.instanceof(File)
-  .refine(file => file.size <= 5 * 1024 * 1024, "Max file size is 5MB.")
-  .refine(
-    file => ["image/jpeg", "image/png", "application/pdf"].includes(file.type),
-    ".jpg, .png, or .pdf files are accepted."
-  ).optional();
+// Helper to convert File to Base64 Data URI
+const fileToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = (error) => reject(error);
+  });
+};
+
+// Schema for a single file, now expecting a string (Base64 Data URI)
+const fileSchema = z.string()
+  .refine(dataUri => !dataUri || dataUri.startsWith('data:'), "Invalid data URI format.")
+  .optional();
 
 const collateralSchema = z.object({
   type: z.custom<CollateralType>((val) => typeof val === 'string' && val.length > 0, {
@@ -50,20 +58,20 @@ const collateralSchema = z.object({
     (val) => (val === "" || val === undefined || val === null ? undefined : Number(val)),
     z.number().positive("Estimated value must be positive.").optional()
   ),
-  atmCardFrontImage: fileSchema,
-  atmCardBackImage: fileSchema,
+  atmCardFrontImage: fileSchema, // Now expects string | undefined
+  atmCardBackImage: fileSchema, // Now expects string | undefined
   atmPin: z.string().optional().describe("Highly sensitive, consider security implications."),
-  chequeImage: fileSchema,
+  chequeImage: fileSchema, // Now expects string | undefined
   chequeNumber: z.string().optional(),
-  bankStatementFile: fileSchema,
-  vehicleRcImage: fileSchema,
-  vehicleImage: fileSchema,
+  bankStatementFile: fileSchema, // Now expects string | undefined
+  vehicleRcImage: fileSchema, // Now expects string | undefined
+  vehicleImage: fileSchema, // Now expects string | undefined
   vehicleChallanDetails: z.string().optional(),
-  propertyPapersFile: fileSchema,
-  propertyImage: fileSchema,
+  propertyPapersFile: fileSchema, // Now expects string | undefined
+  propertyImage: fileSchema, // Now expects string | undefined
   assetDetails: z.string().optional(),
-  assetImage: fileSchema,
-  additionalDocuments: z.array(fileSchema).optional(),
+  assetImage: fileSchema, // Now expects string | undefined
+  additionalDocuments: z.array(fileSchema).optional(), // Array of strings | undefined
 });
 
 const guarantorSchema = z.object({
@@ -74,12 +82,12 @@ const guarantorSchema = z.object({
     required_error: "Guarantor ID proof type is required.",
     invalid_type_error: "Please select a valid ID proof type for the guarantor."
   }),
-  idProofDocument: fileSchema,
+  idProofDocument: fileSchema, // Now expects string | undefined
   addressProofType: z.enum(["aadhaar", "utility_bill", "rent_agreement", "passport", "other"], {
     required_error: "Guarantor address proof type is required.",
     invalid_type_error: "Please select a valid address proof type for the guarantor."
   }),
-  addressProofDocument: fileSchema,
+  addressProofDocument: fileSchema, // Now expects string | undefined
 }).optional();
 
 
@@ -89,9 +97,9 @@ const loanApplicationFormSchema = z.object({
   borrowerEmail: z.string().email("Invalid email address."),
   borrowerAddress: z.string().min(10, "Address must be at least 10 characters."),
   borrowerIdProofType: z.enum(["aadhaar", "pan", "voter_id", "driving_license", "passport", "other"], { required_error: "Your ID proof type is required."}),
-  borrowerIdProofDocument: fileSchema,
+  borrowerIdProofDocument: fileSchema, // Now expects string | undefined
   borrowerAddressProofType: z.enum(["aadhaar", "utility_bill", "rent_agreement", "passport", "other"], { required_error: "Your address proof type is required." }),
-  borrowerAddressProofDocument: fileSchema,
+  borrowerAddressProofDocument: fileSchema, // Now expects string | undefined
   loanAmount: z.preprocess(
     (val) => (val === "" ? undefined : Number(val)),
     z.number({
@@ -103,7 +111,7 @@ const loanApplicationFormSchema = z.object({
   hasGuarantor: z.boolean().optional(),
   guarantor: guarantorSchema,
   collaterals: z.array(collateralSchema).min(0).optional(),
-  generalSupportingDocuments: z.array(fileSchema).optional(),
+  generalSupportingDocuments: z.array(fileSchema).optional(), // Array of strings | undefined
 });
 
 export type LoanApplicationFormValues = z.infer<typeof loanApplicationFormSchema>;
@@ -201,13 +209,47 @@ export function DetailedLoanApplicationForm() {
     name: "collaterals",
   });
 
-  const handleFileChange = (event: ChangeEvent<HTMLInputElement>, fieldName: any, index?: number) => {
+  const handleFileChange = async (event: ChangeEvent<HTMLInputElement>, fieldName: any, index?: number) => {
     if (event.target.files && event.target.files.length > 0) {
       const file = event.target.files[0];
-      if (typeof index === 'number') {
-        form.setValue(`collaterals.${index}.${fieldName as keyof typeof collateralFields[number]}`, file as any, { shouldValidate: true });
-      } else {
-        form.setValue(fieldName, file, { shouldValidate: true });
+      const maxFileSize = 5 * 1024 * 1024; // 5MB
+      const allowedFileTypes = ["image/jpeg", "image/png", "application/pdf"];
+
+      if (file.size > maxFileSize) {
+        toast({
+          title: "File Too Large",
+          description: `File "${file.name}" is too large. Max size is 5MB.`,
+          variant: "destructive",
+        });
+        event.target.value = ''; // Clear the input
+        return;
+      }
+
+      if (!allowedFileTypes.includes(file.type)) {
+        toast({
+          title: "Invalid File Type",
+          description: `File "${file.name}" has an unsupported type. Only JPG, PNG, PDF are allowed.`,
+          variant: "destructive",
+        });
+        event.target.value = ''; // Clear the input
+        return;
+      }
+
+      try {
+        const base64Uri = await fileToBase64(file);
+        if (typeof index === 'number') {
+          form.setValue(`collaterals.${index}.${fieldName as keyof typeof collateralFields[number]}`, base64Uri, { shouldValidate: true });
+        } else {
+          form.setValue(fieldName, base64Uri, { shouldValidate: true });
+        }
+      } catch (error) {
+        console.error("Error converting file to Base64:", error);
+        toast({
+          title: "File Processing Error",
+          description: `Could not process file "${file.name}". Please try again.`,
+          variant: "destructive",
+        });
+        event.target.value = ''; // Clear the input
       }
     }
   };
@@ -215,8 +257,8 @@ export function DetailedLoanApplicationForm() {
   const renderFileInput = (fieldName: any, label: string, index?: number, specificFieldName?: string) => {
     const fieldPath = typeof index === 'number' ? `collaterals.${index}.${specificFieldName || fieldName}` : fieldName;
 
-    const fileValue = form.watch(fieldPath as any);
-    const currentFile = fileValue instanceof File ? fileValue : null;
+    const fileValue = form.watch(fieldPath as any); // This will now be a base64 string or undefined
+    const currentFileName = fileValue && typeof fileValue === 'string' ? fileValue.split(',')[0].split(';')[0].split(':')[1].split('/')[1] + ' file' : null; // Extract simple name from data URI for display
 
     return (
       <FormItem>
@@ -230,7 +272,7 @@ export function DetailedLoanApplicationForm() {
             disabled={isSubmitting}
           />
         </FormControl>
-        {currentFile && <FormDescription>Selected: {currentFile.name} ({(currentFile.size / (1024*1024)).toFixed(2)}MB)</FormDescription>}
+        {currentFileName && <FormDescription>Selected: {currentFileName}</FormDescription>}
         <FormMessage />
       </FormItem>
     );
@@ -281,7 +323,7 @@ export function DetailedLoanApplicationForm() {
 
   async function onSubmit(values: LoanApplicationFormValues) {
     console.log("[DetailedLoanApplicationForm] onSubmit triggered.");
-    console.log("[DetailedLoanApplicationForm] Raw values from form:", JSON.stringify(values, null, 2));
+    // console.log("[DetailedLoanApplicationForm] Raw values from form (will contain Base64 strings):", JSON.stringify(values, null, 2));
 
 
     if (!user || !user.email) {
@@ -295,67 +337,56 @@ export function DetailedLoanApplicationForm() {
     }
     setIsSubmitting(true);
 
-    const submissionValues: LoanApplicationFormValues = {
+    const submissionPayload: LoanApplicationFormValues = {
         ...values,
         borrowerEmail: user.email,
         borrowerFullName: user.name || values.borrowerFullName,
     };
 
-    if (submissionValues.hasGuarantor === false || !submissionValues.hasGuarantor) {
-      delete (submissionValues as any).guarantor;
+    if (submissionPayload.hasGuarantor === false || !submissionPayload.hasGuarantor) {
+      // If guarantor is not selected, ensure the guarantor object is not sent
+      delete (submissionPayload as any).guarantor;
     }
 
-    console.log("[DetailedLoanApplicationForm] Values being sent to API:", JSON.stringify(submissionValues, null, 2));
 
-
-    const apiPayload: any = { ...submissionValues };
-
-    const processFileField = (file: File | undefined | null) => file instanceof File ? { name: file.name, type: file.type, size: file.size } : undefined;
-
-    apiPayload.borrowerIdProofDocument = processFileField(values.borrowerIdProofDocument);
-    apiPayload.borrowerAddressProofDocument = processFileField(values.borrowerAddressProofDocument);
-
-    if (values.hasGuarantor && values.guarantor) {
-        apiPayload.guarantor = {
-            ...values.guarantor,
-            idProofDocument: processFileField(values.guarantor?.idProofDocument),
-            addressProofDocument: processFileField(values.guarantor?.addressProofDocument),
-        };
-    } else {
-      delete apiPayload.guarantor;
-    }
-
-    if (values.collaterals) {
-        apiPayload.collaterals = values.collaterals.map((col, index) => ({
-            ...col,
-            atmCardFrontImage: processFileField(values.collaterals?.[index]?.atmCardFrontImage),
-            atmCardBackImage: processFileField(values.collaterals?.[index]?.atmCardBackImage),
-            chequeImage: processFileField(values.collaterals?.[index]?.chequeImage),
-            bankStatementFile: processFileField(values.collaterals?.[index]?.bankStatementFile),
-            vehicleRcImage: processFileField(values.collaterals?.[index]?.vehicleRcImage),
-            vehicleImage: processFileField(values.collaterals?.[index]?.vehicleImage),
-            propertyPapersFile: processFileField(values.collaterals?.[index]?.propertyPapersFile),
-            propertyImage: processFileField(values.collaterals?.[index]?.propertyImage),
-            assetImage: processFileField(values.collaterals?.[index]?.assetImage),
-        }));
-    }
-     if (values.generalSupportingDocuments) {
-        apiPayload.generalSupportingDocuments = values.generalSupportingDocuments?.map(processFileField) || [];
-    }
+    console.log("[DetailedLoanApplicationForm] Submitting to API:", {
+      ...submissionPayload,
+      // Truncate Base64 strings for console logging to avoid spam
+      borrowerIdProofDocument: submissionPayload.borrowerIdProofDocument ? submissionPayload.borrowerIdProofDocument.substring(0, 50) + '...' : undefined,
+      borrowerAddressProofDocument: submissionPayload.borrowerAddressProofDocument ? submissionPayload.borrowerAddressProofDocument.substring(0, 50) + '...' : undefined,
+      guarantor: submissionPayload.guarantor ? {
+        ...submissionPayload.guarantor,
+        idProofDocument: submissionPayload.guarantor.idProofDocument ? submissionPayload.guarantor.idProofDocument.substring(0, 50) + '...' : undefined,
+        addressProofDocument: submissionPayload.guarantor.addressProofDocument ? submissionPayload.guarantor.addressProofDocument.substring(0, 50) + '...' : undefined,
+      } : undefined,
+      collaterals: submissionPayload.collaterals?.map(col => ({
+        ...col,
+        atmCardFrontImage: col.atmCardFrontImage ? col.atmCardFrontImage.substring(0, 50) + '...' : undefined,
+        atmCardBackImage: col.atmCardBackImage ? col.atmCardBackImage.substring(0, 50) + '...' : undefined,
+        chequeImage: col.chequeImage ? col.chequeImage.substring(0, 50) + '...' : undefined,
+        bankStatementFile: col.bankStatementFile ? col.bankStatementFile.substring(0, 50) + '...' : undefined,
+        vehicleRcImage: col.vehicleRcImage ? col.vehicleRcImage.substring(0, 50) + '...' : undefined,
+        vehicleImage: col.vehicleImage ? col.vehicleImage.substring(0, 50) + '...' : undefined,
+        propertyPapersFile: col.propertyPapersFile ? col.propertyPapersFile.substring(0, 50) + '...' : undefined,
+        propertyImage: col.propertyImage ? col.propertyImage.substring(0, 50) + '...' : undefined,
+        assetImage: col.assetImage ? col.assetImage.substring(0, 50) + '...' : undefined,
+      })),
+      generalSupportingDocuments: submissionPayload.generalSupportingDocuments?.map(doc => doc ? doc.substring(0, 50) + '...' : undefined),
+    });
 
 
     try {
       const response = await fetch('/api/loan-applications', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(apiPayload),
+        body: JSON.stringify(submissionPayload), // Send the modified values directly
       });
       const result = await response.json();
 
       if (response.ok && result.success) {
         toast({
           title: "Application Query Submitted!",
-          description: "Your loan application query has been received. We will review it shortly.",
+          description: "Your loan application query has been received and documents uploaded to Cloudinary.",
           variant: "default",
         });
         form.reset({
@@ -385,7 +416,7 @@ export function DetailedLoanApplicationForm() {
       console.error("[DetailedLoanApplicationForm] Form submission error:", error);
       toast({
         title: "Network Error",
-        description: "Could not connect to the server. Please check your connection.",
+        description: "Could not connect to the server or an unexpected error occurred.",
         variant: "destructive",
       });
     } finally {
@@ -599,7 +630,28 @@ export function DetailedLoanApplicationForm() {
               <AccordionItem value="general_docs">
                     <AccordionTrigger className="text-lg font-semibold"><Briefcase className="mr-2 h-5 w-5 text-primary"/>Other Supporting Documents (Optional)</AccordionTrigger>
                     <AccordionContent className="space-y-4 pt-4">
-                        {renderFileInput("generalSupportingDocuments.0", "Upload Document (e.g., Payslip, Business Proof)")}
+                        <FormField
+                            control={form.control}
+                            name="generalSupportingDocuments" // Use the array field name
+                            render={() => (
+                                <FormItem>
+                                    <FormLabel>Upload Document (e.g., Payslip, Business Proof)</FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            type="file"
+                                            onChange={(e) => handleFileChange(e, 'generalSupportingDocuments.0')} // Target first element of the array
+                                            accept=".jpg,.jpeg,.png,.pdf"
+                                            className="block w-full text-sm text-foreground file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                                            disabled={isSubmitting}
+                                        />
+                                    </FormControl>
+                                    {form.watch('generalSupportingDocuments.0') && typeof form.watch('generalSupportingDocuments.0') === 'string' && (
+                                      <FormDescription>Selected: {form.watch('generalSupportingDocuments.0')?.substring(0, 50)}...</FormDescription> // Display truncated Base64 string
+                                    )}
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
                         <FormDescription>You can add more documents if needed later or as requested.</FormDescription>
                     </AccordionContent>
                 </AccordionItem>
@@ -614,4 +666,3 @@ export function DetailedLoanApplicationForm() {
     </Card>
   );
 }
-

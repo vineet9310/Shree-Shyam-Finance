@@ -1,15 +1,19 @@
-
 // src/models/LoanApplication.ts
+
 import mongoose, { Schema, Document, models, Model } from 'mongoose';
-import type { LoanApplication as LoanApplicationType, Guarantor as GuarantorType, CollateralDocument as CollateralDocumentType } from '@/lib/types';
-import UserModel from './User'; // Import UserModel for populate
+import type { LoanApplication as LoanApplicationType, Guarantor as GuarantorType, CollateralDocument as CollateralDocumentType, RejectionReason as RejectionReasonType } from '@/lib/types';
+import UserModel from './User';
 
 // Interface for Mongoose Document
-export interface LoanApplicationDocument extends Omit<LoanApplicationType, 'id' | 'borrowerUserId' | 'guarantor' | 'submittedCollateral' | 'processedDocuments' | 'applicationDate' | 'approvedDate' | 'disbursementDate' | 'firstPaymentDueDate' | 'maturityDate' | 'lastPaymentDate' | 'nextPaymentDueDate' | 'createdAt' | 'updatedAt'>, Document {
+export interface LoanApplicationDocument extends Omit<LoanApplicationType, 'id' | 'borrowerUserId' | 'guarantor' | 'submittedCollateral' | 'processedDocuments' | 'applicationDate' | 'approvedDate' | 'disbursementDate' | 'firstPaymentDueDate' | 'maturityDate' | 'lastPaymentDate' | 'nextPaymentDueDate' | 'createdAt' | 'updatedAt' | 'borrowerIdProofDocumentName' | 'borrowerAddressProofDocumentName' | 'rejectionDetails'>, Document {
   borrowerUserId: mongoose.Types.ObjectId | UserDocument; // Can be populated
   // Denormalized fields for easier display
   borrowerFullName: string;
   borrowerEmail: string;
+  borrowerContactNo?: string; // Added
+  borrowerAddress?: string; // Added
+  borrowerIdProofType?: string; // Added
+  borrowerAddressProofType?: string; // Added
 
   guarantor?: GuarantorSchemaType;
   submittedCollateral: CollateralDocumentSchemaType[];
@@ -22,6 +26,14 @@ export interface LoanApplicationDocument extends Omit<LoanApplicationType, 'id' 
   nextPaymentDueDate?: Date;
   createdAt?: Date; // Mongoose timestamps will add this
   updatedAt?: Date; // Mongoose timestamps will add this
+
+  // Document URLs from Cloudinary
+  borrowerIdProofDocumentUrl?: string;
+  borrowerAddressProofDocumentUrl?: string;
+  generalSupportingDocumentUrls?: string[];
+
+  // New field for rejection details
+  rejectionDetails?: RejectionReasonSchemaType; // Add this
 }
 
 interface UserDocument extends Document {
@@ -38,10 +50,10 @@ const GuarantorSchema = new Schema<GuarantorType>({
   address: { type: String, required: true },
   contactNo: { type: String, required: true },
   idProofType: { type: String, enum: ["aadhaar", "pan", "voter_id", "driving_license", "passport", "other"], required: true },
-  idProofDocumentName: String,
+  idProofDocumentUrl: String,
   idProofOtherDetails: String,
   addressProofType: { type: String, enum: ["aadhaar", "utility_bill", "rent_agreement", "passport", "other"], required: true },
-  addressProofDocumentName: String,
+  addressProofDocumentUrl: String,
   addressProofOtherDetails: String,
   relationshipToBorrower: String,
 }, { _id: false });
@@ -51,45 +63,62 @@ export type GuarantorSchemaType = mongoose.InferSchemaType<typeof GuarantorSchem
 
 // Sub-schema for CollateralDocument - aligning with form fields for document names
 const CollateralDocumentSchema = new Schema<Omit<CollateralDocumentType, 'atmCardFrontImage' | 'atmCardBackImage' | 'chequeImage' | 'bankStatementFile' | 'vehicleRcImage' | 'vehicleImage' | 'propertyPapersFile' | 'propertyImage' | 'assetImage' | 'additionalDocuments'>>({
-  type: { type: String, required: true }, // CollateralType
+  type: { type: String, required: true },
   description: { type: String, required: true },
 
   atmPin: String,
-  atmCardFrontImageName: String,
-  atmCardBackImageName: String,
+  atmCardFrontImageUrl: String,
+  atmCardBackImageUrl: String,
 
-  chequeImageName: String,
+  chequeImageUrl: String,
   chequeNumber: String,
   chequeBankName: String,
 
-  bankStatementFileName: String,
+  bankStatementUrl: String,
 
-  vehicleRcImageName: String,
-  vehicleImageName: String,
+  vehicleRcImageUrl: String,
+  vehicleImageUrl: String,
   vehicleChallanDetails: String,
+  vehiclePapersUrl: String,
 
-  propertyPapersFileName: String,
-  propertyImageName: String,
+  propertyPapersUrl: String,
+  propertyImageUrl: String,
 
   assetDetails: String,
-  assetImageName: String,
+  assetImageUrl: String,
 
   estimatedValue: Number,
   notes: String,
+  documentUrls: [String],
 }, { _id: false });
 
 export type CollateralDocumentSchemaType = mongoose.InferSchemaType<typeof CollateralDocumentSchema>;
+
+// New sub-schema for RejectionReason
+const RejectionReasonSchema = new Schema<RejectionReasonType>({
+  text: String,
+  imageUrl: String,
+  audioUrl: String,
+  adminId: { type: String }, // Changed from Schema.Types.ObjectId to String
+  rejectedAt: { type: Date, default: Date.now },
+}, { _id: false });
+
+export type RejectionReasonSchemaType = mongoose.InferSchemaType<typeof RejectionReasonSchema>;
 
 
 const LoanApplicationSchema: Schema<LoanApplicationDocument> = new Schema(
   {
     borrowerUserId: {
       type: Schema.Types.ObjectId,
-      ref: 'User', // Ensure this matches the name you used for mongoose.model('User', ...)
+      ref: 'User',
       required: true,
     },
     borrowerFullName: { type: String, required: true },
     borrowerEmail: { type: String, required: true },
+    borrowerContactNo: { type: String }, // Added
+    borrowerAddress: { type: String }, // Added
+    borrowerIdProofType: { type: String }, // Added
+    borrowerAddressProofType: { type: String }, // Added
     guarantor: GuarantorSchema,
     applicationDate: { type: Date, default: Date.now, required: true },
     requestedAmount: { type: Number, required: true },
@@ -129,8 +158,12 @@ const LoanApplicationSchema: Schema<LoanApplicationDocument> = new Schema(
     nextPaymentDueDate: Date,
     nextPaymentAmount: Number,
 
-    borrowerIdProofDocumentName: String,
-    borrowerAddressProofDocumentName: String,
+    borrowerIdProofDocumentUrl: String,
+    borrowerAddressProofDocumentUrl: String,
+    generalSupportingDocumentUrls: [String],
+
+    // New field for rejection details
+    rejectionDetails: RejectionReasonSchema, // Add this
   },
   {
     timestamps: true,
@@ -144,7 +177,10 @@ const LoanApplicationSchema: Schema<LoanApplicationDocument> = new Schema(
               if (!ret.borrowerUserId.id) {
                 ret.borrowerUserId.id = ret.borrowerUserId._id.toString();
               }
-              // delete ret.borrowerUserId._id; // Optionally remove _id from populated sub-object
+            }
+            // Ensure rejectionDetails.rejectedAt is converted to string if present
+            if (ret.rejectionDetails && ret.rejectionDetails.rejectedAt instanceof Date) {
+              ret.rejectionDetails.rejectedAt = ret.rejectionDetails.rejectedAt.toISOString();
             }
             delete ret._id;
             delete ret.__v;
@@ -159,7 +195,10 @@ const LoanApplicationSchema: Schema<LoanApplicationDocument> = new Schema(
               if (!ret.borrowerUserId.id) {
                 ret.borrowerUserId.id = ret.borrowerUserId._id.toString();
               }
-              // delete ret.borrowerUserId._id;
+            }
+            // Ensure rejectionDetails.rejectedAt is converted to string if present
+            if (ret.rejectionDetails && ret.rejectionDetails.rejectedAt instanceof Date) {
+              ret.rejectionDetails.rejectedAt = ret.rejectionDetails.rejectedAt.toISOString();
             }
             delete ret._id;
             delete ret.__v;

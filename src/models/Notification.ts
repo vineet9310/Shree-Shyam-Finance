@@ -1,14 +1,18 @@
-
 // src/models/Notification.ts
+
 import mongoose, { Schema, Document, models, Model } from 'mongoose';
 import type { SystemNotification as NotificationType } from '@/lib/types';
 
-export interface NotificationDocument extends Omit<NotificationType, 'id' | 'recipientUserId' | 'loanApplicationId' | 'paymentRecordId' | 'createdAt'>, Document {
+export interface NotificationDocument extends Omit<NotificationType, 'id' | 'recipientUserId' | 'loanApplicationId' | 'paymentRecordId' | 'createdAt' | 'rejectionReasonText' | 'rejectionReasonImageUrl' | 'rejectionReasonAudioUrl'>, Document {
   recipientUserId: mongoose.Types.ObjectId;
   loanApplicationId?: mongoose.Types.ObjectId;
   paymentRecordId?: mongoose.Types.ObjectId;
   createdAt?: Date;
   updatedAt?: Date;
+  // New fields for rejection details directly in notification
+  rejectionReasonText?: string;
+  rejectionReasonImageUrl?: string;
+  rejectionReasonAudioUrl?: string;
 }
 
 const NotificationSchema: Schema<NotificationDocument> = new Schema(
@@ -41,6 +45,7 @@ const NotificationSchema: Schema<NotificationDocument> = new Schema(
         'document_request',
         'general_admin_alert',
         'general_user_info',
+        'loan_rejected_details', // New type
       ],
       required: true,
     },
@@ -49,6 +54,10 @@ const NotificationSchema: Schema<NotificationDocument> = new Schema(
       default: false,
     },
     linkTo: String,
+    // New fields for rejection details for direct notification display
+    rejectionReasonText: String,
+    rejectionReasonImageUrl: String,
+    rejectionReasonAudioUrl: String,
   },
   {
     timestamps: true,

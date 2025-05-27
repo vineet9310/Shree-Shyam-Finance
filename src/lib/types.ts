@@ -15,9 +15,9 @@ export interface User {
   contactNo?: string;
   address?: string;
   idProofType?: string;
-  idProofDocumentUrl?: string;
+  idProofDocumentUrl?: string; // Added for User documents
   addressProofType?: string;
-  addressProofDocumentUrl?: string;
+  addressProofDocumentUrl?: string; // Added for User documents
   passwordHash?: string; // Only for backend, should not be sent to client
   createdAt?: string; // ISO Date string
   updatedAt?: string; // ISO Date string
@@ -42,18 +42,16 @@ export interface BorrowerProfile {
 }
 
 export interface Guarantor {
-  // id: string; // Mongoose will handle _id if this becomes a sub-document or its own model
-  // loanApplicationId: string; 
   fullName: string;
   address: string;
   contactNo: string;
   idProofType: 'aadhaar' | 'pan' | 'voter_id' | 'driving_license' | 'passport' | 'other';
-  idProofDocumentUrl?: string; // Made optional for frontend type, backend model handles storage
-  idProofDocument?: File | {name: string, type: string, size: number}; // For form state
+  idProofDocumentUrl?: string; // Changed to URL
+  idProofDocument?: string; // For form state, will be Base64 string
   idProofOtherDetails?: string;
   addressProofType: 'aadhaar' | 'utility_bill' | 'rent_agreement' | 'passport' | 'other';
-  addressProofDocumentUrl?: string; // Made optional
-  addressProofDocument?: File | {name: string, type: string, size: number}; // For form state
+  addressProofDocumentUrl?: string; // Changed to URL
+  addressProofDocument?: string; // For form state, will be Base64 string
   addressProofOtherDetails?: string;
   relationshipToBorrower?: string;
 }
@@ -61,7 +59,7 @@ export interface Guarantor {
 export type CollateralType =
   | 'atm_card'
   | 'blank_cheque'
-  | 'bank_statement' 
+  | 'bank_statement'
   | 'vehicle_bike'
   | 'vehicle_car'
   | 'vehicle_scooty'
@@ -71,88 +69,92 @@ export type CollateralType =
   | 'other_asset';
 
 export interface CollateralDocument {
-  // id: string; // Mongoose will handle _id
-  // loanApplicationId: string;
   type: CollateralType;
-  description: string; 
+  description: string;
 
-  atmPin?: string; 
-  atmCardFrontImageUrl?: string; 
-  atmCardBackImageUrl?: string;  
-  // File objects for form state, URLs for stored data
-  atmCardFrontImage?: File | {name: string, type: string, size: number};
-  atmCardBackImage?: File | {name: string, type: string, size: number};
+  atmPin?: string;
+  atmCardFrontImageUrl?: string; // Changed to URL
+  atmCardBackImageUrl?: string;  // Changed to URL
+  atmCardFrontImage?: string; // For form state, will be Base64 string
+  atmCardBackImage?: string; // For form state, will be Base64 string
 
-
-  chequeImageUrl?: string; 
-  chequeImage?: File | {name: string, type: string, size: number};
+  chequeImageUrl?: string; // Changed to URL
+  chequeImage?: string; // For form state, will be Base64 string
   chequeNumber?: string;
   chequeBankName?: string;
 
-  bankStatementUrl?: string; 
-  bankStatementFile?: File | {name: string, type: string, size: number};
+  bankStatementUrl?: string; // Changed to URL
+  bankStatementFile?: string; // For form state, will be Base64 string
 
-  vehicleRcImageUrl?: string;
-  vehicleRcImage?: File | {name: string, type: string, size: number};
-  vehicleImageUrl?: string; 
-  vehicleImage?: File | {name: string, type: string, size: number};
-  vehicleChallanDetails?: string; 
-  vehiclePapersUrl?: string;
+  vehicleRcImageUrl?: string; // Changed to URL
+  vehicleRcImage?: string; // For form state, will be Base64 string
+  vehicleImageUrl?: string; // Changed to URL
+  vehicleImage?: string; // For form state, will be Base64 string
+  vehicleChallanDetails?: string;
+  vehiclePapersUrl?: string; // New field for general vehicle papers URL
 
-  propertyPapersUrl?: string; 
-  propertyPapersFile?: File | {name: string, type: string, size: number};
-  propertyImageUrl?: string; 
-  propertyImage?: File | {name: string, type: string, size: number};
+  propertyPapersUrl?: string; // Changed to URL
+  propertyPapersFile?: string; // For form state, will be Base64 string
+  propertyImageUrl?: string; // Changed to URL
+  propertyImage?: string; // For form state, will be Base64 string
 
-  assetDetails?: string; 
-  assetImageUrl?: string;
-  assetImage?: File | {name: string, type: string, size: number};
+  assetDetails?: string;
+  assetImageUrl?: string; // Changed to URL
+  assetImage?: string; // For form state, will be Base64 string
 
   estimatedValue?: number;
-  documentUrls?: string[]; 
+  documentUrls?: string[]; // Generic array of URLs for miscellaneous docs
   notes?: string;
-  additionalDocuments?: (File | {name: string, type: string, size: number})[]; // for form
+  additionalDocuments?: string[]; // For form state, will be array of Base64 strings
+}
+
+export interface RejectionReason {
+  text?: string;
+  imageUrl?: string; // URL from Cloudinary
+  audioUrl?: string; // URL from Cloudinary
+  adminId?: string; // ID of the admin who rejected
+  rejectedAt?: string; // ISO date string of rejection
 }
 
 export type LoanApplicationStatus =
-  | 'QueryInitiated'         
-  | 'PendingAdminVerification' 
-  | 'AdditionalInfoRequired' 
-  | 'Approved'               
-  | 'Rejected'               
-  | 'Active'                 
-  | 'PaidOff'                
-  | 'Overdue'                
-  | 'Defaulted';             
+  | 'QueryInitiated'
+  | 'PendingAdminVerification'
+  | 'AdditionalInfoRequired'
+  | 'Approved'
+  | 'Rejected'
+  | 'Active'
+  | 'PaidOff'
+  | 'Overdue'
+  | 'Defaulted';
 
 export interface LoanApplication {
   id: string; // Mongoose _id
   borrowerUserId: string | User; // string for ID, User object when populated
-  guarantor?: Guarantor; 
-  
-  applicationDate: string; 
+  guarantor?: Guarantor;
+
+  applicationDate: string;
   requestedAmount: number;
   purpose: string;
-  
+
   submittedCollateral: CollateralDocument[];
-  
+
   status: LoanApplicationStatus;
   adminVerificationNotes?: string;
-  adminAssignedTo?: string; 
-  
+  adminAssignedTo?: string;
+
   approvedAmount?: number;
-  interestRate?: number; 
-  interestType?: 'simple' | 'compound_monthly'; 
+  interestRate?: number;
+  interestType?: 'simple' | 'compound_monthly';
   repaymentFrequency?: 'daily' | 'weekly' | 'monthly' | 'custom';
-  loanTermMonths?: number; 
+  loanTermMonths?: number;
   processingFee?: number;
   otherCharges?: { description: string; amount: number }[];
-  
-  approvedDate?: string; 
-  disbursementDate?: string; 
-  firstPaymentDueDate?: string; 
-  maturityDate?: string; 
-  
+
+  approvedDate?: string;
+  disbursementDate?: string;
+  firstPaymentDueDate?: string;
+  maturityDate?: string;
+
   principalDisbursed: number;
   currentPrincipalOutstanding: number;
   currentInterestOutstanding: number;
@@ -161,15 +163,17 @@ export interface LoanApplication {
   totalPenaltiesPaid: number;
   lastPaymentDate?: string;
   nextPaymentDueDate?: string;
-  nextPaymentAmount?: number; 
-  
-  // Representing document names/placeholders from form for initial backend storage
-  // These are temporary until full file upload logic is in place.
-  borrowerIdProofDocumentName?: string;
-  borrowerAddressProofDocumentName?: string;
-  // Add more such fields for guarantor and collateral documents if needed for Mongoose schema
+  nextPaymentAmount?: number;
+
+  // These fields will now directly store Cloudinary URLs
+  borrowerIdProofDocumentUrl?: string;
+  borrowerAddressProofDocumentUrl?: string;
+  generalSupportingDocumentUrls?: string[]; // Array of URLs for general documents
 
   processedDocuments?: { name: string; dataUri: string }[]; // For AI flow primarily
+  
+  // New field for rejection details
+  rejectionDetails?: RejectionReason; // Add this
 
   createdAt?: string;
   updatedAt?: string;
@@ -193,7 +197,7 @@ export interface PaymentRecord {
 
 export interface SystemNotification {
   id: string;
-  recipientUserId: string; 
+  recipientUserId: string;
   loanApplicationId?: string;
   paymentRecordId?: string;
   message: string;
@@ -205,10 +209,15 @@ export interface SystemNotification {
     | 'payment_overdue_alert'
     | 'document_request'
     | 'general_admin_alert'
-    | 'general_user_info';
+    | 'general_user_info'
+    | 'loan_rejected_details'; // New notification type for rejection details
   isRead: boolean;
-  createdAt: string; 
-  linkTo?: string; 
+  createdAt: string;
+  linkTo?: string;
+  // New fields to store rejection details in notification, for direct display
+  rejectionReasonText?: string;
+  rejectionReasonImageUrl?: string;
+  rejectionReasonAudioUrl?: string;
 }
 
 

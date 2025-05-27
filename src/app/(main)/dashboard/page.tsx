@@ -1,3 +1,4 @@
+// src/app/(main)/dashboard/page.tsx
 
 "use client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,9 +9,9 @@ import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ROUTES } from "@/lib/constants";
-import { TrendingUp, History, CalendarClock, AlertTriangle, CheckCircle2, Clock, IndianRupee, FileText, Loader2, Eye, Users, ListChecks, ShieldCheck, BellRing, MessageSquare, Info } from "lucide-react"; // Added MessageSquare, Info
+import { TrendingUp, History, CalendarClock, AlertTriangle, CheckCircle2, Clock, IndianRupee, FileText, Loader2, Eye, Users, ListChecks, ShieldCheck, BellRing, MessageSquare, Info, Volume2, Image as ImageIcon } from "lucide-react"; // Added MessageSquare, Info, Volume2, ImageIcon
 import FormattedDate from "@/components/custom/FormattedDate";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react"; // Added useRef for audio playback
 import { useToast } from "@/hooks/use-toast";
 
 
@@ -57,10 +58,21 @@ export default function DashboardPage() {
   const [errorLoans, setErrorLoans] = useState<string | null>(null);
   const [errorNotifications, setErrorNotifications] = useState<string | null>(null); // Error state for notifications
   const { toast } = useToast();
+  const notificationAudioRef = useRef<HTMLAudioElement | null>(null); // For playing notification audio
+
+
+  const playNotificationAudio = (audioUrl: string) => {
+    if (notificationAudioRef.current) {
+      notificationAudioRef.current.src = audioUrl;
+      notificationAudioRef.current.play().catch(e => console.error("Error playing notification audio:", e));
+      toast({ title: "Playing Notification", description: "Audio message is now playing." });
+    }
+  };
+
 
   useEffect(() => {
     const fetchUserLoans = async () => {
-      if (!user?.id) { 
+      if (!user?.id) {
         setIsLoadingLoans(false);
         setUserLoanApplications([]);
         return;
@@ -136,11 +148,11 @@ export default function DashboardPage() {
     } else {
       setUserLoanApplications([]);
       setNotifications([]); // Clear notifications for admin or if no user
-      setIsLoadingLoans(false); 
+      setIsLoadingLoans(false);
       setIsLoadingNotifications(false);
     }
-    
-    setPaymentHistory([]); 
+
+    setPaymentHistory([]);
 
   }, [user, toast]);
 
@@ -256,12 +268,37 @@ export default function DashboardPage() {
                   <div className="flex items-start gap-3">
                     <div className="mt-1">
                       {notif.type === 'loan_status_updated' && <MessageSquare className="h-5 w-5 text-primary" />}
+                      {notif.type === 'loan_rejected_details' && <XCircle className="h-5 w-5 text-destructive" />} {/* Icon for rejected */}
                       {notif.type.includes('reminder') && <Clock className="h-5 w-5 text-yellow-500" />}
                       {notif.type.includes('alert') && <AlertTriangle className="h-5 w-5 text-destructive" />}
-                      {!['loan_status_updated', 'reminder', 'alert'].some(t => notif.type.includes(t)) && <Info className="h-5 w-5 text-muted-foreground" />}
+                      {!['loan_status_updated', 'reminder', 'alert', 'loan_rejected_details'].some(t => notif.type.includes(t)) && <Info className="h-5 w-5 text-muted-foreground" />}
                     </div>
                     <div>
                       <p className={`text-sm font-medium ${!notif.isRead ? 'text-accent-foreground' : 'text-foreground'}`}>{notif.message}</p>
+                      {notif.type === 'loan_rejected_details' && (
+                          <div className="mt-2 text-xs">
+                              {notif.rejectionReasonText && (
+                                  <p className="text-foreground">Reason: {notif.rejectionReasonText}</p>
+                              )}
+                              {notif.rejectionReasonImageUrl && (
+                                  <p className="flex items-center text-foreground mt-1">
+                                      <ImageIcon className="h-3 w-3 mr-1"/>
+                                      <a href={notif.rejectionReasonImageUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                                          View Image
+                                      </a>
+                                  </p>
+                              )}
+                              {notif.rejectionReasonAudioUrl && (
+                                  <p className="flex items-center text-foreground mt-1">
+                                      <Volume2 className="h-3 w-3 mr-1"/>
+                                      <button onClick={() => playNotificationAudio(notif.rejectionReasonAudioUrl!)} className="text-primary hover:underline">
+                                          Play Audio
+                                      </button>
+                                  </p>
+                              )}
+                              <audio ref={notificationAudioRef} className="hidden"></audio> {/* Hidden audio player */}
+                          </div>
+                      )}
                       <p className="text-xs text-muted-foreground">
                         <FormattedDate dateString={notif.createdAt} options={{ year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }} />
                       </p>
@@ -310,7 +347,7 @@ export default function DashboardPage() {
                   <CardContent className="space-y-1 text-sm">
                     <p>Amount Requested: <span className="font-semibold">₹{app.requestedAmount.toLocaleString()}</span></p>
                     <p className="flex items-center text-xs text-muted-foreground"><Clock className="mr-1 h-3 w-3" /> Applied: <FormattedDate dateString={app.applicationDate} /></p>
-                     <Button asChild variant="outline" size="sm" className="mt-2 w-full"> 
+                     <Button asChild variant="outline" size="sm" className="mt-2 w-full">
                         <Link href={ROUTES.USER_APPLICATION_DETAIL(app.id)}>
                             <Eye className="mr-2 h-4 w-4" /> View Details
                         </Link>
@@ -364,10 +401,10 @@ export default function DashboardPage() {
                     {loan.nextPaymentAmount && (
                        <p>Next Payment Amount: <span className="font-semibold">₹{loan.nextPaymentAmount.toLocaleString()}</span></p>
                     )}
-                     <p className="flex items-center text-xs text-muted-foreground"><Clock className="mr-1 h-3 w-3" /> 
+                     <p className="flex items-center text-xs text-muted-foreground"><Clock className="mr-1 h-3 w-3" />
                         {loan.status === 'Approved' ? 'Approved:' : 'Disbursed:'} <FormattedDate dateString={loan.approvedDate || loan.disbursementDate} />
                      </p>
-                      <Button asChild variant="outline" size="sm" className="mt-2 w-full"> 
+                      <Button asChild variant="outline" size="sm" className="mt-2 w-full">
                         <Link href={ROUTES.USER_APPLICATION_DETAIL(loan.id)}>
                             <Eye className="mr-2 h-4 w-4" /> View Details
                         </Link>
@@ -419,5 +456,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    
