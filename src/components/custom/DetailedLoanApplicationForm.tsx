@@ -75,21 +75,21 @@ const collateralSchema = z.object({
 });
 
 const guarantorSchema = z.object({
-  fullName: z.string().min(2, "Guarantor full name is required (min 2 chars)."),
-  address: z.string().min(5, "Guarantor address is required (min 5 chars)."),
-  contactNo: z.string().min(10, "Guarantor contact no. is required (min 10 digits).").max(15, "Guarantor contact no. too long (max 15 digits)."),
+  fullName: z.string().min(2, "Guarantor full name is required (min 2 chars).").optional().or(z.literal('')), // Made optional
+  address: z.string().min(5, "Guarantor address is required (min 5 chars).").optional().or(z.literal('')), // Made optional
+  contactNo: z.string().min(10, "Guarantor contact no. is required (min 10 digits).").max(15, "Guarantor contact no. too long (max 15 digits).").optional().or(z.literal('')), // Made optional
   idProofType: z.enum(["aadhaar", "pan", "voter_id", "driving_license", "passport", "other"], {
     required_error: "Guarantor ID proof type is required.",
     invalid_type_error: "Please select a valid ID proof type for the guarantor."
-  }),
-  idProofDocument: fileSchema, // Now expects string | undefined
+  }).optional(), // Made optional
+  idProofDocument: fileSchema, // Already optional
   addressProofType: z.enum(["aadhaar", "utility_bill", "rent_agreement", "passport", "other"], {
     required_error: "Guarantor address proof type is required.",
     invalid_type_error: "Please select a valid address proof type for the guarantor."
-  }),
-  addressProofDocument: fileSchema, // Now expects string | undefined
-}).optional();
-
+  }).optional(), // Made optional
+  addressProofDocument: fileSchema, // Already optional
+  relationshipToBorrower: z.string().optional(), // Already optional
+}).optional(); // The entire guarantor object is optional
 
 const loanApplicationFormSchema = z.object({
   borrowerFullName: z.string().min(1, "Full name is required."),
@@ -108,10 +108,36 @@ const loanApplicationFormSchema = z.object({
     }).min(1000, "Loan amount must be at least ₹1,000.")
   ),
   loanPurpose: z.string().min(10, "Please describe loan purpose (min 10 chars)."),
+  monthlyIncome: z.preprocess( // Changed to monthlyIncome
+    (val) => (val === "" || val === undefined || val === null ? undefined : Number(val)),
+    z.number().positive("Monthly income must be positive.").optional()
+  ),
+  employmentStatus: z.string().optional(),
+  jobType: z.string().optional(), // New field
+  businessDescription: z.string().optional(), // New field
+  creditScore: z.preprocess(
+    (val) => (val === "" || val === undefined || val === null ? undefined : Number(val)),
+    z.number().int().min(300, "Credit score must be at least 300.").max(900, "Credit score must be at most 900.").optional()
+  ),
   hasGuarantor: z.boolean().optional(),
   guarantor: guarantorSchema,
   collaterals: z.array(collateralSchema).min(0).optional(),
   generalSupportingDocuments: z.array(fileSchema).optional(), // Array of strings | undefined
+}).superRefine((data, ctx) => { // Conditional validation for jobType/businessDescription
+  if (data.employmentStatus === 'employed' && !data.jobType) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['jobType'],
+      message: 'Job Type is required for employed status.',
+    });
+  }
+  if (data.employmentStatus === 'self-employed' && !data.businessDescription) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['businessDescription'],
+      message: 'Business Description is required for self-employed status.',
+    });
+  }
 });
 
 export type LoanApplicationFormValues = z.infer<typeof loanApplicationFormSchema>;
@@ -151,6 +177,11 @@ export function DetailedLoanApplicationForm() {
       borrowerAddressProofType: undefined,
       loanAmount: '' as any,
       loanPurpose: "",
+      monthlyIncome: '' as any, // Initialize monthlyIncome
+      employmentStatus: undefined, // Initialize employmentStatus
+      jobType: "", // Initialize new field
+      businessDescription: "", // Initialize new field
+      creditScore: '' as any, // Initialize creditScore
       hasGuarantor: false,
       guarantor: {
         fullName: "",
@@ -160,6 +191,7 @@ export function DetailedLoanApplicationForm() {
         idProofDocument: undefined,
         addressProofType: undefined,
         addressProofDocument: undefined,
+        relationshipToBorrower: "",
       },
       collaterals: [],
       generalSupportingDocuments: [],
@@ -174,12 +206,17 @@ export function DetailedLoanApplicationForm() {
         borrowerEmail: user.email || "",
         borrowerContactNo: user.contactNo || "",
         borrowerAddress: user.address || "",
-        borrowerIdProofType: undefined,
-        borrowerAddressProofType: undefined,
+        borrowerIdProofType: user.idProofType || undefined, // Populate from user if available
+        borrowerAddressProofType: user.addressProofType || undefined, // Populate from user if available
         loanAmount: '' as any,
         loanPurpose: "",
+        monthlyIncome: user.monthlyIncome || '' as any, // Populate from user
+        employmentStatus: user.employmentStatus || undefined, // Populate from user
+        jobType: user.jobType || "", // Populate new field
+        businessDescription: user.businessDescription || "", // Populate new field
+        creditScore: user.creditScore || '' as any, // Populate from user
         hasGuarantor: false,
-        guarantor: { fullName: "", address: "", contactNo: "", idProofType: undefined, idProofDocument: undefined, addressProofType: undefined, addressProofDocument: undefined },
+        guarantor: { fullName: "", address: "", contactNo: "", idProofType: undefined, idProofDocument: undefined, addressProofType: undefined, addressProofDocument: undefined, relationshipToBorrower: "" },
         collaterals: [],
         generalSupportingDocuments: [],
       });
@@ -195,8 +232,13 @@ export function DetailedLoanApplicationForm() {
             borrowerAddressProofType: undefined,
             loanAmount: '' as any,
             loanPurpose: "",
+            monthlyIncome: '' as any,
+            employmentStatus: undefined,
+            jobType: "",
+            businessDescription: "",
+            creditScore: '' as any,
             hasGuarantor: false,
-            guarantor: { fullName: "", address: "", contactNo: "", idProofType: undefined, idProofDocument: undefined, addressProofType: undefined, addressProofDocument: undefined },
+            guarantor: { fullName: "", address: "", contactNo: "", idProofType: undefined, idProofDocument: undefined, addressProofType: undefined, addressProofDocument: undefined, relationshipToBorrower: "" },
             collaterals: [],
             generalSupportingDocuments: [],
         });
@@ -398,8 +440,13 @@ export function DetailedLoanApplicationForm() {
             borrowerAddressProofType: undefined,
             loanAmount: '' as any,
             loanPurpose: "",
+            monthlyIncome: user?.monthlyIncome || '' as any,
+            employmentStatus: user?.employmentStatus || undefined,
+            jobType: user?.jobType || "",
+            businessDescription: user?.businessDescription || "",
+            creditScore: user?.creditScore || '' as any,
             hasGuarantor: false,
-            guarantor: { fullName: "", address: "", contactNo: "", idProofType: undefined, idProofDocument: undefined, addressProofType: undefined, addressProofDocument: undefined },
+            guarantor: { fullName: "", address: "", contactNo: "", idProofType: undefined, idProofDocument: undefined, addressProofType: undefined, addressProofDocument: undefined, relationshipToBorrower: "" },
             collaterals: [],
             generalSupportingDocuments: [],
         });
@@ -424,6 +471,8 @@ export function DetailedLoanApplicationForm() {
     }
   }
 
+  const employmentStatus = form.watch("employmentStatus");
+
   return (
     <Card className="w-full max-w-3xl mx-auto shadow-xl my-8">
       <CardHeader>
@@ -434,19 +483,19 @@ export function DetailedLoanApplicationForm() {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="space-y-8">
 
-            <Accordion type="multiple" defaultValue={["borrower_details", "loan_details"]} className="w-full">
+            <Accordion type="multiple" defaultValue={["borrower_details", "loan_details", "financial_profile"]} className="w-full">
               {/* Borrower Details Section */}
               <AccordionItem value="borrower_details">
                 <AccordionTrigger className="text-lg font-semibold"><UserCircle className="mr-2 h-5 w-5 text-primary"/>Borrower Details</AccordionTrigger>
                 <AccordionContent className="space-y-4 pt-4">
                   <FormField control={form.control} name="borrowerFullName" render={({ field }) => (
-                    <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input placeholder="e.g., Ramesh Kumar" {...field} value={field.value || ""} disabled={isSubmitting} readOnly /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input placeholder="e.g., Ramesh Kumar" {...field} value={field.value || ""} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
                   )} />
                   <FormField control={form.control} name="borrowerContactNo" render={({ field }) => (
                     <FormItem><FormLabel>Contact Number</FormLabel><FormControl><Input type="tel" placeholder="e.g., 9876543210" {...field} value={field.value || ""} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
                   )} />
                   <FormField control={form.control} name="borrowerEmail" render={({ field }) => (
-                    <FormItem><FormLabel>Email Address</FormLabel><FormControl><Input type="email" placeholder="ramesh@example.com" {...field} value={field.value || ""} disabled={isSubmitting} readOnly /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Email Address</FormLabel><FormControl><Input type="email" placeholder="ramesh@example.com" {...field} value={field.value || ""} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
                   )} />
                   <FormField control={form.control} name="borrowerAddress" render={({ field }) => (
                     <FormItem><FormLabel>Full Address</FormLabel><FormControl><Textarea placeholder="House No, Street, City, State, Pincode" {...field} value={field.value || ""} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
@@ -478,6 +527,38 @@ export function DetailedLoanApplicationForm() {
                   )} />
                   <FormField control={form.control} name="loanPurpose" render={({ field }) => (
                     <FormItem><FormLabel>Purpose of Loan</FormLabel><FormControl><Textarea placeholder="Detailed reason for needing the loan..." {...field} value={field.value || ""} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                </AccordionContent>
+              </AccordionItem>
+
+              {/* Financial Profile Section */}
+              <AccordionItem value="financial_profile">
+                <AccordionTrigger className="text-lg font-semibold"><Briefcase className="mr-2 h-5 w-5 text-primary"/>Financial Profile</AccordionTrigger>
+                <AccordionContent className="space-y-4 pt-4">
+                  <FormField control={form.control} name="monthlyIncome" render={({ field }) => (
+                    <FormItem><FormLabel>Monthly Income (₹)</FormLabel><FormControl><Input type="number" placeholder="e.g., 50000" {...field} value={field.value || ""} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                  <FormField control={form.control} name="employmentStatus" render={({ field }) => (
+                    <FormItem><FormLabel>Employment Status</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}><FormControl><SelectTrigger><SelectValue placeholder="Select employment status" /></SelectTrigger></FormControl><SelectContent>
+                      <SelectItem value="employed">Employed</SelectItem><SelectItem value="self-employed">Self-Employed</SelectItem><SelectItem value="unemployed">Unemployed</SelectItem>
+                      <SelectItem value="student">Student</SelectItem><SelectItem value="retired">Retired</SelectItem>
+                    </SelectContent></Select><FormMessage /></FormItem>
+                  )} />
+
+                  {employmentStatus === 'employed' && (
+                    <FormField control={form.control} name="jobType" render={({ field }) => (
+                      <FormItem><FormLabel>Job Type</FormLabel><FormControl><Input placeholder="e.g., Software Engineer, Teacher" {...field} value={field.value || ""} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                  )}
+
+                  {employmentStatus === 'self-employed' && (
+                    <FormField control={form.control} name="businessDescription" render={({ field }) => (
+                      <FormItem><FormLabel>Business Description</FormLabel><FormControl><Textarea placeholder="Describe your business (e.g., owns a grocery store, freelance graphic designer)" {...field} value={field.value || ""} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                  )}
+
+                  <FormField control={form.control} name="creditScore" render={({ field }) => (
+                    <FormItem><FormLabel>Credit Score (Optional)</FormLabel><FormControl><Input type="number" placeholder="e.g., 750" {...field} value={field.value || ""} disabled={isSubmitting} /></FormControl><FormDescription>Providing your credit score can help with faster processing.</FormDescription><FormMessage /></FormItem>
                   )} />
                 </AccordionContent>
               </AccordionItem>
@@ -525,6 +606,9 @@ export function DetailedLoanApplicationForm() {
                                 </SelectContent></Select><FormMessage /></FormItem>
                             )} />
                              {renderFileInput("guarantor.addressProofDocument", "Upload Guarantor Address Proof", undefined, "addressProofDocument")}
+                            <FormField control={form.control} name="guarantor.relationshipToBorrower" render={({ field }) => (
+                                <FormItem><FormLabel>Relationship to Borrower</FormLabel><FormControl><Input placeholder="e.g., Parent, Sibling, Friend" {...field} value={field.value || ""} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
+                            )} />
                         </>
                     )}
                 </AccordionContent>

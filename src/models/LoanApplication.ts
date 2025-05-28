@@ -23,7 +23,6 @@ export interface LoanApplicationDocument extends Omit<LoanApplicationType, 'id' 
   firstPaymentDueDate?: Date;
   maturityDate?: Date;
   lastPaymentDate?: Date;
-  nextPaymentDueDate?: Date;
   createdAt?: Date; // Mongoose timestamps will add this
   updatedAt?: Date; // Mongoose timestamps will add this
 
@@ -34,6 +33,11 @@ export interface LoanApplicationDocument extends Omit<LoanApplicationType, 'id' 
 
   // New field for rejection details
   rejectionDetails?: RejectionReasonSchemaType; // Add this
+
+  // New fields for financial profile
+  monthlyIncome?: number; // Changed from income to monthlyIncome
+  jobType?: string; // New field
+  businessDescription?: string; // New field
 }
 
 interface UserDocument extends Document {
@@ -46,13 +50,13 @@ interface UserDocument extends Document {
 
 // Sub-schema for Guarantor - aligning with form fields for document names
 const GuarantorSchema = new Schema<GuarantorType>({
-  fullName: { type: String, required: true },
-  address: { type: String, required: true },
-  contactNo: { type: String, required: true },
-  idProofType: { type: String, enum: ["aadhaar", "pan", "voter_id", "driving_license", "passport", "other"], required: true },
+  fullName: { type: String, required: false }, // Changed to false
+  address: { type: String, required: false }, // Changed to false
+  contactNo: { type: String, required: false }, // Changed to false
+  idProofType: { type: String, enum: ["aadhaar", "pan", "voter_id", "driving_license", "passport", "other"], required: false }, // Changed to false
   idProofDocumentUrl: String,
   idProofOtherDetails: String,
-  addressProofType: { type: String, enum: ["aadhaar", "utility_bill", "rent_agreement", "passport", "other"], required: true },
+  addressProofType: { type: String, enum: ["aadhaar", "utility_bill", "rent_agreement", "passport", "other"], required: false }, // Changed to false
   addressProofDocumentUrl: String,
   addressProofOtherDetails: String,
   relationshipToBorrower: String,
@@ -119,7 +123,7 @@ const LoanApplicationSchema: Schema<LoanApplicationDocument> = new Schema(
     borrowerAddress: { type: String }, // Added
     borrowerIdProofType: { type: String }, // Added
     borrowerAddressProofType: { type: String }, // Added
-    guarantor: GuarantorSchema,
+    guarantor: GuarantorSchema, // This makes the guarantor subdocument itself optional if not provided
     applicationDate: { type: Date, default: Date.now, required: true },
     requestedAmount: { type: Number, required: true },
     purpose: { type: String, required: true },
@@ -164,6 +168,12 @@ const LoanApplicationSchema: Schema<LoanApplicationDocument> = new Schema(
 
     // New field for rejection details
     rejectionDetails: RejectionReasonSchema, // Add this
+
+    // New fields for financial profile
+    monthlyIncome: { type: Number }, // Changed from income to monthlyIncome
+    jobType: { type: String }, // New field
+    businessDescription: { type: String }, // New field
+    creditScore: { type: Number }, // Existing field, just ensuring it's here
   },
   {
     timestamps: true,

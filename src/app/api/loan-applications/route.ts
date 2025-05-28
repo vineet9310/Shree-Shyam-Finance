@@ -18,6 +18,15 @@ export async function POST(request: NextRequest) {
     const body: LoanApplicationFormValues = await request.json();
     console.log('[API POST /loan-applications] Request body (partial, sensitive info omitted):', {
       borrowerEmail: body.borrowerEmail,
+      borrowerContactNo: body.borrowerContactNo,
+      borrowerAddress: body.borrowerAddress,
+      borrowerIdProofType: body.borrowerIdProofType,
+      borrowerAddressProofType: body.borrowerAddressProofType,
+      monthlyIncome: body.monthlyIncome, // Changed from income to monthlyIncome
+      employmentStatus: body.employmentStatus,
+      jobType: body.jobType, // Added
+      businessDescription: body.businessDescription, // Added
+      creditScore: body.creditScore,
       loanAmount: body.loanAmount,
       hasGuarantor: body.hasGuarantor,
       numCollaterals: body.collaterals?.length,
@@ -136,6 +145,17 @@ export async function POST(request: NextRequest) {
       borrowerUserId: borrower._id,
       borrowerFullName: body.borrowerFullName,
       borrowerEmail: body.borrowerEmail.toLowerCase(),
+      // Add new borrower details
+      borrowerContactNo: body.borrowerContactNo,
+      borrowerAddress: body.borrowerAddress,
+      borrowerIdProofType: body.borrowerIdProofType,
+      borrowerAddressProofType: body.borrowerAddressProofType,
+      // Add financial profile details
+      monthlyIncome: body.monthlyIncome, // Changed from income to monthlyIncome
+      employmentStatus: body.employmentStatus,
+      jobType: body.jobType, // Added
+      businessDescription: body.businessDescription, // Added
+      creditScore: body.creditScore,
       applicationDate: new Date(),
       requestedAmount: body.loanAmount,
       purpose: body.loanPurpose,
@@ -154,9 +174,11 @@ export async function POST(request: NextRequest) {
         address: body.guarantor.address,
         contactNo: body.guarantor.contactNo,
         idProofType: body.guarantor.idProofType,
-        idProofDocumentUrl: uploadedFileUrls.guarantorIdProofDocumentUrl, // Store URL
+        // Ensure guarantor document URLs are correctly assigned
+        idProofDocumentUrl: uploadedFileUrls.guarantorIdProofDocumentUrl, // Correctly assign URL
         addressProofType: body.guarantor.addressProofType,
-        addressProofDocumentUrl: uploadedFileUrls.guarantorAddressProofDocumentUrl, // Store URL
+        addressProofDocumentUrl: uploadedFileUrls.guarantorAddressProofDocumentUrl, // Correctly assign URL
+        relationshipToBorrower: body.guarantor.relationshipToBorrower,
       };
     }
 

@@ -446,7 +446,7 @@ export default function AdminApplicationDetailsPage() {
                 />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                     <div>
-                        <Label htmlFor="rejectionImage">Upload Image (Optional)</Label>
+                        <Label htmlFor="rejectionImage">Upload Image</Label>
                         <Input
                             id="rejectionImage"
                             type="file"
@@ -460,7 +460,7 @@ export default function AdminApplicationDetailsPage() {
                         )}
                     </div>
                     <div>
-                        <Label htmlFor="rejectionAudio">Upload/Record Audio (Optional)</Label>
+                        <Label htmlFor="rejectionAudio">Upload Record Audio</Label>
                         <div className="flex items-center gap-2 mt-1">
                             <Input
                                 id="rejectionAudio"
