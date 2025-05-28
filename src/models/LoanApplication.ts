@@ -1,11 +1,11 @@
 // src/models/LoanApplication.ts
 
 import mongoose, { Schema, Document, models, Model } from 'mongoose';
-import type { LoanApplication as LoanApplicationType, Guarantor as GuarantorType, CollateralDocument as CollateralDocumentType, RejectionReason as RejectionReasonType } from '@/lib/types';
+import type { LoanApplication as LoanApplicationType, Guarantor as GuarantorType, CollateralDocument as CollateralDocumentType, RejectionReason as RejectionReasonType, LoanRepaymentScheduleEntry } from '@/lib/types'; // Import LoanRepaymentScheduleEntry
 import UserModel from './User';
 
 // Interface for Mongoose Document
-export interface LoanApplicationDocument extends Omit<LoanApplicationType, 'id' | 'borrowerUserId' | 'guarantor' | 'submittedCollateral' | 'processedDocuments' | 'applicationDate' | 'approvedDate' | 'disbursementDate' | 'firstPaymentDueDate' | 'maturityDate' | 'lastPaymentDate' | 'nextPaymentDueDate' | 'createdAt' | 'updatedAt' | 'borrowerIdProofDocumentName' | 'borrowerAddressProofDocumentName' | 'rejectionDetails'>, Document {
+export interface LoanApplicationDocument extends Omit<LoanApplicationType, 'id' | 'borrowerUserId' | 'guarantor' | 'submittedCollateral' | 'processedDocuments' | 'applicationDate' | 'approvedDate' | 'disbursementDate' | 'firstPaymentDueDate' | 'maturityDate' | 'lastPaymentDate' | 'nextPaymentDueDate' | 'createdAt' | 'updatedAt' | 'borrowerIdProofDocumentName' | 'borrowerAddressProofDocumentName' | 'rejectionDetails' | 'repaymentSchedule'>, Document {
   borrowerUserId: mongoose.Types.ObjectId | UserDocument; // Can be populated
   // Denormalized fields for easier display
   borrowerFullName: string;
@@ -23,6 +23,7 @@ export interface LoanApplicationDocument extends Omit<LoanApplicationType, 'id' 
   firstPaymentDueDate?: Date;
   maturityDate?: Date;
   lastPaymentDate?: Date;
+  nextPaymentDueDate?: Date;
   createdAt?: Date; // Mongoose timestamps will add this
   updatedAt?: Date; // Mongoose timestamps will add this
 
@@ -38,6 +39,9 @@ export interface LoanApplicationDocument extends Omit<LoanApplicationType, 'id' 
   monthlyIncome?: number; // Changed from income to monthlyIncome
   jobType?: string; // New field
   businessDescription?: string; // New field
+
+  // New field for repayment schedule
+  repaymentSchedule?: LoanRepaymentScheduleEntrySchemaType[]; // Array of repayment entries
 }
 
 interface UserDocument extends Document {
@@ -109,6 +113,20 @@ const RejectionReasonSchema = new Schema<RejectionReasonType>({
 
 export type RejectionReasonSchemaType = mongoose.InferSchemaType<typeof RejectionReasonSchema>;
 
+// New sub-schema for LoanRepaymentScheduleEntry
+const LoanRepaymentScheduleEntrySchema = new Schema<LoanRepaymentScheduleEntry>({
+  period: { type: Number, required: true },
+  dueDate: { type: Date, required: true },
+  startingBalance: { type: Number, required: true },
+  principalComponent: { type: Number, required: true },
+  interestComponent: { type: Number, required: true },
+  endingBalance: { type: Number, required: true },
+  paymentAmount: { type: Number, required: true }, // EMI
+  isPaid: { type: Boolean, default: false },
+}, { _id: false });
+
+export type LoanRepaymentScheduleEntrySchemaType = mongoose.InferSchemaType<typeof LoanRepaymentScheduleEntrySchema>;
+
 
 const LoanApplicationSchema: Schema<LoanApplicationDocument> = new Schema(
   {
@@ -174,6 +192,9 @@ const LoanApplicationSchema: Schema<LoanApplicationDocument> = new Schema(
     jobType: { type: String }, // New field
     businessDescription: { type: String }, // New field
     creditScore: { type: Number }, // Existing field, just ensuring it's here
+
+    // New field for repayment schedule
+    repaymentSchedule: [LoanRepaymentScheduleEntrySchema], // Array of repayment entries
   },
   {
     timestamps: true,
@@ -192,6 +213,13 @@ const LoanApplicationSchema: Schema<LoanApplicationDocument> = new Schema(
             if (ret.rejectionDetails && ret.rejectionDetails.rejectedAt instanceof Date) {
               ret.rejectionDetails.rejectedAt = ret.rejectionDetails.rejectedAt.toISOString();
             }
+            // Convert repayment schedule dates to ISO strings
+            if (ret.repaymentSchedule && Array.isArray(ret.repaymentSchedule)) {
+              ret.repaymentSchedule = ret.repaymentSchedule.map((entry: any) => ({
+                ...entry,
+                dueDate: entry.dueDate instanceof Date ? entry.dueDate.toISOString() : entry.dueDate,
+              }));
+            }
             delete ret._id;
             delete ret.__v;
         }
@@ -209,6 +237,13 @@ const LoanApplicationSchema: Schema<LoanApplicationDocument> = new Schema(
             // Ensure rejectionDetails.rejectedAt is converted to string if present
             if (ret.rejectionDetails && ret.rejectionDetails.rejectedAt instanceof Date) {
               ret.rejectionDetails.rejectedAt = ret.rejectionDetails.rejectedAt.toISOString();
+            }
+            // Convert repayment schedule dates to ISO strings
+            if (ret.repaymentSchedule && Array.isArray(ret.repaymentSchedule)) {
+              ret.repaymentSchedule = ret.repaymentSchedule.map((entry: any) => ({
+                ...entry,
+                dueDate: entry.dueDate instanceof Date ? entry.dueDate.toISOString() : entry.dueDate,
+              }));
             }
             delete ret._id;
             delete ret.__v;

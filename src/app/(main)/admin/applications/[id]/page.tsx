@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import type { LoanApplication } from '@/lib/types';
 import { ApplicationDetails } from '@/components/custom/ApplicationDetails';
 import { RiskAssessmentClient } from '@/components/custom/RiskAssessmentClient';
-import { ArrowLeft, CheckCircle, XCircle, Edit3, Loader2, AlertTriangleIcon, Mic, PlayCircle, Trash2 } from "lucide-react"; // Added Trash2 icon
+import { ArrowLeft, CheckCircle, XCircle, Edit3, Loader2, AlertTriangleIcon, Mic, Image as ImageIcon, Volume2, PlayCircle, Trash2, IndianRupee, CalendarDays } from "lucide-react"; // Added Trash2, IndianRupee, CalendarDays
 import { useToast } from "@/hooks/use-toast";
 import {
   AlertDialog,
@@ -32,11 +32,27 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/context/AuthContext'; // Import useAuth
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { format } from "date-fns";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import FormattedDate from "@/components/custom/FormattedDate"; // Import FormattedDate
 
 
 // Helper function for client-side basic ID validation
+// Modified to allow mock IDs starting with 'mock' for development
 const isValidMongoIdClientSide = (id: string | null | undefined): boolean => {
   if (!id || typeof id !== 'string') return false;
+  // Allow mock IDs for development, e.g., "mockadmin_vineet"
+  if (id.startsWith('mock')) return true;
+  // Standard MongoDB ObjectId validation
   return /^[0-9a-fA-F]{24}$/.test(id);
 };
 
@@ -74,10 +90,33 @@ export default function AdminApplicationDetailsPage() {
   const audioChunksRef = useRef<Blob[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null); // For playing recorded audio
 
+  // State for Loan Approval details
+  const [approvedAmount, setApprovedAmount] = useState<number | ''>('');
+  const [interestRate, setInterestRate] = useState<number | ''>('');
+  const [loanTermMonths, setLoanTermMonths] = useState<number | ''>('');
+  const [repaymentFrequency, setRepaymentFrequency] = useState<'daily' | 'weekly' | 'monthly' | 'custom' | ''>('');
+
+  // State for Loan Disbursement details
+  const [disbursementAmount, setDisbursementAmount] = useState<number | ''>('');
+  const [disbursementPaymentMethod, setDisbursementPaymentMethod] = useState<string>('');
+  const [disbursementTransactionRef, setDisbursementTransactionRef] = useState<string>('');
+  const [disbursementNotes, setDisbursementNotes] = useState<string>('');
+  const [disbursementScreenshot, setDisbursementScreenshot] = useState<File | null>(null);
+  const [isDisbursing, setIsDisbursing] = useState(false);
+
+  // State for Payment Recording details
+  const [paymentAmount, setPaymentAmount] = useState<number | ''>('');
+  const [paymentMethod, setPaymentMethod] = useState<string>('');
+  const [paymentTransactionRef, setPaymentTransactionRef] = useState<string>('');
+  const [paymentNotes, setPaymentNotes] = useState<string>('');
+  const [paymentScreenshot, setPaymentScreenshot] = useState<File | null>(null);
+  const [paymentDate, setPaymentDate] = useState<Date | undefined>(new Date());
+  const [isRecordingPayment, setIsRecordingPayment] = useState(false);
+
+
   const applicationId = params.id as string;
 
   useEffect(() => {
-    console.log("useEffect: Initial applicationId from params:", applicationId); // New log
     if (!applicationId) {
       setIsLoading(true);
       setError(null);
@@ -113,7 +152,6 @@ export default function AdminApplicationDetailsPage() {
       .then(data => {
         if (data.success && data.application) {
           const appData = data.application;
-          console.log("useEffect: Fetched application data ID:", appData.id); // New log
           setApplication({
             ...appData,
             fullName: appData.borrowerFullName || (appData.borrowerUserId as any)?.name || 'N/A',
@@ -121,11 +159,21 @@ export default function AdminApplicationDetailsPage() {
             loanAmount: appData.requestedAmount,
             loanPurpose: appData.purpose,
             submittedDate: appData.applicationDate,
-            income: appData.income || 0,
+            monthlyIncome: appData.monthlyIncome || 0, // Use monthlyIncome
             employmentStatus: appData.employmentStatus || 'N/A',
+            jobType: appData.jobType || 'N/A',
+            businessDescription: appData.businessDescription || 'N/A',
             creditScore: appData.creditScore || 0,
-            // processedDocuments is handled by ApplicationDetails directly from URLs now
+            // Populate approval fields if already approved
+            approvedAmount: appData.approvedAmount || '',
+            interestRate: appData.interestRate || '',
+            loanTermMonths: appData.loanTermMonths || '',
+            repaymentFrequency: appData.repaymentFrequency || '',
           });
+          // Set disbursement amount default if loan is approved
+          if (appData.status === 'Approved' && appData.approvedAmount) {
+            setDisbursementAmount(appData.approvedAmount);
+          }
         } else {
           setError(data.message || 'Could not fetch application details');
           setApplication(null);
@@ -142,11 +190,11 @@ export default function AdminApplicationDetailsPage() {
   }, [applicationId]);
 
 
-  const handleFileChange = (event: ChangeEvent<HTMLInputElement>, type: 'image' | 'audio') => {
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>, type: 'image' | 'audio' | 'screenshot', setState: Function) => {
     if (event.target.files && event.target.files.length > 0) {
       const file = event.target.files[0];
-      const maxSize = type === 'image' ? MAX_FILE_SIZE_MB : MAX_AUDIO_SIZE_MB;
-      const allowedTypes = type === 'image' ? ALLOWED_IMAGE_TYPES : ALLOWED_AUDIO_TYPES;
+      const maxSize = type === 'audio' ? MAX_AUDIO_SIZE_MB : MAX_FILE_SIZE_MB;
+      const allowedTypes = type === 'audio' ? ALLOWED_AUDIO_TYPES : ALLOWED_IMAGE_TYPES; // Screenshots are usually images
 
       if (file.size > maxSize * 1024 * 1024) {
         toast({
@@ -166,12 +214,7 @@ export default function AdminApplicationDetailsPage() {
         event.target.value = '';
         return;
       }
-
-      if (type === 'image') {
-        setRejectionReasonImageFile(file);
-      } else {
-        setRejectionReasonAudioFile(file);
-      }
+      setState(file);
     }
   };
 
@@ -255,7 +298,6 @@ export default function AdminApplicationDetailsPage() {
 
     // Explicitly validate application.id before sending to API
     if (!isValidMongoIdClientSide(application.id)) {
-        console.error("handleUpdateApplicationStatus: Invalid application.id detected:", application.id); // New log
         toast({ title: "Error", description: "Invalid Application ID format. Cannot update.", variant: "destructive" });
         return;
     }
@@ -265,7 +307,17 @@ export default function AdminApplicationDetailsPage() {
 
     const payload: any = { status: newStatus };
 
-    if (newStatus === 'Rejected') {
+    if (newStatus === 'Approved') {
+        if (approvedAmount === '' || interestRate === '' || loanTermMonths === '' || repaymentFrequency === '') {
+            toast({ title: "Approval Details Required", description: "Please fill in Approved Amount, Interest Rate, Loan Term, and Repayment Frequency.", variant: "destructive" });
+            setIsUpdatingStatus(false);
+            return;
+        }
+        payload.approvedAmount = Number(approvedAmount);
+        payload.interestRate = Number(interestRate);
+        payload.loanTermMonths = Number(loanTermMonths);
+        payload.repaymentFrequency = repaymentFrequency;
+    } else if (newStatus === 'Rejected') {
         if (!rejectionReasonText.trim() && !rejectionReasonImageFile && !rejectionReasonAudioFile) {
             toast({ title: "Rejection Reason Required", description: "Please provide a text, image, or audio reason for rejection.", variant: "destructive" });
             setIsUpdatingStatus(false);
@@ -317,6 +369,13 @@ export default function AdminApplicationDetailsPage() {
             setRejectionReasonImageFile(null);
             setRejectionReasonAudioFile(null);
         }
+        // Reset approval fields after successful approval
+        if (newStatus === 'Approved') {
+            setApprovedAmount('');
+            setInterestRate('');
+            setLoanTermMonths('');
+            setRepaymentFrequency('');
+        }
       } else {
         throw new Error(result.message || "Failed to update application status.");
       }
@@ -332,6 +391,151 @@ export default function AdminApplicationDetailsPage() {
       setIsUpdatingStatus(false);
     }
   };
+
+  const handleDisburseLoan = async () => {
+    if (!application || !application.id) {
+      toast({ title: "Error", description: "Application data not available.", variant: "destructive" });
+      return;
+    }
+    // Check if user is available and has an valid MongoDB ID
+    if (!user || !user.id || !isValidMongoIdClientSide(user.id)) {
+      toast({ title: "Error", description: "Valid Admin user data (ID) not available. Please log in as an admin with a valid database ID.", variant: "destructive" });
+      console.error("Admin user ID is missing or invalid for disbursement:", user?.id);
+      return;
+    }
+
+    if (disbursementAmount === '' || disbursementAmount <= 0 || !disbursementPaymentMethod) {
+        toast({ title: "Disbursement Details Required", description: "Please provide a valid amount and payment method.", variant: "destructive" });
+        return;
+    }
+    if (disbursementPaymentMethod !== 'cash' && !disbursementScreenshot) {
+        toast({ title: "Screenshot Required", description: "Please upload a screenshot for online payments.", variant: "destructive" });
+        return;
+    }
+
+    setIsDisbursing(true);
+    setError(null);
+
+    const payload: any = {
+        adminId: user.id,
+        disbursementAmount: Number(disbursementAmount),
+        paymentMethod: disbursementPaymentMethod,
+        transactionReference: disbursementTransactionRef.trim(),
+        notes: disbursementNotes.trim(),
+    };
+
+    try {
+        if (disbursementScreenshot) {
+            payload.disbursementScreenshot = await fileToBase64(disbursementScreenshot);
+        }
+    } catch (fileError: any) {
+        toast({ title: "File Conversion Error", description: `Failed to process screenshot: ${fileError.message}`, variant: "destructive" });
+        setIsDisbursing(false);
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/loan-applications/${application.id}/disburse`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+            setApplication(prev => prev ? { ...prev, ...result.application } : null);
+            toast({ title: "Loan Disbursed", description: `Loan of ₹${disbursementAmount.toLocaleString()} disbursed successfully.`, });
+            // Reset disbursement form fields
+            setDisbursementAmount('');
+            setDisbursementPaymentMethod('');
+            setDisbursementTransactionRef('');
+            setDisbursementNotes('');
+            setDisbursementScreenshot(null);
+        } else {
+            throw new Error(result.message || "Failed to disburse loan.");
+        }
+    } catch (err: any) {
+        console.error("Error disbursing loan:", err);
+        setError(err.message || "An unexpected error occurred during disbursement.");
+        toast({ title: "Disbursement Failed", description: err.message || "Could not disburse loan.", variant: "destructive", });
+    } finally {
+        setIsDisbursing(false);
+    }
+  };
+
+  const handleRecordPayment = async () => {
+    if (!application || !application.id) {
+      toast({ title: "Error", description: "Application data not available.", variant: "destructive" });
+      return;
+    }
+    // Check if user is available and has an valid MongoDB ID
+    if (!user || !user.id || !isValidMongoIdClientSide(user.id)) {
+      toast({ title: "Error", description: "Valid Admin user data (ID) not available. Please log in as an admin with a valid database ID.", variant: "destructive" });
+      console.error("Admin user ID is missing or invalid for payment recording:", user?.id);
+      return;
+    }
+
+    if (paymentAmount === '' || paymentAmount <= 0 || !paymentMethod || !paymentDate) {
+        toast({ title: "Payment Details Required", description: "Please provide a valid amount, date, and payment method.", variant: "destructive" });
+        return;
+    }
+    if (paymentMethod !== 'cash' && !paymentScreenshot) {
+        toast({ title: "Screenshot Required", description: "Please upload a screenshot for online payments.", variant: "destructive" });
+        return;
+    }
+
+    setIsRecordingPayment(true);
+    setError(null);
+
+    const payload: any = {
+        adminId: user.id,
+        paymentAmount: Number(paymentAmount),
+        paymentMethod: paymentMethod,
+        transactionReference: paymentTransactionRef.trim(),
+        notes: paymentNotes.trim(),
+        paymentDate: paymentDate.toISOString(), // Send as ISO string
+    };
+
+    try {
+        if (paymentScreenshot) {
+            payload.paymentScreenshot = await fileToBase64(paymentScreenshot);
+        }
+    } catch (fileError: any) {
+        toast({ title: "File Conversion Error", description: `Failed to process screenshot: ${fileError.message}`, variant: "destructive" });
+        setIsRecordingPayment(false);
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/loan-applications/${application.id}/payment`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+            setApplication(prev => prev ? { ...prev, ...result.application } : null); // Update application state
+            toast({ title: "Payment Recorded", description: `Payment of ₹${paymentAmount.toLocaleString()} recorded successfully.`, });
+            // Reset payment form fields
+            setPaymentAmount('');
+            setPaymentMethod('');
+            setPaymentTransactionRef('');
+            setPaymentNotes('');
+            setPaymentScreenshot(null);
+            setPaymentDate(new Date());
+        } else {
+            throw new Error(result.message || "Failed to record payment.");
+        }
+    } catch (err: any) {
+        console.error("Error recording payment:", err);
+        setError(err.message || "An unexpected error occurred during payment recording.");
+        toast({ title: "Payment Recording Failed", description: err.message || "Could not record payment.", variant: "destructive", });
+    } finally {
+        setIsRecordingPayment(false);
+    }
+  };
+
 
   if (!applicationId && !error && isLoading) {
      return <div className="flex justify-center items-center min-h-[calc(100vh-10rem)]"><Loader2 className="h-8 w-8 animate-spin text-primary mr-2" /><p>Loading application ID...</p></div>;
@@ -385,15 +589,16 @@ export default function AdminApplicationDetailsPage() {
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="text-xl flex items-center gap-2"><Edit3 className="h-6 w-6 text-primary"/>Application Actions</CardTitle>
-          <CardDescription>Approve or reject this loan application.</CardDescription>
+          <CardDescription>Approve, reject, disburse, or record payments for this loan application.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col sm:flex-row gap-4">
+          {/* Approve Loan Dialog */}
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button
                 variant="default"
                 className="bg-primary hover:bg-primary/90 text-primary-foreground w-full sm:w-auto"
-                disabled={application.status === 'Approved' || isUpdatingStatus}
+                disabled={application.status === 'Approved' || application.status === 'Active' || isUpdatingStatus}
               >
                 {isUpdatingStatus && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 <CheckCircle className="mr-2 h-4 w-4" /> Approve
@@ -406,6 +611,29 @@ export default function AdminApplicationDetailsPage() {
                   Are you sure you want to approve this loan application for {application.borrowerFullName || 'N/A'}?
                 </AlertDialogDescription>
               </AlertDialogHeader>
+              <div className="mt-4 space-y-3">
+                <Label htmlFor="approvedAmount">Approved Amount (₹)</Label>
+                <Input id="approvedAmount" type="number" placeholder="e.g., 50000" value={approvedAmount} onChange={(e) => setApprovedAmount(Number(e.target.value))} disabled={isUpdatingStatus} />
+
+                <Label htmlFor="interestRate">Interest Rate (%)</Label>
+                <Input id="interestRate" type="number" placeholder="e.g., 12.5" value={interestRate} onChange={(e) => setInterestRate(Number(e.target.value))} disabled={isUpdatingStatus} />
+
+                <Label htmlFor="loanTermMonths">Loan Term (Months)</Label>
+                <Input id="loanTermMonths" type="number" placeholder="e.g., 12" value={loanTermMonths} onChange={(e) => setLoanTermMonths(Number(e.target.value))} disabled={isUpdatingStatus} />
+
+                <Label htmlFor="repaymentFrequency">Repayment Frequency</Label>
+                <Select value={repaymentFrequency} onValueChange={(value: 'daily' | 'weekly' | 'monthly' | 'custom') => setRepaymentFrequency(value)} disabled={isUpdatingStatus}>
+                    <SelectTrigger id="repaymentFrequency">
+                        <SelectValue placeholder="Select frequency" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="monthly">Monthly</SelectItem>
+                        <SelectItem value="weekly">Weekly</SelectItem>
+                        <SelectItem value="daily">Daily</SelectItem>
+                        <SelectItem value="custom">Custom</SelectItem>
+                    </SelectContent>
+                </Select>
+              </div>
               <AlertDialogFooter>
                 <AlertDialogCancel disabled={isUpdatingStatus}>Cancel</AlertDialogCancel>
                 <AlertDialogAction onClick={() => handleUpdateApplicationStatus('Approved')} className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isUpdatingStatus}>
@@ -416,6 +644,7 @@ export default function AdminApplicationDetailsPage() {
             </AlertDialogContent>
           </AlertDialog>
 
+          {/* Reject Loan Dialog */}
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button
@@ -446,12 +675,12 @@ export default function AdminApplicationDetailsPage() {
                 />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                     <div>
-                        <Label htmlFor="rejectionImage">Upload Image</Label>
+                        <Label htmlFor="rejectionImage">Upload Image (Optional)</Label>
                         <Input
                             id="rejectionImage"
                             type="file"
                             accept={ALLOWED_IMAGE_TYPES.join(',')}
-                            onChange={(e) => handleFileChange(e, 'image')}
+                            onChange={(e) => handleFileChange(e, 'image', setRejectionReasonImageFile)}
                             disabled={isUpdatingStatus}
                             className="mt-1"
                         />
@@ -460,13 +689,13 @@ export default function AdminApplicationDetailsPage() {
                         )}
                     </div>
                     <div>
-                        <Label htmlFor="rejectionAudio">Upload Record Audio</Label>
+                        <Label htmlFor="rejectionAudio">Upload/Record Audio (Optional)</Label>
                         <div className="flex items-center gap-2 mt-1">
                             <Input
                                 id="rejectionAudio"
                                 type="file"
                                 accept={ALLOWED_AUDIO_TYPES.join(',')}
-                                onChange={(e) => setRejectionReasonAudioFile(e.target.files ? e.target.files[0] : null)}
+                                onChange={(e) => handleFileChange(e, 'audio', setRejectionReasonAudioFile)}
                                 disabled={isUpdatingStatus || isRecording}
                             />
                             <Button
@@ -504,6 +733,187 @@ export default function AdminApplicationDetailsPage() {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+
+          {/* Disburse Loan Dialog */}
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="secondary"
+                className="w-full sm:w-auto"
+                disabled={application.status !== 'Approved' || isDisbursing}
+              >
+                {isDisbursing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                <IndianRupee className="mr-2 h-4 w-4" /> Disburse Loan
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Disburse Loan</AlertDialogTitle>
+                {/* Wrapped content in a single div for AlertDialogDescription */}
+                <AlertDialogDescription asChild>
+                  <div>
+                    Disburse the approved loan amount to {application.borrowerFullName || 'N/A'}.
+                    <div className="text-sm text-muted-foreground mt-2">
+                      Approved Amount: ₹{application.approvedAmount?.toLocaleString() || 'N/A'}
+                    </div>
+                  </div>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <div className="mt-4 space-y-3">
+                <Label htmlFor="disbursementAmount">Disbursement Amount (₹)</Label>
+                <Input id="disbursementAmount" type="number" placeholder="e.g., 48000" value={disbursementAmount} onChange={(e) => setDisbursementAmount(Number(e.target.value))} disabled={isDisbursing} />
+
+                <Label htmlFor="disbursementPaymentMethod">Payment Method</Label>
+                <Select value={disbursementPaymentMethod} onValueChange={setDisbursementPaymentMethod} disabled={isDisbursing}>
+                    <SelectTrigger id="disbursementPaymentMethod">
+                        <SelectValue placeholder="Select payment method" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="cash">Cash</SelectItem>
+                        <SelectItem value="online_transfer_upi">Online Transfer (UPI)</SelectItem>
+                        <SelectItem value="online_transfer_neft">Online Transfer (NEFT)</SelectItem>
+                        <SelectItem value="cheque_deposit">Cheque Deposit</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                </Select>
+
+                {disbursementPaymentMethod !== 'cash' && disbursementPaymentMethod !== '' && (
+                    <>
+                        <Label htmlFor="disbursementScreenshot">Upload Screenshot (for Online/Cheque)</Label>
+                        <Input
+                            id="disbursementScreenshot"
+                            type="file"
+                            accept={ALLOWED_IMAGE_TYPES.join(',')}
+                            onChange={(e) => handleFileChange(e, 'screenshot', setDisbursementScreenshot)}
+                            disabled={isDisbursing}
+                        />
+                        {disbursementScreenshot && (
+                            <p className="text-xs text-muted-foreground mt-1">Selected: {disbursementScreenshot.name}</p>
+                        )}
+                    </>
+                )}
+
+                <Label htmlFor="disbursementTransactionRef">Transaction Reference (Optional)</Label>
+                <Input id="disbursementTransactionRef" placeholder="e.g., UPI ID, Cheque No." value={disbursementTransactionRef} onChange={(e) => setDisbursementTransactionRef(e.target.value)} disabled={isDisbursing} />
+
+                <Label htmlFor="disbursementNotes">Notes (Optional)</Label>
+                <Textarea id="disbursementNotes" placeholder="Any additional notes about disbursement" value={disbursementNotes} onChange={(e) => setDisbursementNotes(e.target.value)} disabled={isDisbursing} />
+
+              </div>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={isDisbursing}>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDisburseLoan} className="bg-secondary hover:bg-secondary/90 text-secondary-foreground" disabled={isDisbursing}>
+                  {isDisbursing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Confirm Disburse
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          {/* Record Payment Dialog */}
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="outline"
+                className="w-full sm:w-auto"
+                disabled={application.status !== 'Active' && application.status !== 'Overdue' || isRecordingPayment}
+              >
+                {isRecordingPayment && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                <IndianRupee className="mr-2 h-4 w-4" /> Record Payment
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Record Payment</AlertDialogTitle>
+                {/* Wrapped content in a single div for AlertDialogDescription */}
+                <AlertDialogDescription asChild>
+                  <div>
+                    Record a payment received for this loan application.
+                    <div className="text-sm text-muted-foreground mt-2">
+                      Next Due Date: <FormattedDate dateString={application.nextPaymentDueDate} />
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Next Payment Amount: ₹{application.nextPaymentAmount?.toLocaleString() || 'N/A'}
+                    </div>
+                  </div>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <div className="mt-4 space-y-3">
+                <Label htmlFor="paymentAmount">Payment Amount (₹)</Label>
+                <Input id="paymentAmount" type="number" placeholder="e.g., 5000" value={paymentAmount} onChange={(e) => setPaymentAmount(Number(e.target.value))} disabled={isRecordingPayment} />
+
+                <Label htmlFor="paymentDate">Payment Date</Label>
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <Button
+                            variant={"outline"}
+                            className={cn(
+                                "w-full justify-start text-left font-normal",
+                                !paymentDate && "text-muted-foreground"
+                            )}
+                            disabled={isRecordingPayment}
+                        >
+                            <CalendarDays className="mr-2 h-4 w-4" />
+                            {paymentDate ? format(paymentDate, "PPP") : <span>Pick a date</span>}
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                        <Calendar
+                            mode="single"
+                            selected={paymentDate}
+                            onSelect={setPaymentDate}
+                            initialFocus
+                        />
+                    </PopoverContent>
+                </Popover>
+
+                <Label htmlFor="paymentMethod">Payment Method</Label>
+                <Select value={paymentMethod} onValueChange={setPaymentMethod} disabled={isRecordingPayment}>
+                    <SelectTrigger id="paymentMethod">
+                        <SelectValue placeholder="Select payment method" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="cash">Cash</SelectItem>
+                        <SelectItem value="online_transfer_upi">Online Transfer (UPI)</SelectItem>
+                        <SelectItem value="online_transfer_neft">Online Transfer (NEFT)</SelectItem>
+                        <SelectItem value="cheque_deposit">Cheque Deposit</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                </Select>
+
+                {paymentMethod !== 'cash' && paymentMethod !== '' && (
+                    <>
+                        <Label htmlFor="paymentScreenshot">Upload Screenshot (for Online/Cheque)</Label>
+                        <Input
+                            id="paymentScreenshot"
+                            type="file"
+                            accept={ALLOWED_IMAGE_TYPES.join(',')}
+                            onChange={(e) => handleFileChange(e, 'screenshot', setPaymentScreenshot)}
+                            disabled={isRecordingPayment}
+                        />
+                        {paymentScreenshot && (
+                            <p className="text-xs text-muted-foreground mt-1">Selected: {paymentScreenshot.name}</p>
+                        )}
+                    </>
+                )}
+
+                <Label htmlFor="paymentTransactionRef">Transaction Reference (Optional)</Label>
+                <Input id="paymentTransactionRef" placeholder="e.g., UPI ID, Cheque No." value={paymentTransactionRef} onChange={(e) => setPaymentTransactionRef(e.target.value)} disabled={isRecordingPayment} />
+
+                <Label htmlFor="paymentNotes">Notes (Optional)</Label>
+                <Textarea id="paymentNotes" placeholder="Any additional notes about payment" value={paymentNotes} onChange={(e) => setPaymentNotes(e.target.value)} disabled={isRecordingPayment} />
+
+              </div>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={isRecordingPayment}>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleRecordPayment} className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isRecordingPayment}>
+                  {isRecordingPayment && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Confirm Payment
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
         </CardContent>
       </Card>
     </div>

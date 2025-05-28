@@ -1,5 +1,5 @@
-
 "use client";
+// src/context/AuthContext.tsx
 import type { User } from '@/lib/types';
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
@@ -14,12 +14,14 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock users - ensure their IDs are distinct and recognizable if needed for debugging.
-// For actual DB users, their IDs will be MongoDB ObjectIds.
+// Mock users - For development/testing purposes only.
+// In a production environment, this array should ideally be empty or removed.
+// **CRITICAL FIX: Removed the hardcoded admin user for 'vineetbeniwal9310@gmail.com'**
 const mockUsers: User[] = [
   { id: 'mockuser1', email: 'user@example.com', name: 'Test User', role: 'user' },
   { id: 'mockadmin1', email: 'admin@example.com', name: 'Admin User', role: 'admin' },
-  { id: 'mockadmin_vineet', email: 'vineetbeniwal9310@gmail.com', name: 'Vineet Beniwal (Admin)', role: 'admin' },
+  // Removed the problematic mock user:
+  // { id: 'mockadmin_vineet', email: 'vineetbeniwal9310@gmail.com', name: 'Vineet Beniwal (Admin)', role: 'admin' },
 ];
 
 const isValidMongoDbObjectId = (id: string): boolean => {
@@ -68,20 +70,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const isIdValidMongo = isValidMongoDbObjectId(userData.id);
     console.log(`[AuthContext] Validating userData.id: "${userData.id}". Is valid Mongo ObjectId? ${isIdValidMongo}`);
 
-    if (isIdValidMongo) {
-      console.log('[AuthContext] Logging in with validated MongoDB ID:', userData.id);
-      setUser(userData);
-      localStorage.setItem('rivaayat-user', JSON.stringify(userData));
-      if (userData.role === 'admin') {
-        router.push(ROUTES.ADMIN_DASHBOARD);
-      } else {
-        router.push(ROUTES.DASHBOARD);
-      }
-      return;
-    }
-
-    // Check against hardcoded mock users (for demo/testing) ONLY if ID wasn't a valid Mongo ID
-    console.log('[AuthContext] userData.id not a valid MongoID, checking mock users.');
+    // Check against hardcoded mock users (for demo/testing)
+    // This block should ideally be removed for production, or only contain non-sensitive mocks.
     if (typeof userData.email === 'string' && userData.email.length > 0) {
       const foundMockUser = mockUsers.find(u => u.email.toLowerCase() === userData.email.toLowerCase());
       if (foundMockUser) {
@@ -93,13 +83,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else {
           router.push(ROUTES.DASHBOARD);
         }
-        return;
+        return; // IMPORTANT: Exit after handling mock user
       }
     } else {
       console.warn('[AuthContext] userData.email is not a valid string for mock user lookup:', userData.email);
     }
 
-    console.warn(`[AuthContext] Login attempt for email "${userData.email}" (ID: "${userData.id}"): User not found in mocks and ID was not a valid MongoDB ObjectId. Login will not proceed for this session. A backend login API is required for these users if they are registered.`);
+    // If not a mock user, proceed with actual login flow (assuming userData comes from backend API)
+    // Here, we assume if we reach this point, userData.id *should* be a valid Mongo ID from a successful backend login.
+    // The `isValidMongoDbObjectId` check at the top of the useEffect handles localStorage validation.
+    // For direct login calls from a real API, the API should return a valid ID.
+    if (isIdValidMongo) {
+      console.log('[AuthContext] Logging in with validated MongoDB ID from API response:', userData.id);
+      setUser(userData);
+      localStorage.setItem('rivaayat-user', JSON.stringify(userData));
+      if (userData.role === 'admin') {
+        router.push(ROUTES.ADMIN_DASHBOARD);
+      } else {
+        router.push(ROUTES.DASHBOARD);
+      }
+    } else {
+      console.warn(`[AuthContext] Login attempt for email "${userData.email}" (ID: "${userData.id}"): User not found in mocks and ID was not a valid MongoDB ObjectId. Login will not proceed for this session. A backend login API is required for these users if they are registered.`);
+    }
   };
 
   const logout = () => {

@@ -5,11 +5,58 @@ import LoanApplicationModel from '@/models/LoanApplication';
 import UserModel from '@/models/User';
 import NotificationModel from '@/models/Notification';
 import mongoose from 'mongoose';
-import { uploadImageToCloudinary } from '@/lib/cloudinary'; // Assuming you have this util now
-import type { LoanApplicationStatus, SystemNotification } from '@/lib/types'; // Added SystemNotification import
+import { uploadImageToCloudinary } from '@/lib/cloudinary';
+import type { LoanApplicationStatus, SystemNotification, LoanRepaymentScheduleEntry } from '@/lib/types';
 
 // Helper to check if a string is a valid data URI
 const isDataURI = (str: string) => typeof str === 'string' && str.startsWith('data:');
+
+// Helper function to calculate EMI (Equated Monthly Installment)
+// This is a simplified calculation and might need adjustment for real-world scenarios
+function calculateEMI(principal: number, annualInterestRate: number, loanTermMonths: number): { emi: number, repaymentSchedule: LoanRepaymentScheduleEntry[] } {
+  if (principal <= 0 || annualInterestRate < 0 || loanTermMonths <= 0) {
+    return { emi: 0, repaymentSchedule: [] };
+  }
+
+  const monthlyInterestRate = annualInterestRate / 12 / 100; // Convert annual percentage to monthly decimal
+
+  let emi = 0;
+  if (monthlyInterestRate === 0) {
+    emi = principal / loanTermMonths;
+  } else {
+    emi = principal * monthlyInterestRate * Math.pow(1 + monthlyInterestRate, loanTermMonths) / (Math.pow(1 + monthlyInterestRate, loanTermMonths) - 1);
+  }
+
+  const repaymentSchedule: LoanRepaymentScheduleEntry[] = [];
+  let outstandingBalance = principal;
+  let currentDate = new Date(); // Start date for repayment schedule generation
+
+  for (let i = 1; i <= loanTermMonths; i++) {
+    const interestComponent = outstandingBalance * monthlyInterestRate;
+    const principalComponent = emi - interestComponent;
+    const endingBalance = outstandingBalance - principalComponent;
+
+    // Calculate due date for the current period (e.g., 1 month from previous due date)
+    const dueDate = new Date(currentDate);
+    dueDate.setMonth(dueDate.getMonth() + 1);
+    currentDate = dueDate; // Update current date for next iteration
+
+    repaymentSchedule.push({
+      period: i,
+      dueDate: dueDate.toISOString(),
+      startingBalance: parseFloat(outstandingBalance.toFixed(2)),
+      principalComponent: parseFloat(principalComponent.toFixed(2)),
+      interestComponent: parseFloat(interestComponent.toFixed(2)),
+      endingBalance: parseFloat(Math.max(0, endingBalance).toFixed(2)), // Ensure balance doesn't go negative
+      paymentAmount: parseFloat(emi.toFixed(2)),
+      isPaid: false,
+    });
+    outstandingBalance = endingBalance;
+  }
+
+  return { emi: parseFloat(emi.toFixed(2)), repaymentSchedule };
+}
+
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   const { id } = params;
@@ -59,13 +106,17 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
   try {
     const body = await request.json(); // Get the whole body
-    const { status, rejectionReasonText, rejectionReasonImage, rejectionReasonAudio, adminId } :
+    const { status, rejectionReasonText, rejectionReasonImage, rejectionReasonAudio, adminId, approvedAmount, interestRate, loanTermMonths, repaymentFrequency } :
       {
         status: LoanApplicationStatus,
         rejectionReasonText?: string,
         rejectionReasonImage?: string, // Base64 from frontend
         rejectionReasonAudio?: string, // Base64 from frontend
         adminId?: string, // Admin's user ID
+        approvedAmount?: number; // For approval
+        interestRate?: number; // For approval
+        loanTermMonths?: number; // For approval
+        repaymentFrequency?: 'daily' | 'weekly' | 'monthly' | 'custom'; // For approval
       } = body;
 
     console.log(`[API PUT /loan-applications/${id}] New status received: ${status}`);
@@ -91,12 +142,39 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const updateData: any = { status };
 
     if (status === 'Approved' && oldStatus !== 'Approved') {
-      updateData.approvedDate = new Date();
-      if (application.approvedAmount == null || application.approvedAmount === 0) {
-        updateData.approvedAmount = application.requestedAmount;
+      // Validate required fields for approval
+      if (approvedAmount === undefined || interestRate === undefined || loanTermMonths === undefined || !repaymentFrequency) {
+        return NextResponse.json({ success: false, message: 'Approved amount, interest rate, loan term, and repayment frequency are required for approval.' }, { status: 400 });
       }
+
+      updateData.approvedDate = new Date();
+      updateData.approvedAmount = approvedAmount;
+      updateData.interestRate = interestRate;
+      updateData.loanTermMonths = loanTermMonths;
+      updateData.repaymentFrequency = repaymentFrequency;
+      updateData.currentPrincipalOutstanding = approvedAmount; // Initially, outstanding principal is the approved amount
+      updateData.currentInterestOutstanding = 0; // Initially, no outstanding interest
+
+      // Calculate repayment schedule
+      const { emi, repaymentSchedule } = calculateEMI(approvedAmount, interestRate, loanTermMonths);
+      updateData.repaymentSchedule = repaymentSchedule;
+      updateData.nextPaymentAmount = emi;
+
+      // Set first payment due date
+      if (repaymentSchedule.length > 0) {
+        updateData.firstPaymentDueDate = new Date(repaymentSchedule[0].dueDate);
+        updateData.nextPaymentDueDate = new Date(repaymentSchedule[0].dueDate);
+      } else {
+        // Fallback if no schedule generated (shouldn't happen with valid inputs)
+        const oneMonthFromNow = new Date();
+        oneMonthFromNow.setMonth(oneMonthFromNow.getMonth() + 1);
+        updateData.firstPaymentDueDate = oneMonthFromNow;
+        updateData.nextPaymentDueDate = oneMonthFromNow;
+      }
+
       // Ensure rejection details are cleared if status changes from Rejected to Approved
       updateData.rejectionDetails = undefined;
+
     } else if (status === 'Rejected' && oldStatus !== 'Rejected') {
       const rejectionDetails: any = {
         text: rejectionReasonText,
@@ -112,8 +190,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
           console.log(`[API PUT /loan-applications/${id}] Uploaded rejection image: ${imageUploadResult.secure_url}`);
         } catch (uploadError) {
           console.error(`[API PUT /loan-applications/${id}] Failed to upload rejection image:`, uploadError);
-          // Decide if you want to fail the whole request or just proceed without the image
-          // For now, re-throw to fail the request for clear error feedback
           throw new Error('Failed to upload rejection image.');
         }
       }
@@ -171,7 +247,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
             rejectionReasonTextForNotif = updatedApplication.rejectionDetails.text;
             rejectionReasonImageUrlForNotif = updatedApplication.rejectionDetails.imageUrl;
             rejectionReasonAudioUrlForNotif = updatedApplication.rejectionDetails.audioUrl;
-            console.log(`[API PUT /loan-applications/${id}] Rejection details for notification: Text: ${rejectionReasonTextForNotif ? 'Yes' : 'No'}, Image: ${rejectionReasonImageUrlForNotif ? 'Yes' : 'No'}, Audio: ${rejectionReasonAudioUrlForNotif ? 'Yes' : 'No'}`);
         }
       }
 

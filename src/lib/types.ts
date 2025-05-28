@@ -1,3 +1,4 @@
+// src/lib/types.ts
 
 import type mongoose from 'mongoose';
 
@@ -27,18 +28,18 @@ export interface User {
 // For now, User model has some of these.
 export interface BorrowerProfile {
   id: string;
-  userId: string; 
-  fullName: string; 
+  userId: string;
+  fullName: string;
   address: string;
   contactNo: string;
   idProofType: 'aadhaar' | 'pan' | 'voter_id' | 'driving_license' | 'passport' | 'other';
-  idProofDocumentUrl: string; 
-  idProofOtherDetails?: string; 
+  idProofDocumentUrl: string;
+  idProofOtherDetails?: string;
   addressProofType: 'aadhaar' | 'utility_bill' | 'rent_agreement' | 'passport' | 'other';
   addressProofDocumentUrl: string;
-  addressProofOtherDetails?: string; 
+  addressProofOtherDetails?: string;
   occupation?: string;
-  notes?: string; 
+  notes?: string;
 }
 
 export interface Guarantor {
@@ -116,16 +117,53 @@ export interface RejectionReason {
   rejectedAt?: string; // ISO date string of rejection
 }
 
-export type LoanApplicationStatus =
-  | 'QueryInitiated'
-  | 'PendingAdminVerification'
-  | 'AdditionalInfoRequired'
-  | 'Approved'
-  | 'Rejected'
-  | 'Active'
-  | 'PaidOff'
-  | 'Overdue'
-  | 'Defaulted';
+export enum LoanApplicationStatusEnum {
+  QUERY_INITIATED = 'QueryInitiated',
+  PENDING_ADMIN_VERIFICATION = 'PendingAdminVerification',
+  ADDITIONAL_INFO_REQUIRED = 'AdditionalInfoRequired',
+  APPROVED = 'Approved',
+  REJECTED = 'Rejected',
+  ACTIVE = 'Active',
+  PAID_OFF = 'PaidOff',
+  OVERDUE = 'Overdue',
+  DEFAULTED = 'Defaulted',
+}
+
+export enum LoanTransactionTypeEnum {
+  DISBURSEMENT = 'disbursement',
+  REPAYMENT = 'repayment',
+  FEE = 'fee',
+  INTEREST_CHARGE = 'interest_charge',
+  PENALTY_CHARGE = 'penalty_charge',
+  ADJUSTMENT = 'adjustment',
+}
+
+export enum UserRoleEnum {
+  USER = 'user',
+  ADMIN = 'admin',
+  AUDITOR = 'auditor', // Example of another role
+}
+
+export interface RiskAssessment {
+  score: number;
+  reasoning: string;
+  recommendation: 'approve' | 'reject' | 'further_review';
+  assessedBy?: string; // User ID of admin/AI who assessed
+  assessedAt: string; // ISO Date string
+}
+
+
+// New type for a single repayment schedule entry
+export interface LoanRepaymentScheduleEntry {
+  period: number;
+  dueDate: string; // ISO Date string
+  startingBalance: number;
+  principalComponent: number;
+  interestComponent: number;
+  endingBalance: number;
+  paymentAmount: number; // EMI
+  isPaid: boolean;
+}
 
 export interface LoanApplication {
   id: string; // Mongoose _id
@@ -136,9 +174,16 @@ export interface LoanApplication {
   requestedAmount: number;
   purpose: string;
 
+  // New fields for financial profile
+  monthlyIncome?: number; // Changed from income to monthlyIncome
+  employmentStatus?: string;
+  jobType?: string; // New field
+  businessDescription?: string; // New field
+
+
   submittedCollateral: CollateralDocument[];
 
-  status: LoanApplicationStatus;
+  status: LoanApplicationStatusEnum; // Use enum
   adminVerificationNotes?: string;
   adminAssignedTo?: string;
 
@@ -177,6 +222,26 @@ export interface LoanApplication {
 
   createdAt?: string;
   updatedAt?: string;
+
+  // New field for generated repayment schedule
+  repaymentSchedule?: LoanRepaymentScheduleEntry[];
+
+  // New field for risk assessment
+  riskAssessment?: RiskAssessment;
+  
+  // Derived fields (computed on server-side)
+  totalRepayableAmount?: number;
+  amountPaid?: number;
+  balanceDue?: number;
+
+
+  // For compatibility with old data structure in frontend (optional to keep)
+  fullName?: string; // Derived from borrowerFullName or borrowerUserId.name
+  email?: string; // Derived from borrowerEmail or borrowerUserId.email
+  loanAmount?: number; // Derived from requestedAmount
+  loanPurpose?: string; // Derived from purpose
+  submittedDate?: string; // Derived from applicationDate
+  income?: number; // Old name for monthlyIncome
 }
 
 export interface PaymentRecord {
@@ -185,7 +250,8 @@ export interface PaymentRecord {
   borrowerUserId: string;
   paymentDate: string; 
   amountPaid: number;
-  paymentMethod: 'cash' | 'online_transfer_upi' | 'online_transfer_neft' | 'cheque_deposit';
+  type: LoanTransactionTypeEnum; // Use enum
+  paymentMethod: 'cash' | 'online_transfer_upi' | 'online_transfer_neft' | 'cheque_deposit' | 'other'; // Added 'other'
   transactionReference?: string; 
   principalApplied: number;
   interestApplied: number;
@@ -193,7 +259,23 @@ export interface PaymentRecord {
   notes?: string; 
   recordedByAdminId: string; 
   recordedAt: string; 
+  isLatePayment?: boolean; // Added
+  daysLate?: number; // Added
 }
+
+export enum NotificationTypeEnum {
+  LOAN_APPLICATION_SUBMITTED = 'loan_application_submitted',
+  LOAN_STATUS_UPDATED = 'loan_status_updated',
+  PAYMENT_DUE_REMINDER = 'payment_due_reminder',
+  PAYMENT_RECEIVED_CONFIRMATION = 'payment_received_confirmation',
+  PAYMENT_OVERDUE_ALERT = 'payment_overdue_alert',
+  DOCUMENT_REQUEST = 'document_request',
+  GENERAL_ADMIN_ALERT = 'general_admin_alert',
+  GENERAL_USER_INFO = 'general_user_info',
+  LOAN_REJECTED_DETAILS = 'loan_rejected_details',
+  LOAN_DISBURSED_CONFIRMATION = 'loan_disbursed_confirmation', // New type for disbursement confirmation
+}
+
 
 export interface SystemNotification {
   id: string;
@@ -201,16 +283,7 @@ export interface SystemNotification {
   loanApplicationId?: string;
   paymentRecordId?: string;
   message: string;
-  type:
-    | 'loan_application_submitted'
-    | 'loan_status_updated'
-    | 'payment_due_reminder'
-    | 'payment_received_confirmation'
-    | 'payment_overdue_alert'
-    | 'document_request'
-    | 'general_admin_alert'
-    | 'general_user_info'
-    | 'loan_rejected_details'; // New notification type for rejection details
+  type: NotificationTypeEnum; // Use enum
   isRead: boolean;
   createdAt: string;
   linkTo?: string;
@@ -244,7 +317,7 @@ export interface UserLoan {
   id: string; 
   loanType: string; 
   amount: number; 
-  status: LoanApplicationStatus; 
+  status: LoanApplicationStatusEnum; // Use enum
   nextPaymentDate?: string; 
   nextPaymentAmount?: number; 
 }
@@ -256,3 +329,4 @@ export interface PaymentHistoryEntry {
   amount: number; 
   status: 'Paid' | 'Missed' | 'Upcoming'; 
 }
+

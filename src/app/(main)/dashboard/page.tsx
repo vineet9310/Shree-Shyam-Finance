@@ -9,7 +9,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ROUTES } from "@/lib/constants";
-import { TrendingUp, History, CalendarClock, AlertTriangle, CheckCircle2, Clock, IndianRupee, FileText, Loader2, Eye, Users, ListChecks, ShieldCheck, BellRing, MessageSquare, Info, Volume2, Image as ImageIcon } from "lucide-react"; // Added MessageSquare, Info, Volume2, ImageIcon
+import { TrendingUp, History, CalendarClock, AlertTriangle, CheckCircle2, Clock, IndianRupee, FileText, Loader2, Eye, Users, ListChecks, ShieldCheck, BellRing, MessageSquare, Info, Volume2, Image as ImageIcon, XCircle } from "lucide-react"; // Added XCircle
 import FormattedDate from "@/components/custom/FormattedDate";
 import { useEffect, useState, useRef } from "react"; // Added useRef for audio playback
 import { useToast } from "@/hooks/use-toast";
@@ -272,6 +272,8 @@ export default function DashboardPage() {
                       {notif.type.includes('reminder') && <Clock className="h-5 w-5 text-yellow-500" />}
                       {notif.type.includes('alert') && <AlertTriangle className="h-5 w-5 text-destructive" />}
                       {!['loan_status_updated', 'reminder', 'alert', 'loan_rejected_details'].some(t => notif.type.includes(t)) && <Info className="h-5 w-5 text-muted-foreground" />}
+                      {/* New: Icon for loan_disbursed_confirmation */}
+                      {notif.type === 'loan_disbursed_confirmation' && <IndianRupee className="h-5 w-5 text-green-500" />}
                     </div>
                     <div>
                       <p className={`text-sm font-medium ${!notif.isRead ? 'text-accent-foreground' : 'text-foreground'}`}>{notif.message}</p>
@@ -317,51 +319,6 @@ export default function DashboardPage() {
           )}
         </CardContent>
       </Card>
-
-
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><FileText className="h-6 w-6 text-primary" />My Loan Application Queries</CardTitle>
-          <CardDescription>Track your submitted loan applications that are under review.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoadingLoans ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
-              <p>Loading your applications...</p>
-            </div>
-          ) : errorLoans ? (
-            <div className="flex flex-col items-center justify-center py-8 text-destructive">
-              <AlertTriangle className="h-8 w-8 mb-2" />
-              <p className="font-semibold">Failed to load applications</p>
-              <p className="text-sm">{errorLoans}</p>
-            </div>
-          ) : applicationQueries.length > 0 ? (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {applicationQueries.map((app) => (
-                <Card key={app.id} className="bg-card-foreground/5">
-                  <CardHeader>
-                    <CardTitle className="text-lg truncate" title={app.purpose}>{app.purpose.substring(0,30)}{app.purpose.length > 30 ? "..." : ""}</CardTitle>
-                    <StatusBadge status={app.status} />
-                  </CardHeader>
-                  <CardContent className="space-y-1 text-sm">
-                    <p>Amount Requested: <span className="font-semibold">₹{app.requestedAmount.toLocaleString()}</span></p>
-                    <p className="flex items-center text-xs text-muted-foreground"><Clock className="mr-1 h-3 w-3" /> Applied: <FormattedDate dateString={app.applicationDate} /></p>
-                     <Button asChild variant="outline" size="sm" className="mt-2 w-full">
-                        <Link href={ROUTES.USER_APPLICATION_DETAIL(app.id)}>
-                            <Eye className="mr-2 h-4 w-4" /> View Details
-                        </Link>
-                     </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <p className="text-muted-foreground text-center py-8">You have no submitted loan queries under review. <Link href={ROUTES.APPLY_LOAN} className="text-accent hover:underline">Apply for one now!</Link></p>
-          )}
-        </CardContent>
-      </Card>
-
 
       <Card className="shadow-lg">
         <CardHeader>

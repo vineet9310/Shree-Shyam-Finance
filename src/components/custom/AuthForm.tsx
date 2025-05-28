@@ -13,7 +13,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+import { Input } from "@/components/ui/input"; // Corrected this line
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import type { User } from "@/lib/types";
@@ -125,21 +125,8 @@ export function AuthForm({ mode, imageSrc }: AuthFormProps) {
     setError(null);
     setIsLoading(true);
 
-    // Developer Bypass for admin login - REMOVE FOR PRODUCTION
-    if (mode === 'login' && values.email === 'vineetbeniwal9310@gmail.com') {
-      console.warn("[AuthForm:Login] Developer bypass for admin login activated for:", values.email);
-      const adminUser: User = {
-        id: 'mockadmin_vineet',
-        name: 'Vineet Beniwal',
-        email: values.email,
-        role: 'admin',
-        contactNo: '0000000000',
-        address: 'Admin Address', // This will still exist in the User type, but won't be collected on registration
-      };
-      contextLogin(adminUser);
-      setIsLoading(false);
-      return;
-    }
+    // REMOVED: Developer Bypass for admin login.
+    // All login attempts will now go through the backend API.
 
     if (mode === "login") {
       try {
@@ -433,9 +420,7 @@ export function AuthForm({ mode, imageSrc }: AuthFormProps) {
             </Link>
             .
           </p>
-          <p className="mt-4 text-xs text-muted-foreground/80 text-center">
-             For login: Admins use `vineetbeniwal9310@gmail.com` (dev bypass). Other users, register first.
-           </p>
+          {/* Removed the developer bypass instruction text */}
         </div>
       </div>
     </div>
