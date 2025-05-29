@@ -160,7 +160,7 @@ export default function AdminApplicationDetailsPage() {
             loanPurpose: appData.purpose,
             submittedDate: appData.applicationDate,
             monthlyIncome: appData.monthlyIncome || 0, // Use monthlyIncome
-            employmentStatus: appData.employmentStatus || 'N/A',
+            employmentStatus: appData.employmentStatus || appData.jobType || 'N/A',
             jobType: appData.jobType || 'N/A',
             businessDescription: appData.businessDescription || 'N/A',
             creditScore: appData.creditScore || 0,
@@ -613,7 +613,13 @@ export default function AdminApplicationDetailsPage() {
               </AlertDialogHeader>
               <div className="mt-4 space-y-3">
                 <Label htmlFor="approvedAmount">Approved Amount (₹)</Label>
-                <Input id="approvedAmount" type="number" placeholder="e.g., 50000" value={approvedAmount} onChange={(e) => setApprovedAmount(Number(e.target.value))} disabled={isUpdatingStatus} />
+                <Input
+                  id="approvedAmount"
+                  type="number"
+                  placeholder="e.g., 50000"
+                  value={approvedAmount !== '' ? approvedAmount : (application?.requestedAmount || '')}
+                  onChange={(e) => setApprovedAmount(Number(e.target.value))}
+                />
 
                 <Label htmlFor="interestRate">Interest Rate (%)</Label>
                 <Input id="interestRate" type="number" placeholder="e.g., 12.5" value={interestRate} onChange={(e) => setInterestRate(Number(e.target.value))} disabled={isUpdatingStatus} />
