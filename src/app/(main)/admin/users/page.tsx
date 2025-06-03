@@ -1,4 +1,3 @@
-
 "use client";
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -81,48 +80,93 @@ export default function AdminUsersPage() {
           <CardDescription>
             View and manage all registered users in the system. 
             <br />
-            <span className="text-xs text-destructive font-semibold">Note: For security reasons, user passwords are not displayed. Implement a password reset functionality if needed.</span>
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {users.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Full Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Contact No.</TableHead>
-                  <TableHead>Address</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {users.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell className="font-medium">{user.name}</TableCell>
-                    <TableCell>{user.email}</TableCell>
-                    <TableCell>
+          {/* Desktop Table View */}
+          <div className="hidden md:block">
+            {users.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Full Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Contact No.</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {users.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell className="font-medium">{user.name}</TableCell>
+                      <TableCell>{user.email}</TableCell>
+                      <TableCell>
+                        <Badge variant={user.role === 'admin' ? 'destructive' : 'secondary'} className="capitalize">
+                          {user.role}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {user.contactNo ? user.contactNo : ""}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button asChild variant="outline" size="sm">
+                          <Link href={ROUTES.ADMIN_USER_DETAIL(user.id)}>
+                            <Eye className="mr-2 h-4 w-4" /> View Details
+                          </Link>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <p className="text-muted-foreground text-center py-8">No users found.</p>
+            )}
+          </div>
+
+          {/* Mobile Card View */}
+          <div className="block md:hidden space-y-4">
+            {users.length > 0 ? (
+              users.map((user) => (
+                <Card key={user.id} className="shadow border">
+                  <CardHeader className="pb-2 pt-3 px-4">
+                    <div className="flex items-center justify-between mb-1">
+                      <CardTitle className="text-base font-semibold truncate" title={user.name}>
+                        <UsersRound className="inline-block mr-2 h-4 w-4 text-muted-foreground" />
+                        {user.name}
+                      </CardTitle>
                       <Badge variant={user.role === 'admin' ? 'destructive' : 'secondary'} className="capitalize">
                         {user.role}
                       </Badge>
-                    </TableCell>
-                    <TableCell>{user.contactNo || 'N/A'}</TableCell>
-                    <TableCell>{user.address || 'N/A'}</TableCell>
-                    <TableCell className="text-right">
-                      <Button asChild variant="outline" size="sm">
-                        <Link href={ROUTES.ADMIN_USER_DETAIL(user.id)}> 
-                          <Eye className="mr-2 h-4 w-4" /> View Details
-                        </Link>
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <p className="text-muted-foreground text-center py-8">No users found.</p>
-          )}
+                    </div>
+                    <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                  </CardHeader>
+                  <CardContent className="px-4 pb-3 pt-2 space-y-1.5 text-sm">
+                    {user.contactNo && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Contact:</span>
+                        <span className="font-medium">{user.contactNo}</span>
+                      </div>
+                    )}
+                    {user.address && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Address:</span>
+                        <span className="font-medium truncate">{user.address}</span>
+                      </div>
+                    )}
+                    <Button asChild variant="outline" size="sm" className="w-full mt-3">
+                      <Link href={ROUTES.ADMIN_USER_DETAIL(user.id)}>
+                        <Eye className="mr-2 h-4 w-4" /> View Details
+                      </Link>
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <p className="text-muted-foreground text-center py-8">No users found.</p>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>

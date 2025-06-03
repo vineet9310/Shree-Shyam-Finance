@@ -293,16 +293,6 @@ export default function AdminUserDetailPage() {
                 <p className="text-foreground">{currentDisplayUser.addressProofType || 'N/A'}</p>
               )}
             </div>
-
-            {user.passwordHash && !isEditing && ( // Only show hash when not editing
-              <div className="flex items-center gap-2 md:col-span-2">
-                <KeyRound className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <p className="font-medium text-muted-foreground">Password Hash (Sensitive)</p>
-                  <p className="text-foreground break-all text-xs">{user.passwordHash}</p>
-                </div>
-              </div>
-            )}
           </div>
           {!isEditing && (
             <div className="pt-2">
@@ -311,16 +301,6 @@ export default function AdminUserDetailPage() {
               </p>
             </div>
           )}
-           {!isEditing && (
-            <Alert variant="destructive" className="mt-4">
-              <AlertTriangleIcon className="h-4 w-4" />
-              <AlertTitle>Security Warning</AlertTitle>
-              <AlertDescription>
-                Displaying password hashes is a security risk. This is shown based on your request. In a production system, passwords or their hashes should never be displayed. Implement a secure password reset mechanism instead. 
-                **Real passwords are NOT stored or retrievable.**
-              </AlertDescription>
-            </Alert>
-           )}
         </CardContent>
         <CardFooter className="flex flex-col sm:flex-row gap-2 border-t pt-6">
           {isEditing ? (
