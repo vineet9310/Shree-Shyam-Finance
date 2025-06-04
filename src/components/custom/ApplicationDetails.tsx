@@ -189,7 +189,7 @@ export function ApplicationDetails({ application }: ApplicationDetailsProps) {
                  <p><strong className="text-gray-300">Amount Approved:</strong> <span className="text-green-400">₹{application.approvedAmount.toLocaleString()}</span></p>
                )}
               <p><strong className="text-gray-300">Purpose:</strong> {application.purpose || application.loanPurpose}</p>
-              {application.interestRate && <p><strong className="text-gray-300">Interest Rate:</strong> {application.interestRate}% ({application.interestType || 'N/A'})</p>}
+              {application.interestRate && <p><strong className="text-gray-300">Interest Rate:</strong> {application.interestRate}%</p>}
               {application.loanTermMonths && <p><strong className="text-gray-300">Loan Term:</strong> {application.loanTermMonths} months</p>}
               {application.repaymentFrequency && <p><strong className="text-gray-300">Repayment Frequency:</strong> {application.repaymentFrequency}</p>}
               {application.processingFee && <p><strong className="text-gray-300">Processing Fee:</strong> ₹{application.processingFee.toLocaleString()}</p>}

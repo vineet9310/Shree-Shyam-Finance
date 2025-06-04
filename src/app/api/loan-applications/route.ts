@@ -240,28 +240,25 @@ export async function GET(request: NextRequest) {
     const applicationsFromDB = await LoanApplicationModel.find(query)
       .populate<{ borrowerUserId: { _id: mongoose.Types.ObjectId, id: string, name: string, email: string } }>({ // Added type hint for populate
           path: 'borrowerUserId',
-          select: 'name email', // Mongoose includes _id by default, virtual 'id' should be handled by toObject
-          model: UserModel // Explicitly specify the model for population
+          select: 'name email',
+          model: UserModel 
       })
-      .sort({ createdAt: -1 }); // Sort by creation date, newest first
+      .sort({ createdAt: -1 });
 
     console.log(`[API GET /loan-applications] Found ${applicationsFromDB.length} applications in DB matching query.`);
 
     const applications = applicationsFromDB.map(app => {
       const appObj = app.toObject();
-      // Ensure that appObj is a plain JavaScript object and doesn't cause issues
       return appObj;
     });
 
     return NextResponse.json({ success: true, applications: applications }, { status: 200 });
   } catch (error: any) {
     console.error('[API GET /loan-applications] Error fetching loan applications:', error);
-    // Ensure that a valid JSON response is always returned, even on error
     return NextResponse.json({ success: false, message: error.message || 'Internal Server Error while fetching applications.' }, { status: 500 });
   }
 }
 
 export async function PUT(request: NextRequest) {
-  // TODO: Implement logic to update a loan application
   return NextResponse.json({ success: false, message: 'PUT method not implemented yet.' }, { status: 405 });
 }

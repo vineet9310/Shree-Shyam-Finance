@@ -1,19 +1,17 @@
-// src/app/(main)/dashboard/page.tsx
-
+// File: src/app/(main)/dashboard/page.tsx
 "use client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import type { LoanApplication, LoanApplicationStatus, PaymentHistoryEntry, SystemNotification } from "@/lib/types"; // Added SystemNotification
+import type { LoanApplication, LoanApplicationStatus, PaymentHistoryEntry, SystemNotification } from "@/lib/types";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ROUTES } from "@/lib/constants";
-import { TrendingUp, History, CalendarClock, AlertTriangle, CheckCircle2, Clock, IndianRupee, FileText, Loader2, Eye, Users, ListChecks, ShieldCheck, BellRing, MessageSquare, Info, Volume2, Image as ImageIcon, XCircle } from "lucide-react"; // Added XCircle
+import { TrendingUp, History, CalendarClock, AlertTriangle, CheckCircle2, Clock, IndianRupee, FileText, Loader2, Eye, Users, ListChecks, ShieldCheck, BellRing, MessageSquare, Info, Volume2, Image as ImageIcon, XCircle, Hourglass } from "lucide-react";
 import FormattedDate from "@/components/custom/FormattedDate";
-import { useEffect, useState, useRef } from "react"; // Added useRef for audio playback
+import { useEffect, useState, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
-
 
 const StatusBadge = ({ status }: { status: LoanApplicationStatus }) => {
   let variant: "default" | "secondary" | "destructive" | "outline" = "outline";
@@ -21,30 +19,32 @@ const StatusBadge = ({ status }: { status: LoanApplicationStatus }) => {
 
   switch (status) {
     case "Approved":
-    case "Active":
+    case "Disbursed": 
+    case "Active": 
     case "PaidOff":
       variant = "default";
-      icon = <CheckCircle2 className="mr-1 h-3 w-3" />;
+      icon = <CheckCircle2 className="mr-1 h-3 w-3 text-green-500" />; 
       break;
     case "QueryInitiated":
     case "PendingAdminVerification":
+    case "Submitted": 
       variant = "secondary";
-      icon = <Clock className="mr-1 h-3 w-3" />;
+      icon = <Hourglass className="mr-1 h-3 w-3 text-yellow-500" />; 
       break;
     case "Rejected":
     case "Overdue":
     case "Defaulted":
       variant = "destructive";
-      icon = <AlertTriangle className="mr-1 h-3 w-3" />;
+      icon = <AlertTriangle className="mr-1 h-3 w-3 text-red-500" />; 
       break;
     case "AdditionalInfoRequired":
-      variant = "outline";
-      icon = <FileText className="mr-1 h-3 w-3" />;
+      variant = "outline"; 
+      icon = <FileText className="mr-1 h-3 w-3 text-blue-500" />; 
       break;
     default:
       icon = <FileText className="mr-1 h-3 w-3" />;
   }
-  return <Badge variant={variant} className="capitalize text-xs flex items-center whitespace-nowrap">{icon}{status}</Badge>;
+  return <Badge variant={variant} className="capitalize text-xs flex items-center whitespace-nowrap px-2 py-0.5">{icon}{status.replace(/([A-Z])/g, ' $1').trim()}</Badge>;
 };
 
 
@@ -52,13 +52,13 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const [userLoanApplications, setUserLoanApplications] = useState<LoanApplication[]>([]);
   const [paymentHistory, setPaymentHistory] = useState<PaymentHistoryEntry[]>([]);
-  const [notifications, setNotifications] = useState<SystemNotification[]>([]); // State for notifications
+  const [notifications, setNotifications] = useState<SystemNotification[]>([]);
   const [isLoadingLoans, setIsLoadingLoans] = useState(true);
-  const [isLoadingNotifications, setIsLoadingNotifications] = useState(true); // Loading state for notifications
+  const [isLoadingNotifications, setIsLoadingNotifications] = useState(true);
   const [errorLoans, setErrorLoans] = useState<string | null>(null);
-  const [errorNotifications, setErrorNotifications] = useState<string | null>(null); // Error state for notifications
+  const [errorNotifications, setErrorNotifications] = useState<string | null>(null);
   const { toast } = useToast();
-  const notificationAudioRef = useRef<HTMLAudioElement | null>(null); // For playing notification audio
+  const notificationAudioRef = useRef<HTMLAudioElement | null>(null);
 
 
   const playNotificationAudio = (audioUrl: string) => {
@@ -71,6 +71,10 @@ export default function DashboardPage() {
 
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+        notificationAudioRef.current = new Audio();
+    }
+
     const fetchUserLoans = async () => {
       if (!user?.id) {
         setIsLoadingLoans(false);
@@ -83,14 +87,18 @@ export default function DashboardPage() {
         console.log(`[DashboardPage] Fetching loans for userId: ${user.id}`);
         const response = await fetch(`/api/loan-applications?userId=${user.id}`);
         if (!response.ok) {
-          const errorData = await response.json();
+          const errorData = await response.json().catch(() => ({ message: 'Failed to fetch loan applications for user and could not parse error response' }));
           throw new Error(errorData.message || 'Failed to fetch loan applications for user');
         }
         const data = await response.json();
-        if (data.success && data.applications) {
-          setUserLoanApplications(data.applications);
-        } else {
-          throw new Error(data.message || 'Could not parse user loan applications');
+        if (data && data.success && Array.isArray(data.applications)) {
+            setUserLoanApplications(data.applications);
+        } else if (Array.isArray(data)) { 
+             setUserLoanApplications(data);
+        }
+         else {
+          console.warn("[DashboardPage] Unexpected data structure for loans:", data);
+          setUserLoanApplications([]);
         }
       } catch (err: any) {
         console.error("[DashboardPage] Error fetching user loans:", err);
@@ -118,14 +126,18 @@ export default function DashboardPage() {
         console.log(`[DashboardPage] Fetching notifications for userId: ${user.id}`);
         const response = await fetch(`/api/notifications?userId=${user.id}`);
         if (!response.ok) {
-          const errorData = await response.json();
+          const errorData = await response.json().catch(() => ({ message: 'Failed to fetch notifications for user and could not parse error response' }));
           throw new Error(errorData.message || 'Failed to fetch notifications for user');
         }
         const data = await response.json();
-        if (data.success && data.notifications) {
-          setNotifications(data.notifications);
-        } else {
-          throw new Error(data.message || 'Could not parse user notifications');
+        if (data && data.success && Array.isArray(data.notifications)) {
+            setNotifications(data.notifications);
+        } else if (Array.isArray(data)) { 
+            setNotifications(data);
+        }
+        else {
+          console.warn("[DashboardPage] Unexpected data structure for notifications:", data);
+          setNotifications([]);
         }
       } catch (err: any) {
         console.error("[DashboardPage] Error fetching user notifications:", err);
@@ -144,33 +156,36 @@ export default function DashboardPage() {
 
     if (user && user.role !== 'admin' && user.id) {
       fetchUserLoans();
-      fetchUserNotifications(); // Fetch notifications
+      fetchUserNotifications();
     } else {
       setUserLoanApplications([]);
-      setNotifications([]); // Clear notifications for admin or if no user
+      setNotifications([]);
       setIsLoadingLoans(false);
       setIsLoadingNotifications(false);
     }
-
     setPaymentHistory([]);
-
   }, [user, toast]);
 
-  const applicationQueries = userLoanApplications.filter(
-    app => app.status === 'QueryInitiated' || app.status === 'PendingAdminVerification' || app.status === 'AdditionalInfoRequired'
+  const pendingApplications = userLoanApplications.filter(
+    app => ['QueryInitiated', 'PendingAdminVerification', 'AdditionalInfoRequired', 'Submitted'].includes(app.status)
   );
-  const activeLoans = userLoanApplications.filter(
-    app => app.status === 'Active' || app.status === 'Overdue' || app.status === 'Approved' // Include Approved here
+
+  const activeOrApprovedLoans = userLoanApplications.filter(
+    app => ['Active', 'Approved', 'Overdue', 'PaidOff', 'Disbursed'].includes(app.status)
   );
+
+  // Date formatting options
+  const dateDisplayOptions: Intl.DateTimeFormatOptions = { day: '2-digit', month: 'long', year: 'numeric' };
+
 
   if (user?.role === 'admin') {
+    // Admin dashboard JSX (unchanged)
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 p-4 md:p-6 lg:p-8">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Welcome, {user?.name}! (Admin)</h1>
+          <h1 className="text-3xl font-bold text-foreground">Welcome, {user?.name || user?.email}! (Admin)</h1>
           <p className="text-muted-foreground">Quick access to administrative tools.</p>
         </div>
-
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           <Card className="shadow-lg hover:shadow-xl transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -192,7 +207,7 @@ export default function DashboardPage() {
               <p className="text-xs text-muted-foreground">Requires review</p>
             </CardContent>
           </Card>
-           <Card className="shadow-lg hover:shadow-xl transition-shadow">
+            <Card className="shadow-lg hover:shadow-xl transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Active Loans (Placeholder)</CardTitle>
               <IndianRupee className="h-5 w-5 text-muted-foreground" />
@@ -203,7 +218,6 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         </div>
-
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><ShieldCheck className="h-6 w-6 text-primary"/>Admin Actions</CardTitle>
@@ -226,12 +240,12 @@ export default function DashboardPage() {
     );
   }
 
-
+  // Regular User Dashboard
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-4 md:p-6 lg:p-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Welcome, {user?.name}!</h1>
+          <h1 className="text-3xl font-bold text-foreground">Welcome, {user?.name || user?.email}!</h1>
           <p className="text-muted-foreground">Here's an overview of your loan activities.</p>
         </div>
         {user?.role !== 'admin' && (
@@ -243,7 +257,7 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Notifications Card */}
+      {/* Notifications Card (unchanged) */}
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><BellRing className="h-6 w-6 text-primary" />My Notifications</CardTitle>
@@ -262,106 +276,88 @@ export default function DashboardPage() {
               <p className="text-sm">{errorNotifications}</p>
             </div>
           ) : notifications.length > 0 ? (
-            <ul className="space-y-3">
+            <ul className="space-y-3 max-h-96 overflow-y-auto">
               {notifications.map((notif) => (
-                <li key={notif.id} className={`p-3 rounded-md border ${notif.isRead ? 'bg-card-foreground/5' : 'bg-accent/10 border-accent'}`}>
+                <li key={notif.id} className={`p-3 rounded-md border ${notif.isRead ? 'bg-card-foreground/5 opacity-70' : 'bg-accent/10 border-accent shadow-sm'}`}>
                   <div className="flex items-start gap-3">
-                    <div className="mt-1">
-                      {notif.type === 'loan_status_updated' && <MessageSquare className="h-5 w-5 text-primary" />}
-                      {notif.type === 'loan_rejected_details' && <XCircle className="h-5 w-5 text-destructive" />} {/* Icon for rejected */}
-                      {notif.type.includes('reminder') && <Clock className="h-5 w-5 text-yellow-500" />}
-                      {notif.type.includes('alert') && <AlertTriangle className="h-5 w-5 text-destructive" />}
-                      {!['loan_status_updated', 'reminder', 'alert', 'loan_rejected_details'].some(t => notif.type.includes(t)) && <Info className="h-5 w-5 text-muted-foreground" />}
-                      {/* New: Icon for loan_disbursed_confirmation */}
-                      {notif.type === 'loan_disbursed_confirmation' && <IndianRupee className="h-5 w-5 text-green-500" />}
+                    <div className="mt-1 flex-shrink-0">
+                      {notif.type === 'loan_status_updated' && <MessageSquare className="h-5 w-5 text-blue-500" />}
+                      {notif.type === 'application_submitted' && <FileText className="h-5 w-5 text-sky-500" />}
+                      {notif.type === 'loan_rejected' && <XCircle className="h-5 w-5 text-red-500" />}
+                      {notif.type === 'loan_approved' && <CheckCircle2 className="h-5 w-5 text-green-500" />}
+                      {notif.type === 'loan_disbursed_confirmation' && <IndianRupee className="h-5 w-5 text-green-600" />}
+                      {notif.type === 'query_raised' && <MessageSquare className="h-5 w-5 text-yellow-500" />}
+                      {notif.type === 'document_request' && <FileText className="h-5 w-5 text-indigo-500" />}
+                      {notif.type.includes('reminder') && <Clock className="h-5 w-5 text-orange-500" />}
+                      {notif.type.includes('alert') && <AlertTriangle className="h-5 w-5 text-red-600" />}
+                      {!['loan_status_updated', 'application_submitted', 'loan_rejected', 'loan_approved', 'loan_disbursed_confirmation', 'query_raised', 'document_request', 'reminder', 'alert'].some(t => notif.type.includes(t)) && 
+                       <Info className="h-5 w-5 text-gray-500" />}
                     </div>
-                    <div>
-                      <p className={`text-sm font-medium ${!notif.isRead ? 'text-accent-foreground' : 'text-foreground'}`}>{notif.message}</p>
-                      {notif.type === 'loan_rejected_details' && (
-                          <div className="mt-2 text-xs">
-                              {notif.rejectionReasonText && (
-                                  <p className="text-foreground">Reason: {notif.rejectionReasonText}</p>
-                              )}
-                              {notif.rejectionReasonImageUrl && (
-                                  <p className="flex items-center text-foreground mt-1">
-                                      <ImageIcon className="h-3 w-3 mr-1"/>
-                                      <a href={notif.rejectionReasonImageUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                                          View Image
-                                      </a>
-                                  </p>
-                              )}
-                              {notif.rejectionReasonAudioUrl && (
-                                  <p className="flex items-center text-foreground mt-1">
-                                      <Volume2 className="h-3 w-3 mr-1"/>
-                                      <button onClick={() => playNotificationAudio(notif.rejectionReasonAudioUrl!)} className="text-primary hover:underline">
-                                          Play Audio
-                                      </button>
-                                  </p>
-                              )}
-                              <audio ref={notificationAudioRef} className="hidden"></audio> {/* Hidden audio player */}
-                          </div>
+                    <div className="flex-grow">
+                      <p className={`text-sm font-medium ${!notif.isRead ? 'text-accent-foreground' : 'text-foreground/80'}`}>{notif.message}</p>
+                      {(notif.type === 'loan_rejected' || notif.type === 'query_raised') && (notif.rejectionReasonText || notif.rejectionReasonImageUrl || notif.rejectionReasonAudioUrl) && (
+                        <div className="mt-2 p-2 border-l-2 border-destructive/50 bg-destructive/5 rounded-md text-xs space-y-1">
+                          {notif.rejectionReasonText && (<p className="text-foreground"><strong>Details:</strong> {notif.rejectionReasonText}</p>)}
+                          {notif.rejectionReasonImageUrl && (<p className="flex items-center text-foreground"><ImageIcon className="h-3 w-3 mr-1 flex-shrink-0"/><a href={notif.rejectionReasonImageUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all">View Supporting Image</a></p>)}
+                          {notif.rejectionReasonAudioUrl && (<p className="flex items-center text-foreground"><Volume2 className="h-3 w-3 mr-1 flex-shrink-0"/><button onClick={() => playNotificationAudio(notif.rejectionReasonAudioUrl!)} className="text-primary hover:underline text-left">Play Audio Explanation</button></p>)}
+                        </div>
                       )}
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-muted-foreground mt-1">
                         <FormattedDate dateString={notif.createdAt} options={{ year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }} />
                       </p>
-                      {notif.linkTo && (
-                        <Link href={notif.linkTo} className="text-xs text-primary hover:underline">
-                          View Details
-                        </Link>
-                      )}
+                      {notif.linkTo && (<Link href={notif.linkTo} className="text-xs text-primary hover:underline mt-1 inline-block">View Details</Link>)}
                     </div>
                   </div>
                 </li>
               ))}
+                <audio ref={notificationAudioRef} className="hidden"></audio>
             </ul>
-          ) : (
-            <p className="text-muted-foreground text-center py-8">You have no new notifications.</p>
-          )}
+          ) : (<p className="text-muted-foreground text-center py-8">You have no new notifications.</p>)}
         </CardContent>
       </Card>
 
+      {/* My Submitted Applications Card (unchanged) */}
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><IndianRupee className="h-6 w-6 text-primary" />Active & Approved Loans</CardTitle>
-          <CardDescription>Your current loans and their statuses.</CardDescription>
+          <CardTitle className="flex items-center gap-2"><Hourglass className="h-6 w-6 text-primary" />My Submitted Applications</CardTitle>
+          <CardDescription>Applications that are currently under review or require action.</CardDescription>
         </CardHeader>
         <CardContent>
-           {isLoadingLoans ? (
+            {isLoadingLoans ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
-              <p>Loading your active loans...</p>
+              <p>Loading your submitted applications...</p>
             </div>
           ) : errorLoans ? (
-             <div className="flex flex-col items-center justify-center py-8 text-destructive">
+              <div className="flex flex-col items-center justify-center py-8 text-destructive">
               <AlertTriangle className="h-8 w-8 mb-2" />
-              <p className="font-semibold">Failed to load active loans</p>
+              <p className="font-semibold">Failed to load applications</p>
               <p className="text-sm">{errorLoans}</p>
             </div>
-          ) : activeLoans.length > 0 ? (
+          ) : pendingApplications.length > 0 ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {activeLoans.map((loan) => (
-                <Card key={loan.id} className={`bg-card-foreground/5 ${loan.status === 'Approved' && loan.approvedDate && (new Date().getTime() - new Date(loan.approvedDate).getTime() < 3 * 24 * 60 * 60 * 1000) ? 'border-2 border-primary shadow-lg' : ''}`}>
+              {pendingApplications.map((loan) => (
+                <Card key={loan.id} className="bg-card-foreground/5 hover:shadow-md transition-shadow">
                   <CardHeader>
-                    <CardTitle className="text-lg truncate" title={loan.purpose}>{loan.purpose.substring(0,30)}{loan.purpose.length > 30 ? "..." : ""}</CardTitle>
-                     <div className="flex items-center gap-2">
+                    <div className="flex justify-between items-start">
+                        <CardTitle className="text-lg truncate" title={loan.purpose || `Application ${loan.applicationId || loan.id}`}>
+                            {loan.purpose ? (loan.purpose.substring(0,30) + (loan.purpose.length > 30 ? "..." : "")) : `Application ${loan.applicationId || loan.id}`}
+                        </CardTitle>
                         <StatusBadge status={loan.status} />
-                        {loan.status === 'Approved' && loan.approvedDate && (new Date().getTime() - new Date(loan.approvedDate).getTime() < 3 * 24 * 60 * 60 * 1000) && (
-                            <Badge variant="default" className="bg-primary/80 text-primary-foreground text-xs">New</Badge>
-                        )}
                     </div>
+                    {loan.applicationId && <CardDescription className="text-xs">ID: {loan.applicationId}</CardDescription>}
                   </CardHeader>
-                  <CardContent className="space-y-1 text-sm">
-                    <p>Approved Amount: <span className="font-semibold">₹{loan.approvedAmount?.toLocaleString() || loan.requestedAmount.toLocaleString()}</span></p>
-                    {loan.nextPaymentDueDate && (
-                      <p className="flex items-center"><CalendarClock className="mr-2 h-4 w-4 text-muted-foreground" /> Next Payment: <FormattedDate dateString={loan.nextPaymentDueDate} /></p>
+                  <CardContent className="space-y-2 text-sm">
+                    <p>Requested Amount: <span className="font-semibold">₹{loan.requestedAmount.toLocaleString()}</span></p>
+                    <p className="flex items-center text-xs text-muted-foreground"><Clock className="mr-1 h-3 w-3 flex-shrink-0" />
+                        Submitted: <FormattedDate dateString={loan.applicationDate || loan.createdAt} options={dateDisplayOptions} />
+                    </p>
+                    {loan.adminRemarks && (
+                        <p className="text-xs italic text-amber-700 border-l-2 border-amber-500 pl-2 py-1 bg-amber-50 rounded-sm">
+                            <strong>Admin Note:</strong> {loan.adminRemarks.substring(0, 100)}{loan.adminRemarks.length > 100 ? "..." : ""}
+                        </p>
                     )}
-                    {loan.nextPaymentAmount && (
-                       <p>Next Payment Amount: <span className="font-semibold">₹{loan.nextPaymentAmount.toLocaleString()}</span></p>
-                    )}
-                     <p className="flex items-center text-xs text-muted-foreground"><Clock className="mr-1 h-3 w-3" />
-                        {loan.status === 'Approved' ? 'Approved:' : 'Disbursed:'} <FormattedDate dateString={loan.approvedDate || loan.disbursementDate} />
-                     </p>
-                      <Button asChild variant="outline" size="sm" className="mt-2 w-full">
+                     <Button asChild variant="outline" size="sm" className="mt-3 w-full">
                         <Link href={ROUTES.USER_APPLICATION_DETAIL(loan.id)}>
                             <Eye className="mr-2 h-4 w-4" /> View Details
                         </Link>
@@ -371,11 +367,127 @@ export default function DashboardPage() {
               ))}
             </div>
           ) : (
+            <p className="text-muted-foreground text-center py-8">You have no applications pending review.</p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Active & Approved Loans Card - UPDATED SECTION */}
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><CheckCircle2 className="h-6 w-6 text-green-600" />Active & Approved Loans</CardTitle>
+          <CardDescription>Your current loans and their statuses.</CardDescription>
+        </CardHeader>
+        <CardContent>
+            {isLoadingLoans ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
+              <p>Loading your active loans...</p>
+            </div>
+          ) : errorLoans ? (
+              <div className="flex flex-col items-center justify-center py-8 text-destructive">
+              <AlertTriangle className="h-8 w-8 mb-2" />
+              <p className="font-semibold">Failed to load active loans</p>
+              <p className="text-sm">{errorLoans}</p>
+            </div>
+          ) : activeOrApprovedLoans.length > 0 ? (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {activeOrApprovedLoans.map((loan) => {
+                const isFirstPaymentPeriod = 
+                  (loan.status === 'Disbursed' || (loan.status === 'Active' && !loan.lastPaymentDate)) &&
+                  loan.disbursementDate && 
+                  typeof loan.principalDisbursed === 'number' && 
+                  typeof loan.interestRate === 'number';
+
+                let interestPayableDate: string | undefined;
+                let interestPayableAmount: number | undefined;
+
+                if (isFirstPaymentPeriod) {
+                  const disbursementDateObj = new Date(loan.disbursementDate!);
+                  const nextMonthDate = new Date(disbursementDateObj.setMonth(disbursementDateObj.getMonth() + 1));
+                  interestPayableDate = nextMonthDate.toISOString();
+                  // Updated interest calculation as per user's request: Annual interest amount
+                  interestPayableAmount = parseFloat((loan.principalDisbursed! * (loan.interestRate! / 100)).toFixed(2));
+                }
+
+                return (
+                  <Card key={loan.id} className={`bg-card-foreground/5 hover:shadow-md transition-shadow ${loan.status === 'Approved' && loan.approvedDate && (new Date().getTime() - new Date(loan.approvedDate).getTime() < 3 * 24 * 60 * 60 * 1000) ? 'border-2 border-green-500' : ''}`}>
+                    <CardHeader>
+                       <div className="flex justify-between items-start">
+                          <CardTitle className="text-lg truncate" title={loan.purpose || `Application ${loan.applicationId || loan.id}`}>
+                               {loan.purpose ? (loan.purpose.substring(0,30) + (loan.purpose.length > 30 ? "..." : "")) : `Application ${loan.applicationId || loan.id}`}
+                          </CardTitle>
+                          <StatusBadge status={loan.status} />
+                      </div>
+                      {loan.applicationId && <CardDescription className="text-xs">ID: {loan.applicationId}</CardDescription>}
+                       {loan.status === 'Approved' && loan.approvedDate && (new Date().getTime() - new Date(loan.approvedDate).getTime() < 3 * 24 * 60 * 60 * 1000) && !isFirstPaymentPeriod && (
+                          <Badge variant="default" className="bg-green-600/80 text-white text-xs mt-1 self-start">Newly Approved</Badge>
+                       )}
+                       {isFirstPaymentPeriod && (
+                         <Badge variant="outline" className="border-blue-500 text-blue-500 text-xs mt-1 self-start">First Payment (Monthly Interest)</Badge>
+                       )}
+                    </CardHeader>
+                    <CardContent className="space-y-2 text-sm">
+                      <p>
+                        {loan.status === 'Approved' && !loan.principalDisbursed ? 'Requested Amount: ' : 'Approved Amount: '} 
+                        <span className="font-semibold">₹{loan.approvedAmount?.toLocaleString() || loan.requestedAmount.toLocaleString()}</span>
+                      </p>
+                      {loan.principalDisbursed && loan.status !== 'Approved' && (
+                        <p>Disbursed Amount: <span className="font-semibold">₹{loan.principalDisbursed.toLocaleString()}</span></p>
+                      )}
+                      
+                      {(loan.status === 'Disbursed' || loan.status === 'Active' || loan.status === 'Overdue') && (
+                        <>
+                          {isFirstPaymentPeriod && interestPayableDate && typeof interestPayableAmount === 'number' ? (
+                            <>
+                              <p className="flex items-center">
+                                <CalendarClock className="mr-2 h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                Interest Payable Date: <FormattedDate dateString={interestPayableDate} options={dateDisplayOptions} />
+                              </p>
+                              <p>
+                                Interest Payable Amount: <span className="font-semibold">₹{interestPayableAmount.toLocaleString()}</span>
+                              </p>
+                            </>
+                          ) : (
+                            <>
+                              {loan.nextPaymentDueDate && (
+                                <p className="flex items-center"><CalendarClock className="mr-2 h-4 w-4 text-muted-foreground flex-shrink-0" /> Next Payment: <FormattedDate dateString={loan.nextPaymentDueDate} options={dateDisplayOptions} /></p>
+                              )}
+                              {typeof loan.nextPaymentAmount === 'number' && (
+                                  <p>Next Payment Amount: <span className="font-semibold">₹{loan.nextPaymentAmount.toLocaleString()}</span></p>
+                              )}
+                            </>
+                          )}
+                        </>
+                      )}
+                      
+                        <p className="flex items-center text-xs text-muted-foreground"><Clock className="mr-1 h-3 w-3 flex-shrink-0" />
+                          {loan.status === 'Approved' && !loan.disbursementDate ? 'Approved:' : 
+                           loan.status === 'Disbursed' || (loan.status === 'Active' && loan.disbursementDate && !loan.lastPaymentDate) ? 'Disbursed:' : 
+                           'Updated:'} 
+                          <FormattedDate dateString={
+                            loan.status === 'Approved' && !loan.disbursementDate ? loan.approvedDate :
+                            loan.status === 'Disbursed' || (loan.status === 'Active' && loan.disbursementDate && !loan.lastPaymentDate) ? loan.disbursementDate :
+                            loan.updatedAt || loan.createdAt
+                          } options={dateDisplayOptions} />
+                        </p>
+                        <Button asChild variant="outline" size="sm" className="mt-3 w-full">
+                          <Link href={ROUTES.USER_APPLICATION_DETAIL(loan.id)}>
+                              <Eye className="mr-2 h-4 w-4" /> View Details
+                          </Link>
+                        </Button>
+                    </CardContent>
+                  </Card>
+                )
+              })}
+            </div>
+          ) : (
             <p className="text-muted-foreground text-center py-8">You have no active or approved loans.</p>
           )}
         </CardContent>
       </Card>
 
+      {/* Payment History Card (unchanged) */}
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><History className="h-6 w-6 text-primary" />Payment History</CardTitle>
@@ -394,7 +506,7 @@ export default function DashboardPage() {
             <TableBody>
               {paymentHistory.map((payment) => (
                 <TableRow key={payment.id}>
-                  <TableCell><FormattedDate dateString={payment.date} /></TableCell>
+                  <TableCell><FormattedDate dateString={payment.date} options={dateDisplayOptions} /></TableCell>
                   <TableCell>₹{payment.amount.toLocaleString()}</TableCell>
                   <TableCell className="text-right">
                     <Badge variant={payment.status === 'Paid' ? 'default' : payment.status === 'Missed' ? 'destructive' : 'secondary'} className="capitalize text-xs">
@@ -405,9 +517,9 @@ export default function DashboardPage() {
               ))}
             </TableBody>
           </Table>
-           ) : (
-            <p className="text-muted-foreground text-center py-8">No payment history available yet.</p>
-          )}
+            ) : (
+              <p className="text-muted-foreground text-center py-8">No payment history available yet.</p>
+            )}
         </CardContent>
       </Card>
     </div>
