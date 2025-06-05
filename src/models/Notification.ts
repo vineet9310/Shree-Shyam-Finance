@@ -1,12 +1,14 @@
 // src/models/Notification.ts
 
 import mongoose, { Schema, Document, models, Model } from 'mongoose';
+// Import NotificationTypeEnum as a value, and SystemNotification as a type
+import { NotificationTypeEnum } from '@/lib/types'; 
 import type { SystemNotification as NotificationType } from '@/lib/types';
 
 export interface NotificationDocument extends Omit<NotificationType, 'id' | 'recipientUserId' | 'loanApplicationId' | 'paymentRecordId' | 'createdAt' | 'rejectionReasonText' | 'rejectionReasonImageUrl' | 'rejectionReasonAudioUrl'>, Document {
   recipientUserId: mongoose.Types.ObjectId;
   loanApplicationId?: mongoose.Types.ObjectId;
-  paymentRecordId?: mongoose.Types.ObjectId;
+  paymentRecordId?: mongoose.Types.ObjectId; // This will now refer to LoanTransaction's _id
   createdAt?: Date;
   updatedAt?: Date;
   // New fields for rejection details directly in notification
@@ -26,9 +28,9 @@ const NotificationSchema: Schema<NotificationDocument> = new Schema(
       type: Schema.Types.ObjectId,
       ref: 'LoanApplication',
     },
-    paymentRecordId: {
+    paymentRecordId: { // Refers to the _id of a LoanTransaction document
       type: Schema.Types.ObjectId,
-      // ref: 'PaymentRecord', // Add this if you create a PaymentRecord model
+      ref: 'LoanTransaction', 
     },
     message: {
       type: String,
@@ -36,17 +38,7 @@ const NotificationSchema: Schema<NotificationDocument> = new Schema(
     },
     type: {
       type: String,
-      enum: [
-        'loan_application_submitted',
-        'loan_status_updated',
-        'payment_due_reminder',
-        'payment_received_confirmation',
-        'payment_overdue_alert',
-        'document_request',
-        'general_admin_alert',
-        'general_user_info',
-        'loan_rejected_details', // New type
-      ],
+      enum: Object.values(NotificationTypeEnum), // Use enum values for validation
       required: true,
     },
     isRead: {
@@ -54,7 +46,6 @@ const NotificationSchema: Schema<NotificationDocument> = new Schema(
       default: false,
     },
     linkTo: String,
-    // New fields for rejection details for direct notification display
     rejectionReasonText: String,
     rejectionReasonImageUrl: String,
     rejectionReasonAudioUrl: String,

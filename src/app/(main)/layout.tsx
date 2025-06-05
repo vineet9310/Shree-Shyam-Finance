@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useEffect } from 'react';
 import Link from 'next/link';
@@ -12,8 +11,9 @@ import {
   Menu,
   Shield,
   Home,
-  UsersRound, // Added for Manage Users
-} from 'lucide-react';
+  UsersRound, // Admin Users icon
+  ChevronRight, // Icon for active link indicator
+} from 'lucide-react'; 
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -25,21 +25,24 @@ import {
 import { AppLogo } from '@/components/custom/AppLogo';
 import { UserNav } from '@/components/custom/UserNav';
 import { useAuth } from '@/context/AuthContext';
-import { ROUTES } from '@/lib/constants';
+import { ROUTES, APP_NAME } from '@/lib/constants'; // Ensure APP_NAME is imported
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 
+// Base navigation items for regular users
 const navItemsBase = [
   { href: ROUTES.DASHBOARD, label: 'Dashboard', icon: LayoutDashboard },
-  { href: ROUTES.APPLY_LOAN, label: 'Apply for New Loan', icon: FilePlus2 }, // Updated label
+  { href: ROUTES.APPLY_LOAN, label: 'Apply for New Loan', icon: FilePlus2 },
 ];
 
+// Additional navigation items for admin users
 const navItemsAdmin = [
   { href: ROUTES.ADMIN_DASHBOARD, label: 'Admin Overview', icon: Shield },
-  { href: ROUTES.ADMIN_USERS, label: 'Manage Users', icon: UsersRound }, // New admin item
+  { href: ROUTES.ADMIN_USERS, label: 'Manage Users', icon: UsersRound },
 ];
 
+// Interface for NavLink properties
 interface NavLinkProps {
   href: string;
   label: string;
@@ -48,21 +51,26 @@ interface NavLinkProps {
   onClick?: () => void;
 }
 
+// NavLink component for sidebar navigation items
 const NavLink: React.FC<NavLinkProps> = ({ href, label, icon: Icon, isActive, onClick }) => (
   <Link
     href={href}
     onClick={onClick}
     className={cn(
-      "flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-      isActive ? "bg-sidebar-primary text-sidebar-primary-foreground" : "text-sidebar-foreground"
+      "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-all duration-150 ease-in-out group", 
+      isActive 
+        ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm font-semibold" 
+        : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:shadow-sm" 
     )}
   >
-    <Icon className="h-5 w-5" />
-    {label}
+    <Icon className={cn("h-5 w-5 shrink-0", isActive ? "text-sidebar-primary-foreground" : "text-sidebar-foreground/80 group-hover:text-sidebar-accent-foreground")} />
+    <span className="truncate">{label}</span> 
+    {isActive && <ChevronRight className="ml-auto h-4 w-4 opacity-70" />} 
   </Link>
 );
 
 
+// Main application layout component
 export default function MainAppLayout({
   children,
 }: {
@@ -71,110 +79,105 @@ export default function MainAppLayout({
   const pathname = usePathname();
   const { user, loading, logout } = useAuth();
   const router = useRouter();
-  const [open, setOpen] = React.useState(false);
+  const [open, setOpen] = React.useState(false); // State for mobile menu
 
+  // Effect to handle authentication and redirection
   useEffect(() => {
     if (!loading && !user) {
-      router.push(ROUTES.LOGIN);
+      router.push(ROUTES.LOGIN); // Redirect to login if not authenticated
     }
   }, [user, loading, router]);
 
+  // Loading state display
   if (loading || !user) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p>Loading...</p>
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        {/* Ensure APP_NAME is defined and accessible here, or use a static string if it's only for display */}
+        <p className="text-foreground animate-pulse">Loading {APP_NAME || "Application"}...</p> 
       </div>
     );
   }
 
+  // Determine navigation items based on user role
   const currentNavItems = user.role === 'admin' 
-    ? [...navItemsBase.filter(item => item.href !== ROUTES.APPLY_LOAN), ...navItemsAdmin] // Admins might not apply for loans themselves
+    ? [...navItemsBase.filter(item => item.href !== ROUTES.APPLY_LOAN), ...navItemsAdmin] 
     : navItemsBase;
   
-  const SidebarContentComp = () => (
+  // Reusable Sidebar Content Component
+  const SidebarContentComp = ({ isMobile = false }: { isMobile?: boolean }) => (
     <>
-      <SheetHeader className="flex h-16 items-center border-b border-sidebar-border px-6 shrink-0">
-        <AppLogo />
-        <SheetTitle className="sr-only">Main Menu</SheetTitle>
+      <SheetHeader className="flex h-16 items-center border-b border-sidebar-border px-4 sm:px-6 shrink-0"> 
+        <AppLogo iconClassName="h-7 w-7" textClassName="text-lg sm:text-xl" /> 
+        {isMobile && <SheetTitle className="sr-only">Main Menu</SheetTitle>}
       </SheetHeader>
       <ScrollArea className="flex-1 py-4">
-        <nav className="grid items-start px-4 text-sm font-medium">
+        <nav className="grid items-start px-3 sm:px-4 text-sm font-medium gap-1"> 
           {currentNavItems.map((item) => (
             <NavLink
               key={item.href}
               href={item.href}
               label={item.label}
               icon={item.icon}
-              isActive={pathname.startsWith(item.href)} // Use startsWith for nested routes
-              onClick={() => setOpen(false)}
+              isActive={pathname.startsWith(item.href === ROUTES.DASHBOARD && item.href.length > 1 ? item.href + "/#" : item.href)} 
+              onClick={() => { if (isMobile) setOpen(false); }}
             />
           ))}
         </nav>
       </ScrollArea>
-      <div className="mt-auto p-4 border-t border-sidebar-border">
-        <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:text-sidebar-accent-foreground" onClick={() => { logout(); setOpen(false); }}>
-          <LogOut className="mr-2 h-5 w-5" />
-          Logout
+      <div className="mt-auto p-3 sm:p-4 border-t border-sidebar-border"> 
+        <Button 
+          variant="ghost" 
+          className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground gap-2.5 px-3 py-2.5" 
+          onClick={() => { logout(); if (isMobile) setOpen(false); }}
+        >
+          <LogOut className="mr-1 h-5 w-5" /> 
+          <span>Logout</span>
         </Button>
       </div>
     </>
   );
 
-
   return (
-    <div className="grid min-h-screen w-full lg:grid-cols-[280px_1fr]">
-      <div className="hidden border-r border-sidebar-border bg-sidebar lg:block">
-        {/* For desktop, SheetHeader/SheetTitle are not strictly needed but structure is now consistent */}
-        <div className="flex h-full max-h-screen flex-col">
-           <div className="flex h-16 items-center border-b border-sidebar-border px-6 shrink-0">
-             <AppLogo />
-           </div>
-           <ScrollArea className="flex-1 py-4">
-             <nav className="grid items-start px-4 text-sm font-medium">
-               {currentNavItems.map((item) => (
-                 <NavLink
-                   key={item.href}
-                   href={item.href}
-                   label={item.label}
-                   icon={item.icon}
-                   isActive={pathname.startsWith(item.href)}
-                 />
-               ))}
-             </nav>
-           </ScrollArea>
-           <div className="mt-auto p-4 border-t border-sidebar-border">
-             <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:text-sidebar-accent-foreground" onClick={() => { logout(); }}>
-               <LogOut className="mr-2 h-5 w-5" />
-               Logout
-             </Button>
-           </div>
-         </div>
-      </div>
-      <div className="flex flex-col">
-        <header className="flex h-16 items-center gap-4 border-b bg-card px-6 shrink-0">
+    <div className="grid min-h-screen w-full lg:grid-cols-[280px_1fr] h-screen overflow-hidden bg-background">
+      {/* Desktop Sidebar */}
+      <aside className="hidden border-r border-sidebar-border bg-sidebar lg:flex flex-col h-full shadow-md"> 
+        <SidebarContentComp />
+      </aside>
+      
+      {/* Right Panel (Header + Main Content) */}
+      <div className="flex flex-col h-screen overflow-hidden">
+        {/* Header: Fixed height, does not scroll */}
+        <header className="flex h-16 items-center gap-4 border-b border-border bg-card px-4 sm:px-6 shrink-0 shadow-sm"> 
+          {/* Mobile Menu Trigger */}
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
               <Button
                 variant="outline"
                 size="icon"
-                className="shrink-0 lg:hidden"
+                className="shrink-0 lg:hidden rounded-full hover:bg-accent" 
                 aria-label="Toggle navigation menu"
               >
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="flex flex-col p-0 w-[280px] bg-sidebar border-sidebar-border">
-              <SidebarContentComp />
+            <SheetContent side="left" className="flex flex-col p-0 w-[280px] bg-sidebar border-r border-sidebar-border shadow-xl">
+              <SidebarContentComp isMobile={true} />
             </SheetContent>
           </Sheet>
           <div className="flex-1">
-            {/* Breadcrumbs or page title can go here */}
+             {/* Example: Display current page title (can be made dynamic) */}
+             {/* <h1 className="text-lg font-semibold text-foreground truncate">
+               {currentNavItems.find(item => pathname.startsWith(item.href))?.label || APP_NAME}
+             </h1> */}
           </div>
           <UserNav />
         </header>
-        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-background">
-          {children}
-        </main>
+        
+        <ScrollArea className="flex-1 bg-background"> 
+          <main className="flex flex-col gap-4 p-4 md:p-6 lg:p-8"> 
+            {children}
+          </main>
+        </ScrollArea>
       </div>
     </div>
   );

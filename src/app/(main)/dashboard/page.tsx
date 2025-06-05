@@ -3,7 +3,8 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import type { LoanApplication, LoanApplicationStatus, PaymentHistoryEntry, SystemNotification } from "@/lib/types";
+// Import NotificationTypeEnum
+import type { LoanApplication, LoanApplicationStatus, PaymentHistoryEntry, SystemNotification, NotificationTypeEnum } from "@/lib/types";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -52,7 +53,10 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const [userLoanApplications, setUserLoanApplications] = useState<LoanApplication[]>([]);
   const [paymentHistory, setPaymentHistory] = useState<PaymentHistoryEntry[]>([]);
-  const [notifications, setNotifications] = useState<SystemNotification[]>([]);
+  // State for notifications that are currently displayed to the user
+  const [notifications, setNotifications] = useState<SystemNotification[]>([]); 
+  // State to store all notifications fetched from the API during the session (or a reasonable batch)
+  const [allFetchedUserNotifications, setAllFetchedUserNotifications] = useState<SystemNotification[]>([]);
   const [isLoadingLoans, setIsLoadingLoans] = useState(true);
   const [isLoadingNotifications, setIsLoadingNotifications] = useState(true);
   const [errorLoans, setErrorLoans] = useState<string | null>(null);
@@ -60,6 +64,7 @@ export default function DashboardPage() {
   const { toast } = useToast();
   const notificationAudioRef = useRef<HTMLAudioElement | null>(null);
 
+  const NOTIFICATION_VISIBLE_DURATION_MS = 48 * 60 * 60 * 1000; // Changed to 48 hours
 
   const playNotificationAudio = (audioUrl: string) => {
     if (notificationAudioRef.current) {
@@ -69,7 +74,84 @@ export default function DashboardPage() {
     }
   };
 
+  // Function to process notifications: 
+  // 1. If a loan is approved, hide its previous rejection notifications.
+  // 2. If a loan is rejected, hide its previous approval notifications.
+  // 3. Filter out notifications older than the specified duration.
+  // 4. Sort, ensure uniqueness, and limit to 20.
+  const filterAndSortNotifications = (
+    fetchedNotifications: SystemNotification[],
+    currentTime: number // Pass current time for consistent filtering
+  ): SystemNotification[] => {
+    const notificationsByLoanId: { [key: string]: SystemNotification[] } = {};
+    const otherNotifications: SystemNotification[] = [];
 
+    // Helper functions to identify notification types
+    const isApprovalNotif = (n: SystemNotification) =>
+        n.type === "loan_approved" || // Specific type if you add it
+        (n.type === "loan_status_updated" && n.message.toLowerCase().includes("approved"));
+    
+    const isRejectionNotif = (n: SystemNotification) =>
+        n.type === "loan_rejected_details" || // Specific type for rejections with details
+        (n.type === "loan_status_updated" && n.message.toLowerCase().includes("rejected"));
+
+
+    // Group notifications by loanApplicationId
+    for (const notif of fetchedNotifications) {
+        if (notif.loanApplicationId) {
+            if (!notificationsByLoanId[notif.loanApplicationId]) {
+                notificationsByLoanId[notif.loanApplicationId] = [];
+            }
+            notificationsByLoanId[notif.loanApplicationId].push(notif);
+        } else {
+            otherNotifications.push(notif);
+        }
+    }
+
+    let processedLoanNotifications: SystemNotification[] = [];
+    for (const loanId in notificationsByLoanId) {
+        let loanSpecificNotifs = [...notificationsByLoanId[loanId]]; // Work with a copy
+
+        // Sort by createdAt to easily find the latest status messages for a loan (newest first)
+        loanSpecificNotifs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+        const latestApproval = loanSpecificNotifs.find(isApprovalNotif);
+        const latestRejection = loanSpecificNotifs.find(isRejectionNotif);
+
+        if (latestApproval && latestRejection) {
+            // Both approval and rejection notifications exist for this loan
+            if (new Date(latestApproval.createdAt).getTime() > new Date(latestRejection.createdAt).getTime()) {
+                // Approval is newer, filter out all rejections for this loan
+                loanSpecificNotifs = loanSpecificNotifs.filter(n => !isRejectionNotif(n));
+            } else {
+                // Rejection is newer (or same time), filter out all approvals for this loan
+                loanSpecificNotifs = loanSpecificNotifs.filter(n => !isApprovalNotif(n));
+            }
+        } else if (latestApproval) {
+            // Only approval found
+            loanSpecificNotifs = loanSpecificNotifs.filter(n => !isRejectionNotif(n));
+        } else if (latestRejection) {
+            // Only rejection found
+            loanSpecificNotifs = loanSpecificNotifs.filter(n => !isApprovalNotif(n));
+        }
+        processedLoanNotifications.push(...loanSpecificNotifs);
+    }
+
+    let allCombinedNotifications = [...otherNotifications, ...processedLoanNotifications];
+    
+    // Filter by time: only keep notifications newer than the specified duration
+    const timeFilteredNotifications = allCombinedNotifications.filter(notif =>
+      (currentTime - new Date(notif.createdAt).getTime()) < NOTIFICATION_VISIBLE_DURATION_MS
+    );
+
+    timeFilteredNotifications.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    
+    const uniqueNotifications = Array.from(new Map(timeFilteredNotifications.map(item => [item.id, item])).values());
+    return uniqueNotifications.slice(0, 20);
+  };
+
+
+  // useEffect for fetching initial data
   useEffect(() => {
     if (typeof window !== "undefined") {
         notificationAudioRef.current = new Audio();
@@ -84,7 +166,6 @@ export default function DashboardPage() {
       setIsLoadingLoans(true);
       setErrorLoans(null);
       try {
-        console.log(`[DashboardPage] Fetching loans for userId: ${user.id}`);
         const response = await fetch(`/api/loan-applications?userId=${user.id}`);
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({ message: 'Failed to fetch loan applications for user and could not parse error response' }));
@@ -97,11 +178,9 @@ export default function DashboardPage() {
              setUserLoanApplications(data);
         }
          else {
-          console.warn("[DashboardPage] Unexpected data structure for loans:", data);
           setUserLoanApplications([]);
         }
       } catch (err: any) {
-        console.error("[DashboardPage] Error fetching user loans:", err);
         setErrorLoans(err.message);
         toast({
           title: "Error loading loan applications",
@@ -118,12 +197,12 @@ export default function DashboardPage() {
       if (!user?.id) {
         setIsLoadingNotifications(false);
         setNotifications([]);
+        setAllFetchedUserNotifications([]);
         return;
       }
       setIsLoadingNotifications(true);
       setErrorNotifications(null);
       try {
-        console.log(`[DashboardPage] Fetching notifications for userId: ${user.id}`);
         const response = await fetch(`/api/notifications?userId=${user.id}`);
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({ message: 'Failed to fetch notifications for user and could not parse error response' }));
@@ -131,16 +210,17 @@ export default function DashboardPage() {
         }
         const data = await response.json();
         if (data && data.success && Array.isArray(data.notifications)) {
-            setNotifications(data.notifications);
+            setAllFetchedUserNotifications(data.notifications); 
+            setNotifications(filterAndSortNotifications(data.notifications, Date.now())); 
         } else if (Array.isArray(data)) { 
-            setNotifications(data);
+            setAllFetchedUserNotifications(data);
+            setNotifications(filterAndSortNotifications(data, Date.now()));
         }
         else {
-          console.warn("[DashboardPage] Unexpected data structure for notifications:", data);
           setNotifications([]);
+          setAllFetchedUserNotifications([]);
         }
       } catch (err: any) {
-        console.error("[DashboardPage] Error fetching user notifications:", err);
         setErrorNotifications(err.message);
         toast({
           title: "Error loading notifications",
@@ -148,6 +228,7 @@ export default function DashboardPage() {
           variant: "destructive",
         });
         setNotifications([]);
+        setAllFetchedUserNotifications([]);
       } finally {
         setIsLoadingNotifications(false);
       }
@@ -160,11 +241,33 @@ export default function DashboardPage() {
     } else {
       setUserLoanApplications([]);
       setNotifications([]);
+      setAllFetchedUserNotifications([]);
       setIsLoadingLoans(false);
       setIsLoadingNotifications(false);
     }
-    setPaymentHistory([]);
+    setPaymentHistory([]); 
   }, [user, toast]);
+
+  useEffect(() => {
+    if (!user || user.role === 'admin' || !user.id || allFetchedUserNotifications.length === 0) {
+        if(notifications.length > 0) setNotifications([]);
+        return;
+    }
+
+    const intervalId = setInterval(() => {
+      const newlyFiltered = filterAndSortNotifications(allFetchedUserNotifications, Date.now());
+      setNotifications(prevDisplayed => {
+          if (JSON.stringify(newlyFiltered) !== JSON.stringify(prevDisplayed)) {
+              return newlyFiltered;
+          }
+          return prevDisplayed;
+      });
+    }, 1 * 60 * 1000); 
+
+    return () => clearInterval(intervalId); 
+
+  }, [user, allFetchedUserNotifications]); 
+
 
   const pendingApplications = userLoanApplications.filter(
     app => ['QueryInitiated', 'PendingAdminVerification', 'AdditionalInfoRequired', 'Submitted'].includes(app.status)
@@ -174,12 +277,10 @@ export default function DashboardPage() {
     app => ['Active', 'Approved', 'Overdue', 'PaidOff', 'Disbursed'].includes(app.status)
   );
 
-  // Date formatting options
   const dateDisplayOptions: Intl.DateTimeFormatOptions = { day: '2-digit', month: 'long', year: 'numeric' };
 
 
   if (user?.role === 'admin') {
-    // Admin dashboard JSX (unchanged)
     return (
       <div className="space-y-6 p-4 md:p-6 lg:p-8">
         <div>
@@ -240,7 +341,6 @@ export default function DashboardPage() {
     );
   }
 
-  // Regular User Dashboard
   return (
     <div className="space-y-6 p-4 md:p-6 lg:p-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -257,14 +357,13 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Notifications Card (unchanged) */}
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><BellRing className="h-6 w-6 text-primary" />My Notifications</CardTitle>
-          <CardDescription>Recent updates and alerts regarding your account and applications.</CardDescription>
+          <CardDescription>Recent updates and alerts regarding your account and applications. Notifications older than 48 hours are automatically hidden.</CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoadingNotifications ? (
+          {isLoadingNotifications && notifications.length === 0 ? ( 
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
               <p>Loading notifications...</p>
@@ -295,7 +394,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="flex-grow">
                       <p className={`text-sm font-medium ${!notif.isRead ? 'text-accent-foreground' : 'text-foreground/80'}`}>{notif.message}</p>
-                      {(notif.type === 'loan_rejected' || notif.type === 'query_raised') && (notif.rejectionReasonText || notif.rejectionReasonImageUrl || notif.rejectionReasonAudioUrl) && (
+                      {(notif.type === 'loan_rejected_details') && (notif.rejectionReasonText || notif.rejectionReasonImageUrl || notif.rejectionReasonAudioUrl) && ( 
                         <div className="mt-2 p-2 border-l-2 border-destructive/50 bg-destructive/5 rounded-md text-xs space-y-1">
                           {notif.rejectionReasonText && (<p className="text-foreground"><strong>Details:</strong> {notif.rejectionReasonText}</p>)}
                           {notif.rejectionReasonImageUrl && (<p className="flex items-center text-foreground"><ImageIcon className="h-3 w-3 mr-1 flex-shrink-0"/><a href={notif.rejectionReasonImageUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all">View Supporting Image</a></p>)}
@@ -312,11 +411,10 @@ export default function DashboardPage() {
               ))}
                 <audio ref={notificationAudioRef} className="hidden"></audio>
             </ul>
-          ) : (<p className="text-muted-foreground text-center py-8">You have no new notifications.</p>)}
+          ) : (<p className="text-muted-foreground text-center py-8">You have no recent notifications.</p>)}
         </CardContent>
       </Card>
 
-      {/* My Submitted Applications Card (unchanged) */}
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><Hourglass className="h-6 w-6 text-primary" />My Submitted Applications</CardTitle>
@@ -372,7 +470,6 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
 
-      {/* Active & Approved Loans Card - UPDATED SECTION */}
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><CheckCircle2 className="h-6 w-6 text-green-600" />Active & Approved Loans</CardTitle>
@@ -406,7 +503,6 @@ export default function DashboardPage() {
                   const disbursementDateObj = new Date(loan.disbursementDate!);
                   const nextMonthDate = new Date(disbursementDateObj.setMonth(disbursementDateObj.getMonth() + 1));
                   interestPayableDate = nextMonthDate.toISOString();
-                  // Updated interest calculation as per user's request: Annual interest amount
                   interestPayableAmount = parseFloat((loan.principalDisbursed! * (loan.interestRate! / 100)).toFixed(2));
                 }
 
@@ -487,7 +583,6 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
 
-      {/* Payment History Card (unchanged) */}
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><History className="h-6 w-6 text-primary" />Payment History</CardTitle>

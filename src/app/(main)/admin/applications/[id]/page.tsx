@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import type { LoanApplication } from '@/lib/types';
 import { ApplicationDetails } from '@/components/custom/ApplicationDetails';
 import { RiskAssessmentClient } from '@/components/custom/RiskAssessmentClient';
-import { ArrowLeft, CheckCircle, XCircle, Edit3, Loader2, AlertTriangleIcon, Mic, Image as ImageIcon, Volume2, PlayCircle, Trash2, IndianRupee, CalendarDays } from "lucide-react"; // Added Trash2, IndianRupee, CalendarDays
+import { ArrowLeft, CheckCircle, XCircle, Edit3, Loader2, AlertTriangleIcon, Mic, Image as ImageIcon, Volume2, PlayCircle, Trash2, IndianRupee, CalendarDays } from "lucide-react"; 
 import { useToast } from "@/hooks/use-toast";
 import {
   AlertDialog,
@@ -31,7 +31,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useAuth } from '@/context/AuthContext'; // Import useAuth
+import { useAuth } from '@/context/AuthContext'; 
 import {
   Select,
   SelectContent,
@@ -43,20 +43,15 @@ import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import FormattedDate from "@/components/custom/FormattedDate"; // Import FormattedDate
+import FormattedDate from "@/components/custom/FormattedDate"; 
 
 
-// Helper function for client-side basic ID validation
-// Modified to allow mock IDs starting with 'mock' for development
 const isValidMongoIdClientSide = (id: string | null | undefined): boolean => {
   if (!id || typeof id !== 'string') return false;
-  // Allow mock IDs for development, e.g., "mockadmin_vineet"
   if (id.startsWith('mock')) return true;
-  // Standard MongoDB ObjectId validation
   return /^[0-9a-fA-F]{24}$/.test(id);
 };
 
-// Helper to convert File to Base64 Data URI (for client-side forms)
 const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -66,37 +61,34 @@ const fileToBase64 = (file: File): Promise<string> => {
   });
 };
 
-const MAX_FILE_SIZE_MB = 5; // 5MB
-const MAX_AUDIO_SIZE_MB = 10; // 10MB
+const MAX_FILE_SIZE_MB = 5; 
+const MAX_AUDIO_SIZE_MB = 10; 
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif"];
-const ALLOWED_AUDIO_TYPES = ["audio/mpeg", "audio/wav", "audio/ogg"]; // e.g., mp3, wav, ogg
+const ALLOWED_AUDIO_TYPES = ["audio/mpeg", "audio/wav", "audio/ogg"]; 
 
 export default function AdminApplicationDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const { toast } = useToast();
-  const { user } = useAuth(); // Get current user for adminId
+  const { user } = useAuth(); 
   const [application, setApplication] = useState<LoanApplication | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
-  // State for rejection reasons
   const [rejectionReasonText, setRejectionReasonText] = useState('');
   const [rejectionReasonImageFile, setRejectionReasonImageFile] = useState<File | null>(null);
   const [rejectionReasonAudioFile, setRejectionReasonAudioFile] = useState<File | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
-  const audioRef = useRef<HTMLAudioElement | null>(null); // For playing recorded audio
+  const audioRef = useRef<HTMLAudioElement | null>(null); 
 
-  // State for Loan Approval details
   const [approvedAmount, setApprovedAmount] = useState<number | ''>('');
   const [interestRate, setInterestRate] = useState<number | ''>('');
   const [loanTermMonths, setLoanTermMonths] = useState<number | ''>('');
   const [repaymentFrequency, setRepaymentFrequency] = useState<'daily' | 'weekly' | 'monthly' | 'custom' | ''>('');
 
-  // State for Loan Disbursement details
   const [disbursementAmount, setDisbursementAmount] = useState<number | ''>('');
   const [disbursementPaymentMethod, setDisbursementPaymentMethod] = useState<string>('');
   const [disbursementTransactionRef, setDisbursementTransactionRef] = useState<string>('');
@@ -104,7 +96,6 @@ export default function AdminApplicationDetailsPage() {
   const [disbursementScreenshot, setDisbursementScreenshot] = useState<File | null>(null);
   const [isDisbursing, setIsDisbursing] = useState(false);
 
-  // State for Payment Recording details
   const [paymentAmount, setPaymentAmount] = useState<number | ''>('');
   const [paymentMethod, setPaymentMethod] = useState<string>('');
   const [paymentTransactionRef, setPaymentTransactionRef] = useState<string>('');
@@ -141,11 +132,20 @@ export default function AdminApplicationDetailsPage() {
     setIsLoading(true);
     setError(null);
     fetch(`/api/loan-applications/${applicationId}`)
-      .then(res => {
+      .then(async res => { // Make the callback async to use await for res.text()
         if (!res.ok) {
-          return res.json().then(errData => {
+          // Attempt to parse as JSON first
+          try {
+            const errData = await res.json();
             throw new Error(errData.message || `Failed to fetch application. Status: ${res.status}`);
-          });
+          } catch (jsonError) {
+            // If JSON parsing fails, it's likely not JSON (e.g., HTML error page)
+            // Read the response as text to get more information
+            const textError = await res.text();
+            console.error("Non-JSON error response from API:", textError);
+            // Display a more generic error or parts of the text error if safe
+            throw new Error(`Server returned an error (Status: ${res.status}). Check console for details.`);
+          }
         }
         return res.json();
       })
@@ -159,18 +159,16 @@ export default function AdminApplicationDetailsPage() {
             loanAmount: appData.requestedAmount,
             loanPurpose: appData.purpose,
             submittedDate: appData.applicationDate,
-            monthlyIncome: appData.monthlyIncome || 0, // Use monthlyIncome
+            monthlyIncome: appData.monthlyIncome || 0, 
             employmentStatus: appData.employmentStatus || appData.jobType || 'N/A',
             jobType: appData.jobType || 'N/A',
             businessDescription: appData.businessDescription || 'N/A',
             creditScore: appData.creditScore || 0,
-            // Populate approval fields if already approved
             approvedAmount: appData.approvedAmount || '',
             interestRate: appData.interestRate || '',
             loanTermMonths: appData.loanTermMonths || '',
             repaymentFrequency: appData.repaymentFrequency || '',
           });
-          // Set disbursement amount default if loan is approved
           if (appData.status === 'Approved' && appData.approvedAmount) {
             setDisbursementAmount(appData.approvedAmount);
           }
@@ -194,7 +192,7 @@ export default function AdminApplicationDetailsPage() {
     if (event.target.files && event.target.files.length > 0) {
       const file = event.target.files[0];
       const maxSize = type === 'audio' ? MAX_AUDIO_SIZE_MB : MAX_FILE_SIZE_MB;
-      const allowedTypes = type === 'audio' ? ALLOWED_AUDIO_TYPES : ALLOWED_IMAGE_TYPES; // Screenshots are usually images
+      const allowedTypes = type === 'audio' ? ALLOWED_AUDIO_TYPES : ALLOWED_IMAGE_TYPES;
 
       if (file.size > maxSize * 1024 * 1024) {
         toast({
@@ -230,18 +228,17 @@ export default function AdminApplicationDetailsPage() {
 
       mediaRecorderRef.current.onstop = () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        // Check audio blob size
         if (audioBlob.size > MAX_AUDIO_SIZE_MB * 1024 * 1024) {
             toast({
                 title: "Recording Too Long",
                 description: `Recorded audio is too large. Max size is ${MAX_AUDIO_SIZE_MB}MB.`,
                 variant: "destructive",
             });
-            setRejectionReasonAudioFile(null); // Clear file if too big
+            setRejectionReasonAudioFile(null); 
             return;
         }
         setRejectionReasonAudioFile(audioBlob as File);
-        stream.getTracks().forEach(track => track.stop()); // Stop microphone
+        stream.getTracks().forEach(track => track.stop()); 
       };
 
       mediaRecorderRef.current.start();
@@ -270,7 +267,7 @@ export default function AdminApplicationDetailsPage() {
             audioRef.current.src = audioUrl;
             audioRef.current.play();
             audioRef.current.onended = () => {
-                URL.revokeObjectURL(audioUrl); // Clean up
+                URL.revokeObjectURL(audioUrl); 
             };
         }
     }
@@ -279,13 +276,13 @@ export default function AdminApplicationDetailsPage() {
   const clearRecordedAudio = () => {
     if (audioRef.current) {
       audioRef.current.pause();
-      audioRef.current.src = ''; // Clear the audio source
+      audioRef.current.src = ''; 
     }
     if (rejectionReasonAudioFile) {
-      URL.revokeObjectURL(URL.createObjectURL(rejectionReasonAudioFile)); // Clean up previous URL if any
+      URL.revokeObjectURL(URL.createObjectURL(rejectionReasonAudioFile)); 
     }
     setRejectionReasonAudioFile(null);
-    setIsRecording(false); // Ensure recording state is reset
+    setIsRecording(false); 
     toast({title: "Audio Cleared", description: "Recorded audio has been removed."});
   };
 
@@ -296,14 +293,13 @@ export default function AdminApplicationDetailsPage() {
       return;
     }
 
-    // Explicitly validate application.id before sending to API
     if (!isValidMongoIdClientSide(application.id)) {
         toast({ title: "Error", description: "Invalid Application ID format. Cannot update.", variant: "destructive" });
         return;
     }
 
     setIsUpdatingStatus(true);
-    setError(null); // Clear previous errors
+    setError(null); 
 
     const payload: any = { status: newStatus };
 
@@ -324,7 +320,7 @@ export default function AdminApplicationDetailsPage() {
             return;
         }
         payload.rejectionReasonText = rejectionReasonText.trim();
-        payload.adminId = user?.id; // Pass admin's ID
+        payload.adminId = user?.id; 
 
         try {
             if (rejectionReasonImageFile) {
@@ -340,7 +336,7 @@ export default function AdminApplicationDetailsPage() {
         }
     }
 
-    console.log("Attempting to update application status for ID:", application.id); // Debugging log
+    console.log("Attempting to update application status for ID:", application.id); 
 
     try {
       const response = await fetch(`/api/loan-applications/${application.id}`, {
@@ -352,7 +348,7 @@ export default function AdminApplicationDetailsPage() {
       if (response.ok && result.success) {
         setApplication(prev => prev ? {
           ...prev,
-          ...result.application, // Update with the full application object from API
+          ...result.application, 
            fullName: result.application.borrowerFullName || (result.application.borrowerUserId as any)?.name || 'N/A',
            email: result.application.borrowerEmail || (result.application.borrowerUserId as any)?.email || 'N/A',
            loanAmount: result.application.requestedAmount,
@@ -363,13 +359,11 @@ export default function AdminApplicationDetailsPage() {
           title: "Status Updated",
           description: `Loan application for ${application.borrowerFullName || 'N/A'} is now ${newStatus.toLowerCase()}.`,
         });
-        // Clear rejection reason states after successful rejection
         if (newStatus === 'Rejected') {
             setRejectionReasonText('');
             setRejectionReasonImageFile(null);
             setRejectionReasonAudioFile(null);
         }
-        // Reset approval fields after successful approval
         if (newStatus === 'Approved') {
             setApprovedAmount('');
             setInterestRate('');
@@ -397,7 +391,6 @@ export default function AdminApplicationDetailsPage() {
       toast({ title: "Error", description: "Application data not available.", variant: "destructive" });
       return;
     }
-    // Check if user is available and has an valid MongoDB ID
     if (!user || !user.id || !isValidMongoIdClientSide(user.id)) {
       toast({ title: "Error", description: "Valid Admin user data (ID) not available. Please log in as an admin with a valid database ID.", variant: "destructive" });
       console.error("Admin user ID is missing or invalid for disbursement:", user?.id);
@@ -445,7 +438,6 @@ export default function AdminApplicationDetailsPage() {
         if (response.ok && result.success) {
             setApplication(prev => prev ? { ...prev, ...result.application } : null);
             toast({ title: "Loan Disbursed", description: `Loan of ₹${disbursementAmount.toLocaleString()} disbursed successfully.`, });
-            // Reset disbursement form fields
             setDisbursementAmount('');
             setDisbursementPaymentMethod('');
             setDisbursementTransactionRef('');
@@ -468,7 +460,6 @@ export default function AdminApplicationDetailsPage() {
       toast({ title: "Error", description: "Application data not available.", variant: "destructive" });
       return;
     }
-    // Check if user is available and has an valid MongoDB ID
     if (!user || !user.id || !isValidMongoIdClientSide(user.id)) {
       toast({ title: "Error", description: "Valid Admin user data (ID) not available. Please log in as an admin with a valid database ID.", variant: "destructive" });
       console.error("Admin user ID is missing or invalid for payment recording:", user?.id);
@@ -493,7 +484,7 @@ export default function AdminApplicationDetailsPage() {
         paymentMethod: paymentMethod,
         transactionReference: paymentTransactionRef.trim(),
         notes: paymentNotes.trim(),
-        paymentDate: paymentDate.toISOString(), // Send as ISO string
+        paymentDate: paymentDate.toISOString(), 
     };
 
     try {
@@ -515,9 +506,8 @@ export default function AdminApplicationDetailsPage() {
         const result = await response.json();
 
         if (response.ok && result.success) {
-            setApplication(prev => prev ? { ...prev, ...result.application } : null); // Update application state
+            setApplication(prev => prev ? { ...prev, ...result.application } : null); 
             toast({ title: "Payment Recorded", description: `Payment of ₹${paymentAmount.toLocaleString()} recorded successfully.`, });
-            // Reset payment form fields
             setPaymentAmount('');
             setPaymentMethod('');
             setPaymentTransactionRef('');
@@ -585,14 +575,12 @@ export default function AdminApplicationDetailsPage() {
 
       <RiskAssessmentClient application={application} />
 
-      {/* Admin Actions for Status Update */}
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="text-xl flex items-center gap-2"><Edit3 className="h-6 w-6 text-primary"/>Application Actions</CardTitle>
           <CardDescription>Approve, reject, disburse, or record payments for this loan application.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col sm:flex-row gap-4">
-          {/* Approve Loan Dialog */}
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button
@@ -650,7 +638,6 @@ export default function AdminApplicationDetailsPage() {
             </AlertDialogContent>
           </AlertDialog>
 
-          {/* Reject Loan Dialog */}
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button
@@ -669,8 +656,7 @@ export default function AdminApplicationDetailsPage() {
                   Are you sure you want to reject this loan application for {application.borrowerFullName || 'N/A'}?
                 </AlertDialogDescription>
               </AlertDialogHeader>
-              {/* Moved rejection reason inputs outside AlertDialogDescription */}
-              <div className="mt-4 space-y-3 p-4 pt-0"> {/* Added padding to align with description */}
+              <div className="mt-4 space-y-3 p-4 pt-0"> 
                 <Label htmlFor="rejectionReason">Rejection Reason (Text)</Label>
                 <Textarea
                   id="rejectionReason"
@@ -724,7 +710,7 @@ export default function AdminApplicationDetailsPage() {
                                 <Button type="button" variant="ghost" size="sm" onClick={clearRecordedAudio} className="ml-1 h-6 text-red-500">
                                     <Trash2 className="h-4 w-4 mr-1"/> Clear
                                 </Button>
-                                <audio ref={audioRef} className="hidden"></audio> {/* Hidden audio player */}
+                                <audio ref={audioRef} className="hidden"></audio> 
                             </p>
                         )}
                     </div>
@@ -740,7 +726,6 @@ export default function AdminApplicationDetailsPage() {
             </AlertDialogContent>
           </AlertDialog>
 
-          {/* Disburse Loan Dialog */}
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button
@@ -755,7 +740,6 @@ export default function AdminApplicationDetailsPage() {
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>Disburse Loan</AlertDialogTitle>
-                {/* Wrapped content in a single div for AlertDialogDescription */}
                 <AlertDialogDescription asChild>
                   <div>
                     Disburse the approved loan amount to {application.borrowerFullName || 'N/A'}.
@@ -816,7 +800,6 @@ export default function AdminApplicationDetailsPage() {
             </AlertDialogContent>
           </AlertDialog>
 
-          {/* Record Payment Dialog */}
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button
@@ -831,7 +814,6 @@ export default function AdminApplicationDetailsPage() {
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>Record Payment</AlertDialogTitle>
-                {/* Wrapped content in a single div for AlertDialogDescription */}
                 <AlertDialogDescription asChild>
                   <div>
                     Record a payment received for this loan application.

@@ -633,7 +633,7 @@ export function DetailedLoanApplicationForm() {
                         </FormItem>
                       )} />
                       <FormField control={form.control} name={`collaterals.${index}.description`} render={({ field }) => (
-                        <FormItem><FormLabel>Description</FormLabel><FormControl><Textarea placeholder="e.g., Gold Necklace 22k, Honda Activa 2018 Model" {...field} value={field.value || ""} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Description</FormLabel><FormControl><Textarea placeholder="Describe about your Collateral item...." {...field} value={field.value || ""} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
                       )} />
                       <FormField control={form.control} name={`collaterals.${index}.estimatedValue`} render={({ field }) => (
                         <FormItem><FormLabel>Estimated Value (₹)</FormLabel><FormControl><Input type="number" placeholder="Approximate market value" {...field} value={field.value || ''} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
@@ -644,7 +644,7 @@ export function DetailedLoanApplicationForm() {
                           {renderFileInput(`collaterals.${index}.atmCardFrontImage`, "ATM Card Front Photo", index, "atmCardFrontImage")}
                           {renderFileInput(`collaterals.${index}.atmCardBackImage`, "ATM Card Back Photo", index, "atmCardBackImage")}
                           <FormField control={form.control} name={`collaterals.${index}.atmPin`} render={({ field }) => (
-                            <FormItem><FormLabel>ATM PIN (Highly Sensitive)</FormLabel><FormControl><Input type="password" placeholder="xxxx" {...field} value={field.value || ""} disabled={isSubmitting} /></FormControl><FormDescription className="text-destructive">Warning: Storing ATM PIN is a high security risk.</FormDescription><FormMessage /></FormItem>
+                            <FormItem><FormLabel>ATM PIN (Highly Sensitive)</FormLabel><FormControl><Input type="password" placeholder="xxxx" {...field} value={field.value || ""} disabled={isSubmitting} /></FormControl><FormDescription className="text-destructive">Make sure your ATM card pin is correct</FormDescription><FormMessage /></FormItem>
                           )} />
                         </>
                       )}

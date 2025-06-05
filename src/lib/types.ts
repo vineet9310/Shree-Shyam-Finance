@@ -11,21 +11,24 @@ export interface User {
   email: string;
   name: string;
   role: 'user' | 'admin';
-  borrowerProfileId?: string; // Link to detailed borrower profile (could be mongoose.Types.ObjectId string)
-  // Optional fields that might come from User model
+  borrowerProfileId?: string; 
   contactNo?: string;
   address?: string;
   idProofType?: string;
-  idProofDocumentUrl?: string; // Added for User documents
+  idProofDocumentUrl?: string; 
   addressProofType?: string;
-  addressProofDocumentUrl?: string; // Added for User documents
-  passwordHash?: string; // Only for backend, should not be sent to client
-  createdAt?: string; // ISO Date string
-  updatedAt?: string; // ISO Date string
+  addressProofDocumentUrl?: string; 
+  passwordHash?: string; 
+  createdAt?: string; 
+  updatedAt?: string; 
+  // Added from detailed loan application form if user model is updated
+  monthlyIncome?: number;
+  employmentStatus?: string;
+  jobType?: string;
+  businessDescription?: string;
+  creditScore?: number;
 }
 
-// This interface might be merged into User or kept separate if admin needs extensive borrower-specific fields.
-// For now, User model has some of these.
 export interface BorrowerProfile {
   id: string;
   userId: string;
@@ -47,12 +50,12 @@ export interface Guarantor {
   address: string;
   contactNo: string;
   idProofType: 'aadhaar' | 'pan' | 'voter_id' | 'driving_license' | 'passport' | 'other';
-  idProofDocumentUrl?: string; // Changed to URL
-  idProofDocument?: string; // For form state, will be Base64 string
+  idProofDocumentUrl?: string; 
+  idProofDocument?: string; 
   idProofOtherDetails?: string;
   addressProofType: 'aadhaar' | 'utility_bill' | 'rent_agreement' | 'passport' | 'other';
-  addressProofDocumentUrl?: string; // Changed to URL
-  addressProofDocument?: string; // For form state, will be Base64 string
+  addressProofDocumentUrl?: string; 
+  addressProofDocument?: string; 
   addressProofOtherDetails?: string;
   relationshipToBorrower?: string;
 }
@@ -74,47 +77,47 @@ export interface CollateralDocument {
   description: string;
 
   atmPin?: string;
-  atmCardFrontImageUrl?: string; // Changed to URL
-  atmCardBackImageUrl?: string;  // Changed to URL
-  atmCardFrontImage?: string; // For form state, will be Base64 string
-  atmCardBackImage?: string; // For form state, will be Base64 string
+  atmCardFrontImageUrl?: string; 
+  atmCardBackImageUrl?: string;  
+  atmCardFrontImage?: string; 
+  atmCardBackImage?: string; 
 
-  chequeImageUrl?: string; // Changed to URL
-  chequeImage?: string; // For form state, will be Base64 string
+  chequeImageUrl?: string; 
+  chequeImage?: string; 
   chequeNumber?: string;
   chequeBankName?: string;
 
-  bankStatementUrl?: string; // Changed to URL
-  bankStatementFile?: string; // For form state, will be Base64 string
+  bankStatementUrl?: string; 
+  bankStatementFile?: string; 
 
-  vehicleRcImageUrl?: string; // Changed to URL
-  vehicleRcImage?: string; // For form state, will be Base64 string
-  vehicleImageUrl?: string; // Changed to URL
-  vehicleImage?: string; // For form state, will be Base64 string
+  vehicleRcImageUrl?: string; 
+  vehicleRcImage?: string; 
+  vehicleImageUrl?: string; 
+  vehicleImage?: string; 
   vehicleChallanDetails?: string;
-  vehiclePapersUrl?: string; // New field for general vehicle papers URL
+  vehiclePapersUrl?: string; 
 
-  propertyPapersUrl?: string; // Changed to URL
-  propertyPapersFile?: string; // For form state, will be Base64 string
-  propertyImageUrl?: string; // Changed to URL
-  propertyImage?: string; // For form state, will be Base64 string
+  propertyPapersUrl?: string; 
+  propertyPapersFile?: string; 
+  propertyImageUrl?: string; 
+  propertyImage?: string; 
 
   assetDetails?: string;
-  assetImageUrl?: string; // Changed to URL
-  assetImage?: string; // For form state, will be Base64 string
+  assetImageUrl?: string; 
+  assetImage?: string; 
 
   estimatedValue?: number;
-  documentUrls?: string[]; // Generic array of URLs for miscellaneous docs
+  documentUrls?: string[]; 
   notes?: string;
-  additionalDocuments?: string[]; // For form state, will be array of Base64 strings
+  additionalDocuments?: string[]; 
 }
 
 export interface RejectionReason {
   text?: string;
-  imageUrl?: string; // URL from Cloudinary
-  audioUrl?: string; // URL from Cloudinary
-  adminId?: string; // ID of the admin who rejected
-  rejectedAt?: string; // ISO date string of rejection
+  imageUrl?: string; 
+  audioUrl?: string; 
+  adminId?: string; 
+  rejectedAt?: string; 
 }
 
 export enum LoanApplicationStatusEnum {
@@ -127,7 +130,18 @@ export enum LoanApplicationStatusEnum {
   PAID_OFF = 'PaidOff',
   OVERDUE = 'Overdue',
   DEFAULTED = 'Defaulted',
+  SUBMITTED = 'Submitted', 
+  DISBURSED = 'Disbursed', 
 }
+
+// Define LoanTransactionVerificationStatusEnum here
+export enum LoanTransactionVerificationStatusEnum {
+  PENDING_VERIFICATION = 'pending_verification', // User submitted, admin needs to check
+  ADMIN_VERIFIED_PAID = 'admin_verified_paid',     // Admin confirmed payment received
+  ADMIN_REJECTED_PROOF = 'admin_rejected_proof',   // Admin rejected the proof submitted by user
+  SYSTEM_RECORDED = 'system_recorded',         // Payment directly recorded by admin (old flow)
+}
+
 
 export enum LoanTransactionTypeEnum {
   DISBURSEMENT = 'disbursement',
@@ -136,54 +150,53 @@ export enum LoanTransactionTypeEnum {
   INTEREST_CHARGE = 'interest_charge',
   PENALTY_CHARGE = 'penalty_charge',
   ADJUSTMENT = 'adjustment',
+  USER_SUBMITTED_PAYMENT = 'user_submitted_payment', 
 }
 
 export enum UserRoleEnum {
   USER = 'user',
   ADMIN = 'admin',
-  AUDITOR = 'auditor', // Example of another role
+  AUDITOR = 'auditor', 
 }
 
 export interface RiskAssessment {
   score: number;
   reasoning: string;
   recommendation: 'approve' | 'reject' | 'further_review';
-  assessedBy?: string; // User ID of admin/AI who assessed
-  assessedAt: string; // ISO Date string
+  assessedBy?: string; 
+  assessedAt: string; 
 }
 
 
-// New type for a single repayment schedule entry
 export interface LoanRepaymentScheduleEntry {
   period: number;
-  dueDate: string; // ISO Date string
+  dueDate: string; 
   startingBalance: number;
   principalComponent: number;
   interestComponent: number;
   endingBalance: number;
-  paymentAmount: number; // EMI
+  paymentAmount: number; 
   isPaid: boolean;
 }
 
 export interface LoanApplication {
-  id: string; // Mongoose _id
-  borrowerUserId: string | User; // string for ID, User object when populated
+  id: string; 
+  borrowerUserId: string | User; 
   guarantor?: Guarantor;
 
   applicationDate: string;
   requestedAmount: number;
   purpose: string;
 
-  // New fields for financial profile
-  monthlyIncome?: number; // Changed from income to monthlyIncome
+  monthlyIncome?: number; 
   employmentStatus?: string;
-  jobType?: string; // New field
-  businessDescription?: string; // New field
+  jobType?: string; 
+  businessDescription?: string; 
 
 
   submittedCollateral: CollateralDocument[];
 
-  status: LoanApplicationStatusEnum; // Use enum
+  status: LoanApplicationStatusEnum; 
   adminVerificationNotes?: string;
   adminAssignedTo?: string;
 
@@ -210,38 +223,41 @@ export interface LoanApplication {
   nextPaymentDueDate?: string;
   nextPaymentAmount?: number;
 
-  // These fields will now directly store Cloudinary URLs
   borrowerIdProofDocumentUrl?: string;
   borrowerAddressProofDocumentUrl?: string;
-  generalSupportingDocumentUrls?: string[]; // Array of URLs for general documents
+  generalSupportingDocumentUrls?: string[]; 
 
-  processedDocuments?: { name: string; dataUri: string }[]; // For AI flow primarily
+  processedDocuments?: { name: string; dataUri: string }[]; 
   
-  // New field for rejection details
-  rejectionDetails?: RejectionReason; // Add this
+  rejectionDetails?: RejectionReason; 
 
   createdAt?: string;
   updatedAt?: string;
 
-  // New field for generated repayment schedule
   repaymentSchedule?: LoanRepaymentScheduleEntry[];
 
-  // New field for risk assessment
   riskAssessment?: RiskAssessment;
   
-  // Derived fields (computed on server-side)
   totalRepayableAmount?: number;
   amountPaid?: number;
   balanceDue?: number;
 
-
-  // For compatibility with old data structure in frontend (optional to keep)
-  fullName?: string; // Derived from borrowerFullName or borrowerUserId.name
-  email?: string; // Derived from borrowerEmail or borrowerUserId.email
-  loanAmount?: number; // Derived from requestedAmount
-  loanPurpose?: string; // Derived from purpose
-  submittedDate?: string; // Derived from applicationDate
-  income?: number; // Old name for monthlyIncome
+  fullName?: string; 
+  email?: string; 
+  loanAmount?: number; 
+  loanPurpose?: string; 
+  submittedDate?: string; 
+  income?: number; 
+  // Fields from User model for convenience, if populated
+  borrowerFullName?: string;
+  borrowerEmail?: string;
+  borrowerContactNo?: string;
+  borrowerAddress?: string;
+  borrowerIdProofType?: string;
+  borrowerAddressProofType?: string;
+  creditScore?: number; 
+  applicationId?: string; 
+  adminRemarks?: string; 
 }
 
 export interface PaymentRecord {
@@ -250,17 +266,23 @@ export interface PaymentRecord {
   borrowerUserId: string;
   paymentDate: string; 
   amountPaid: number;
-  type: LoanTransactionTypeEnum; // Use enum
-  paymentMethod: 'cash' | 'online_transfer_upi' | 'online_transfer_neft' | 'cheque_deposit' | 'other'; // Added 'other'
+  type: LoanTransactionTypeEnum; 
+  paymentMethod: 'cash' | 'online_transfer_upi' | 'online_transfer_neft' | 'cheque_deposit' | 'other' | 'online'; 
   transactionReference?: string; 
   principalApplied: number;
   interestApplied: number;
   penaltyApplied?: number;
   notes?: string; 
-  recordedByAdminId: string; 
+  recordedByAdminId?: string;  
+  submittedByUserId?: string; 
+  userSubmittedScreenshotUrl?: string;
+  verificationStatus?: LoanTransactionVerificationStatusEnum; // Using new enum
+  adminVerifierId?: string;
+  adminVerificationTimestamp?: string;
+  adminVerificationNotes?: string;
   recordedAt: string; 
-  isLatePayment?: boolean; // Added
-  daysLate?: number; // Added
+  isLatePayment?: boolean; 
+  daysLate?: number; 
 }
 
 export enum NotificationTypeEnum {
@@ -273,7 +295,15 @@ export enum NotificationTypeEnum {
   GENERAL_ADMIN_ALERT = 'general_admin_alert',
   GENERAL_USER_INFO = 'general_user_info',
   LOAN_REJECTED_DETAILS = 'loan_rejected_details',
-  LOAN_DISBURSED_CONFIRMATION = 'loan_disbursed_confirmation', // New type for disbursement confirmation
+  LOAN_DISBURSED_CONFIRMATION = 'loan_disbursed_confirmation',
+  // New notification types for user payment submission flow
+  USER_PAYMENT_SUBMITTED_FOR_VERIFICATION = 'user_payment_submitted_for_verification', // To admin
+  PAYMENT_SUBMISSION_RECEIVED = 'payment_submission_received',                         // To user
+  PAYMENT_CONFIRMED_BY_ADMIN = 'payment_confirmed_by_admin',                           // To user
+  PAYMENT_VERIFICATION_FAILED = 'payment_verification_failed',                         // To user
+  LOAN_APPROVED = 'loan_approved', 
+  LOAN_REJECTED = 'loan_rejected', 
+  QUERY_RAISED = 'query_raised', 
 }
 
 
@@ -281,13 +311,12 @@ export interface SystemNotification {
   id: string;
   recipientUserId: string;
   loanApplicationId?: string;
-  paymentRecordId?: string;
+  paymentRecordId?: string; // refers to LoanTransaction id
   message: string;
-  type: NotificationTypeEnum; // Use enum
+  type: NotificationTypeEnum; 
   isRead: boolean;
   createdAt: string;
   linkTo?: string;
-  // New fields to store rejection details in notification, for direct display
   rejectionReasonText?: string;
   rejectionReasonImageUrl?: string;
   rejectionReasonAudioUrl?: string;
@@ -302,7 +331,7 @@ export interface LoanApplicationData_Old {
   loanPurpose: string;
   income: number;
   employmentStatus: 'Employed' | 'Self-Employed' | 'Unemployed' | 'Student';
-  creditScore?: number; // Made optional as in form
+  creditScore?: number; 
   supportingDocuments?: File[]; 
 }
 
@@ -317,7 +346,7 @@ export interface UserLoan {
   id: string; 
   loanType: string; 
   amount: number; 
-  status: LoanApplicationStatusEnum; // Use enum
+  status: LoanApplicationStatusEnum; 
   nextPaymentDate?: string; 
   nextPaymentAmount?: number; 
 }
@@ -329,4 +358,3 @@ export interface PaymentHistoryEntry {
   amount: number; 
   status: 'Paid' | 'Missed' | 'Upcoming'; 
 }
-
