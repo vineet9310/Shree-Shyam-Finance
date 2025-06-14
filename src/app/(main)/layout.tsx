@@ -11,8 +11,9 @@ import {
   Menu,
   Shield,
   Home,
-  UsersRound, // Admin Users icon
-  ChevronRight, // Icon for active link indicator
+  UsersRound, 
+  ChevronRight, 
+  Inbox, // Added Inbox for Payment Verifications
 } from 'lucide-react'; 
 import { Button } from '@/components/ui/button';
 import {
@@ -25,7 +26,7 @@ import {
 import { AppLogo } from '@/components/custom/AppLogo';
 import { UserNav } from '@/components/custom/UserNav';
 import { useAuth } from '@/context/AuthContext';
-import { ROUTES, APP_NAME } from '@/lib/constants'; // Ensure APP_NAME is imported
+import { ROUTES, APP_NAME } from '@/lib/constants'; 
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
@@ -40,6 +41,7 @@ const navItemsBase = [
 const navItemsAdmin = [
   { href: ROUTES.ADMIN_DASHBOARD, label: 'Admin Overview', icon: Shield },
   { href: ROUTES.ADMIN_USERS, label: 'Manage Users', icon: UsersRound },
+  { href: ROUTES.ADMIN_PAYMENT_VERIFICATIONS, label: 'Payment Verifications', icon: Inbox }, // New Admin Link
 ];
 
 // Interface for NavLink properties
@@ -92,7 +94,6 @@ export default function MainAppLayout({
   if (loading || !user) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        {/* Ensure APP_NAME is defined and accessible here, or use a static string if it's only for display */}
         <p className="text-foreground animate-pulse">Loading {APP_NAME || "Application"}...</p> 
       </div>
     );
@@ -118,7 +119,12 @@ export default function MainAppLayout({
               href={item.href}
               label={item.label}
               icon={item.icon}
-              isActive={pathname.startsWith(item.href === ROUTES.DASHBOARD && item.href.length > 1 ? item.href + "/#" : item.href)} 
+              // More precise active state for dashboard and other specific routes
+              isActive={
+                item.href === ROUTES.DASHBOARD 
+                  ? pathname === ROUTES.DASHBOARD // Exact match for /dashboard
+                  : pathname.startsWith(item.href)
+              }
               onClick={() => { if (isMobile) setOpen(false); }}
             />
           ))}
@@ -165,10 +171,6 @@ export default function MainAppLayout({
             </SheetContent>
           </Sheet>
           <div className="flex-1">
-             {/* Example: Display current page title (can be made dynamic) */}
-             {/* <h1 className="text-lg font-semibold text-foreground truncate">
-               {currentNavItems.find(item => pathname.startsWith(item.href))?.label || APP_NAME}
-             </h1> */}
           </div>
           <UserNav />
         </header>

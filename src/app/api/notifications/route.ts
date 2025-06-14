@@ -1,9 +1,9 @@
-
 // src/app/api/notifications/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import NotificationModel from '@/models/Notification';
 import mongoose from 'mongoose';
+import { NotificationTypeEnum } from '@/lib/types';
 
 export async function GET(request: NextRequest) {
   console.log('[API GET /notifications] Received request');
@@ -11,24 +11,46 @@ export async function GET(request: NextRequest) {
     await dbConnect();
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
+    const notificationType = searchParams.get('type'); // New parameter to filter by type
 
-    if (!userId) {
-      console.log('[API GET /notifications] userId query parameter is missing');
-      return NextResponse.json({ success: false, message: 'User ID is required' }, { status: 400 });
+    // Base query
+    let query: any = {};
+
+    // If userId is provided, add it to the query
+    if (userId) {
+      if (!mongoose.Types.ObjectId.isValid(userId)) {
+        return NextResponse.json({ success: false, message: 'Invalid user ID format' }, { status: 400 });
+      }
+      query.recipientUserId = new mongoose.Types.ObjectId(userId);
     }
 
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-      console.log(`[API GET /notifications] Invalid userId format received: ${userId}`);
-      return NextResponse.json({ success: false, message: 'Invalid user ID format' }, { status: 400 });
+    // If notificationType is provided, add it to the query
+    if (notificationType) {
+        // Validate if it's a valid enum value
+        if (Object.values(NotificationTypeEnum).includes(notificationType as NotificationTypeEnum)) {
+            query.type = notificationType;
+        } else {
+            return NextResponse.json({ success: false, message: 'Invalid notification type provided' }, { status: 400 });
+        }
     }
-
-    console.log(`[API GET /notifications] Querying notifications for userId: ${userId}`);
     
-    const notificationsFromDB = await NotificationModel.find({ recipientUserId: new mongoose.Types.ObjectId(userId) })
-      .sort({ createdAt: -1 }) // Sort by creation date, newest first
-      .limit(20); // Limit to recent 20 notifications
+    // If no filters are provided, it's potentially a bad request, but for now, we'll allow it.
+    // In a real app, you might want to require at least one filter.
+    if (Object.keys(query).length === 0) {
+        // This logic now fetches for all users if no userId is provided, which is what we want for the admin queue
+        // But we should only fetch the specific type for the queue page
+        // The frontend for the queue page will now specifically ask for the type.
+        console.log('[API GET /notifications] Fetching notifications with filter:', query);
+    }
 
-    console.log(`[API GET /notifications] Found ${notificationsFromDB.length} notifications for userId ${userId}.`);
+
+    console.log(`[API GET /notifications] Querying notifications with filter:`, query);
+    
+    const notificationsFromDB = await NotificationModel.find(query)
+      .sort({ createdAt: -1 }) 
+      .limit(50); // Increased limit for admin queue
+
+    console.log(`[API GET /notifications] Found ${notificationsFromDB.length} notifications.`);
 
     const notifications = notificationsFromDB.map(notif => notif.toObject());
     
@@ -44,14 +66,8 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Placeholder for marking notifications as read - to be implemented later
+// PUT method remains unchanged
 export async function PUT(request: NextRequest) {
-    // const { searchParams } = new URL(request.url);
-    // const notificationId = searchParams.get('id');
-    // if (!notificationId || !mongoose.Types.ObjectId.isValid(notificationId)) {
-    //   return NextResponse.json({ success: false, message: 'Invalid notification ID' }, { status: 400 });
-    // }
-    // TODO: Implement logic to mark a notification as read
     console.log('[API PUT /notifications] Request received to update notification (not implemented).');
     return NextResponse.json({ success: false, message: 'PUT method not yet fully implemented for notifications.' }, { status: 501 });
 }

@@ -1,31 +1,32 @@
 // src/app/(main)/admin/page.tsx
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react'; 
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import type { LoanApplication, LoanApplicationStatus } from "@/lib/types";
-import { Eye, ShieldCheck, Clock, AlertTriangle, CheckCircle2, FileText, UserCircle, IndianRupee, Loader2, BellRing, CalendarDays, Landmark, Mail } from "lucide-react"; // Added Mail
+import type { LoanApplication, LoanApplicationStatus, SystemNotification, NotificationTypeEnum as NotificationTypeEnumType } from "@/lib/types"; 
+import { Eye, ShieldCheck, Clock, AlertTriangle, CheckCircle2, FileText, UserCircle, IndianRupee, Loader2, BellRing, CalendarDays, Landmark, Mail, MessageSquare, Info, Volume2, Image as ImageIcon, XCircle, Inbox } from "lucide-react"; 
 import { ROUTES } from '@/lib/constants';
 import FormattedDate from "@/components/custom/FormattedDate";
 import { useToast } from '@/hooks/use-toast';
-import { Skeleton } from "@/components/ui/skeleton"; // For mobile card skeletons
+import { Skeleton } from "@/components/ui/skeleton"; 
+import { useAuth } from '@/context/AuthContext'; 
 
 const StatusBadge = ({ status }: { status: LoanApplicationStatus }) => {
-  let variant: "default" | "secondary" | "destructive" | "outline" | "success" | "warning" | "info" = "outline"; // Expanded variants for better mapping
+  let variant: "default" | "secondary" | "destructive" | "outline" | "success" | "warning" | "info" = "outline"; 
   let icon = <Clock className="mr-1 h-3 w-3" />;
-  let badgeClass = "capitalize text-xs flex items-center whitespace-nowrap px-2 py-0.5"; // Adjusted padding
+  let badgeClass = "capitalize text-xs flex items-center whitespace-nowrap px-2 py-0.5"; 
 
   switch (status) {
     case "Approved":
-      variant = "success"; // More semantic for Shadcn UI
+      variant = "success"; 
       icon = <CheckCircle2 className="mr-1 h-3 w-3" />;
       break;
     case "Active":
-      variant = "info"; // Using info for active
+      variant = "info"; 
       icon = <CheckCircle2 className="mr-1 h-3 w-3" />;
       break;
     case "PaidOff":
@@ -33,9 +34,9 @@ const StatusBadge = ({ status }: { status: LoanApplicationStatus }) => {
       icon = <CheckCircle2 className="mr-1 h-3 w-3" />;
       break;
     case "QueryInitiated":
-      variant = "warning"; // Using warning for query
+      variant = "warning"; 
       icon = <BellRing className="mr-1 h-3 w-3" />;
-      badgeClass += " animate-pulse"; // Added pulse for new queries
+      badgeClass += " animate-pulse"; 
       break;
     case "PendingAdminVerification":
       variant = "secondary";
@@ -48,66 +49,134 @@ const StatusBadge = ({ status }: { status: LoanApplicationStatus }) => {
       icon = <AlertTriangle className="mr-1 h-3 w-3" />;
       break;
     case "AdditionalInfoRequired":
-      variant = "outline"; // Kept outline, can be changed
+      variant = "outline"; 
       icon = <FileText className="mr-1 h-3 w-3" />;
       break;
     default:
       icon = <FileText className="mr-1 h-3 w-3" />;
   }
-  return <Badge variant={variant} className={badgeClass}>{icon}{status}</Badge>;
+  // Ensure status is a string before calling replace
+  const displayStatus = typeof status === 'string' ? status.replace(/([A-Z])/g, ' $1').trim() : 'Unknown';
+  return <Badge variant={variant} className={badgeClass}>{icon}{displayStatus}</Badge>;
 };
 
 
 export default function AdminDashboardPage() {
+  const { user: adminUser } = useAuth(); 
   const [applications, setApplications] = useState<LoanApplication[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [isLoadingApplications, setIsLoadingApplications] = useState(true);
+  const [errorApplications, setErrorApplications] = useState<string | null>(null);
+  
+  const [adminNotifications, setAdminNotifications] = useState<SystemNotification[]>([]);
+  const [isLoadingNotifications, setIsLoadingNotifications] = useState(true);
+  const [errorNotifications, setErrorNotifications] = useState<string | null>(null);
+  
   const { toast } = useToast();
+  const notificationAudioRef = useRef<HTMLAudioElement | null>(null); 
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+        notificationAudioRef.current = new Audio();
+    }
+
     const fetchApplications = async () => {
-      setIsLoading(true);
-      setError(null);
-      console.log("[AdminDashboardPage] Fetching applications...");
+      setIsLoadingApplications(true);
+      setErrorApplications(null);
       try {
         const response = await fetch('/api/loan-applications');
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({ message: 'Failed to parse error response from API' }));
-          console.error("[AdminDashboardPage] API error response:", errorData);
           throw new Error(errorData.message || 'Failed to fetch loan applications');
         }
         const data = await response.json();
-        console.log("[AdminDashboardPage] API success response data:", data);
         if (data.success && Array.isArray(data.applications)) {
-          console.log("[AdminDashboardPage] Fetched applications from API. Count:", data.applications.length);
-          if (data.applications.length > 0) {
-            console.log("[AdminDashboardPage] First application object:", JSON.stringify(data.applications[0], null, 2));
-          }
-          // Filter out applications with missing or invalid IDs before setting state
-          const validApplications = data.applications.filter(app => app && typeof app.id === 'string' && app.id.trim() !== '');
+          const validApplications = data.applications.filter((app: LoanApplication) => app && typeof app.id === 'string' && app.id.trim() !== '');
           setApplications(validApplications);
         } else {
           const errMsg = data.message || (Array.isArray(data.applications) ? 'Failed to fetch loan applications' : 'Invalid application data format from API');
-          console.error("[AdminDashboardPage] Error or invalid data format from API:", errMsg, data);
           throw new Error(errMsg);
         }
       } catch (err: any) {
-        console.error("[AdminDashboardPage] Error fetching applications:", err);
-        setError(err.message);
+        setErrorApplications(err.message);
         toast({
-          title: "Error",
+          title: "Error Loading Applications",
           description: err.message || "Could not load applications.",
           variant: "destructive",
         });
       } finally {
-        setIsLoading(false);
+        setIsLoadingApplications(false);
+      }
+    };
+
+    const fetchAdminNotifications = async () => {
+      if (!adminUser || !adminUser.id) {
+        setIsLoadingNotifications(false);
+        setAdminNotifications([]);
+        return;
+      }
+      setIsLoadingNotifications(true);
+      setErrorNotifications(null);
+      try {
+        const response = await fetch(`/api/notifications?userId=${adminUser.id}`);
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ message: 'Failed to parse error response from API for notifications' }));
+          throw new Error(errorData.message || 'Failed to fetch admin notifications');
+        }
+        const data = await response.json();
+        if (data.success && Array.isArray(data.notifications)) {
+          const sortedNotifications = [...data.notifications].sort((a: SystemNotification, b: SystemNotification) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          // Filter out payment verification notifications as they are on a dedicated page
+          const generalNotifications = sortedNotifications.filter(
+            (n: SystemNotification) => n.type !== "USER_PAYMENT_SUBMITTED_FOR_VERIFICATION"
+          );
+          setAdminNotifications(generalNotifications.slice(0, 20)); 
+        } else {
+          setAdminNotifications([]);
+        }
+      } catch (err: any) {
+        setErrorNotifications(err.message);
+        toast({
+          title: "Error Loading Notifications",
+          description: err.message || "Could not load admin notifications.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoadingNotifications(false);
       }
     };
 
     fetchApplications();
-  }, [toast]);
+    if (adminUser) { 
+        fetchAdminNotifications();
+    } else {
+        setIsLoadingNotifications(false); 
+    }
+
+  }, [toast, adminUser]); 
 
   const newApplicationCount = applications.filter(app => app && app.status === 'QueryInitiated').length;
+  // Count of general unread notifications
+  const generalNotificationCount = adminNotifications.filter(n => n.type !== "USER_PAYMENT_SUBMITTED_FOR_VERIFICATION" && !n.isRead).length;
+
+
+  const playNotificationAudio = (audioUrl: string) => { 
+    if (notificationAudioRef.current) {
+      notificationAudioRef.current.src = audioUrl;
+      notificationAudioRef.current.play().catch(e => console.error("Error playing notification audio:", e));
+      toast({ title: "Playing Notification", description: "Audio message is now playing." });
+    }
+  };
+
+  const getNotificationIcon = (type: NotificationTypeEnumType | string) => {
+    switch (type) {
+      // No need for USER_PAYMENT_SUBMITTED_FOR_VERIFICATION here as it's filtered out
+      case "loan_application_submitted":
+        return <FileText className="h-5 w-5 text-sky-500" />;
+      // Add other admin-specific notification types here
+      default:
+        return <Info className="h-5 w-5 text-gray-500" />;
+    }
+  };
 
   const renderMobileSkeletons = (count: number) => {
     return Array.from({ length: count }).map((_, index) => (
@@ -126,33 +195,78 @@ export default function AdminDashboardPage() {
     ));
   };
 
-  if (isLoading && applications.length === 0) { // Show full page loader only if no data yet
+  if (isLoadingApplications && applications.length === 0 && isLoadingNotifications && adminNotifications.length ===0) { 
     return (
       <div className="flex flex-col justify-center items-center min-h-[calc(100vh-10rem)]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="ml-2 mt-2">Loading applications...</p>
+        <p className="ml-2 mt-2">Loading dashboard data...</p>
       </div>
     );
   }
 
-  if (error && applications.length === 0) { // Show full page error only if no data yet
-    return (
-      <div className="flex flex-col justify-center items-center min-h-[calc(100vh-10rem)] text-center p-4">
-        <AlertTriangle className="h-12 w-12 mb-4 text-destructive" />
-        <p className="text-xl font-semibold text-destructive">Failed to load applications</p>
-        <p className="text-muted-foreground mt-1">{error}</p>
-        <Button onClick={() => window.location.reload()} variant="outline" className="mt-6">Retry</Button>
-      </div>
-    );
-  }
 
   return (
-    <div className="space-y-6 p-4 md:p-6 w-full min-w-0"> {/* Added padding and min-w-0 */}
+    <div className="space-y-8 p-4 md:p-6 w-full min-w-0"> 
       <h1 className="text-2xl md:text-3xl font-bold text-foreground flex items-center gap-2">
         <ShieldCheck className="h-7 w-7 md:h-8 md:w-8 text-primary" /> Admin Dashboard
       </h1>
 
-      {/* Summary Cards can be added here if needed, similar to previous versions */}
+      {/* Admin General Notifications Card - Verification queue removed */}
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><BellRing className="h-6 w-6 text-primary" />Admin General Alerts</CardTitle>
+          <CardDescription>
+            Recent system alerts and other important notifications.
+            {generalNotificationCount > 0 && (
+                 <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 border border-blue-300">
+                    {generalNotificationCount} New Alerts
+                </span>
+            )}
+            </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoadingNotifications ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
+              <p>Loading general alerts...</p>
+            </div>
+          ) : errorNotifications ? (
+            <div className="flex flex-col items-center justify-center py-8 text-destructive">
+              <AlertTriangle className="h-8 w-8 mb-2" />
+              <p className="font-semibold">Failed to load alerts</p>
+              <p className="text-sm">{errorNotifications}</p>
+            </div>
+          ) : adminNotifications.length > 0 ? ( // Check if any general notifications exist
+            <ul className="space-y-3 max-h-96 overflow-y-auto">
+              {adminNotifications.map((notif) => ( 
+                <li key={notif.id} className={`p-3 rounded-md border ${notif.isRead ? 'bg-card-foreground/5 opacity-70' : 'bg-accent/10 border-accent shadow-sm'}`}>
+                  <div className="flex items-start gap-3">
+                    <div className="mt-1 flex-shrink-0">
+                      {getNotificationIcon(notif.type)}
+                    </div>
+                    <div className="flex-grow">
+                      <p className={`text-sm font-medium ${!notif.isRead ? 'text-accent-foreground' : 'text-foreground/80'}`}>{notif.message}</p>
+                       {(notif.type === 'loan_rejected_details' || notif.type === 'query_raised') && (notif.rejectionReasonText || notif.rejectionReasonImageUrl || notif.rejectionReasonAudioUrl) && (
+                        <div className="mt-2 p-2 border-l-2 border-destructive/50 bg-destructive/5 rounded-md text-xs space-y-1">
+                          {notif.rejectionReasonText && (<p className="text-foreground"><strong>Details:</strong> {notif.rejectionReasonText}</p>)}
+                          {notif.rejectionReasonImageUrl && (<p className="flex items-center text-foreground"><ImageIcon className="h-3 w-3 mr-1 flex-shrink-0"/><a href={notif.rejectionReasonImageUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all">View Supporting Image</a></p>)}
+                          {notif.rejectionReasonAudioUrl && (<p className="flex items-center text-foreground"><Volume2 className="h-3 w-3 mr-1 flex-shrink-0"/><button onClick={() => playNotificationAudio(notif.rejectionReasonAudioUrl!)} className="text-primary hover:underline text-left">Play Audio Explanation</button></p>)}
+                        </div>
+                      )}
+                      <p className="text-xs text-muted-foreground mt-1">
+                        <FormattedDate dateString={notif.createdAt} options={{ year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }} />
+                      </p>
+                      {notif.linkTo && (<Link href={notif.linkTo} className="text-xs text-primary hover:underline mt-1 inline-block">View Details</Link>)}
+                    </div>
+                  </div>
+                </li>
+              ))}
+                <audio ref={notificationAudioRef} className="hidden"></audio>
+            </ul>
+          ) : (<p className="text-muted-foreground text-center py-8">No new general alerts.</p>)}
+        </CardContent>
+      </Card>
+
 
       <Card className="shadow-lg">
         <CardHeader>
@@ -167,9 +281,8 @@ export default function AdminDashboardPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {/* Desktop Table View */}
           <div className="hidden md:block">
-            {isLoading && applications.length === 0 ? ( // Show loader inside card if still loading but no apps yet
+            {isLoadingApplications && applications.length === 0 ? ( 
                  <div className="flex justify-center items-center py-10">
                     <Loader2 className="h-6 w-6 animate-spin text-primary" />
                     <p className="ml-2">Loading table data...</p>
@@ -188,7 +301,6 @@ export default function AdminDashboardPage() {
                 <TableBody>
                   {applications.map((app) => {
                     if (!app || typeof app.id !== 'string' || app.id.trim() === '') {
-                      console.warn("[AdminDashboardPage] Skipping rendering desktop row for app with missing or invalid ID:", app);
                       return null; 
                     }
                     return (
@@ -216,14 +328,12 @@ export default function AdminDashboardPage() {
             )}
           </div>
 
-          {/* Mobile Card View */}
           <div className="block md:hidden space-y-4">
-            {isLoading && applications.length === 0 ? (
+            {isLoadingApplications && applications.length === 0 ? (
                 renderMobileSkeletons(3)
             ): applications.length > 0 ? (
               applications.map((app) => {
                 if (!app || typeof app.id !== 'string' || app.id.trim() === '') {
-                  console.warn("[AdminDashboardPage] Skipping rendering mobile card for app with missing or invalid ID:", app);
                   return null;
                 }
                 const applicantName = app.borrowerFullName || ((app.borrowerUserId as any)?.name) || "Unknown Applicant";
@@ -268,9 +378,8 @@ export default function AdminDashboardPage() {
               <p className="text-muted-foreground text-center py-8">No loan applications submitted yet.</p>
             )}
           </div>
-           {/* Common error display if fetch fails but some apps were already loaded */}
-           {error && applications.length > 0 && (
-             <p className="text-center text-sm text-destructive mt-4">{error}</p>
+           {errorApplications && applications.length > 0 && (
+             <p className="text-center text-sm text-destructive mt-4">{errorApplications}</p>
            )}
         </CardContent>
       </Card>

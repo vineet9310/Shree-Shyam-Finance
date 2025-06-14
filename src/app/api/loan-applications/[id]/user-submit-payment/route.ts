@@ -2,20 +2,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import LoanApplicationModel from '@/models/LoanApplication';
-import LoanTransactionModel from '@/models/LoanTransaction'; // Default import is fine
-import { LoanTransactionVerificationStatusEnum, NotificationTypeEnum, LoanTransactionTypeEnum } from '@/lib/types'; // Import enum from types.ts
+import LoanTransactionModel from '@/models/LoanTransaction';
+import { LoanTransactionVerificationStatusEnum, NotificationTypeEnum, LoanTransactionTypeEnum } from '@/lib/types';
 import NotificationModel from '@/models/Notification';
-import UserModel from '@/models/User'; 
+import UserModel from '@/models/User';
 import { uploadImageToCloudinary } from '@/lib/cloudinary';
 import mongoose from 'mongoose';
 
 interface UserSubmitPaymentRequestBody {
   borrowerUserId: string;
   paymentAmount: number;
-  paymentDate: string; 
+  paymentDate: string;
   paymentMethod: 'online' | 'cash';
   transactionReference?: string;
-  paymentScreenshot?: string; 
+  paymentScreenshot?: string;
   notes?: string;
 }
 
@@ -68,13 +68,11 @@ export async function POST(
         return NextResponse.json({ success: false, message: 'Transaction reference ID is required for online payments.' }, { status: 400 });
     }
 
-    // --- Fetch Loan Application ---
     const application = await LoanApplicationModel.findById(loanApplicationId).populate<{borrowerUserId: {name: string, email: string} }>({ path: 'borrowerUserId', model: UserModel, select: 'name email' });
     if (!application) {
       return NextResponse.json({ success: false, message: 'Loan application not found.' }, { status: 404 });
     }
 
-    // --- Check Application Status ---
     if (application.status !== 'Active' && application.status !== 'Overdue') {
       return NextResponse.json(
         { success: false, message: `Payments can only be submitted for 'Active' or 'Overdue' loans. Current status: ${application.status}` },
@@ -82,9 +80,8 @@ export async function POST(
       );
     }
     
-    const borrowerName = (application.borrowerUserId as any)?.name || 'User'; 
+    const borrowerName = (application.borrowerUserId as any)?.name || 'User';
 
-    // --- Handle Screenshot Upload (if applicable) ---
     let screenshotUrl: string | undefined = undefined;
     if (paymentMethod === 'online' && paymentScreenshot) {
       try {
@@ -93,7 +90,6 @@ export async function POST(
           `payment_proofs/${loanApplicationId}`
         );
         screenshotUrl = uploadResult.secure_url;
-        console.log(`[API POST /loan-applications/${loanApplicationId}/user-submit-payment] Screenshot uploaded: ${screenshotUrl}`);
       } catch (uploadError: any) {
         console.error(`[API POST /loan-applications/${loanApplicationId}/user-submit-payment] Screenshot upload failed:`, uploadError);
         return NextResponse.json(
@@ -103,7 +99,6 @@ export async function POST(
       }
     }
 
-    // --- Create Loan Transaction Record ---
     const newTransaction = new LoanTransactionModel({
       loanApplicationId: new mongoose.Types.ObjectId(loanApplicationId),
       borrowerUserId: new mongoose.Types.ObjectId(borrowerUserId),
@@ -122,27 +117,26 @@ export async function POST(
       recordedAt: new Date(),
     });
     await newTransaction.save();
-    console.log(`[API POST /loan-applications/${loanApplicationId}/user-submit-payment] New transaction created with ID: ${newTransaction._id}`);
 
-    // --- Create Notification for Admin(s) ---
-    const adminUser = await UserModel.findOne({ role: 'admin' });
-    if (adminUser) {
-      const adminNotification = new NotificationModel({
-        recipientUserId: adminUser._id,
-        loanApplicationId: application._id,
-        paymentRecordId: newTransaction._id, 
-        message: `Payment proof of ₹${paymentAmount.toLocaleString()} submitted by ${borrowerName} for loan application ID ...${application._id.toString().slice(-6)}. Needs verification.`,
-        type: NotificationTypeEnum.USER_PAYMENT_SUBMITTED_FOR_VERIFICATION,
-        linkTo: `/admin/applications/${application._id}?transactionId=${newTransaction._id}`, 
-      });
-      await adminNotification.save();
-      console.log(`[API POST /loan-applications/${loanApplicationId}/user-submit-payment] Notification sent to admin ${adminUser.email}`);
+    const adminUsers = await UserModel.find({ role: 'admin' });
+    if (adminUsers.length > 0) {
+      for (const adminUser of adminUsers) {
+        const adminNotification = new NotificationModel({
+          recipientUserId: adminUser._id,
+          loanApplicationId: application._id,
+          paymentRecordId: newTransaction._id, 
+          message: `Payment proof of ₹${paymentAmount.toLocaleString()} submitted by ${borrowerName} for loan ...${application._id.toString().slice(-6)}. Needs verification.`,
+          type: NotificationTypeEnum.USER_PAYMENT_SUBMITTED_FOR_VERIFICATION,
+          // *** YEH FINAL FIX HAI ***
+          // Ab link hamesha sahi verification page par jayega.
+          linkTo: `/admin/payment-verifications/${newTransaction._id.toString()}`, 
+        });
+        await adminNotification.save();
+      }
     } else {
         console.warn(`[API POST /loan-applications/${loanApplicationId}/user-submit-payment] No admin user found to send verification notification.`);
     }
 
-
-    // --- Create Notification for User ---
     const userNotification = new NotificationModel({
       recipientUserId: new mongoose.Types.ObjectId(borrowerUserId),
       loanApplicationId: application._id,
@@ -152,8 +146,6 @@ export async function POST(
       linkTo: `/dashboard/application/${application._id}`,
     });
     await userNotification.save();
-    console.log(`[API POST /loan-applications/${loanApplicationId}/user-submit-payment] Notification sent to user ${borrowerName}`);
-
 
     return NextResponse.json(
       {
