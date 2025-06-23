@@ -1,46 +1,81 @@
-// src/app/actions.ts
-'use server';
-import { assessLoanRisk, AssessLoanRiskInput, AssessLoanRiskOutput } from '@/ai/flows/loan-risk-assessment';
-import { LoanApplication } from '@/lib/types'; // Assuming this type exists and includes processedDocuments
+"use server";
 
-// Helper to convert File to Base64 Data URI (cannot be in this server action file directly if used on client before sending)
-// This implies files are already converted to data URIs before this action is called.
+import dbConnect from "@/lib/mongodb";
+import LoanApplicationModel from "@/models/LoanApplication";
+// FIX: The imported function name was incorrect. It's 'assessLoanRisk'.
+import { assessLoanRisk } from "@/ai/flows/loan-risk-assessment";
+import { revalidatePath } from "next/cache";
+import { NextRequest } from 'next/server';
+import * as jwt from 'jsonwebtoken';
 
-export async function performRiskAssessmentAction(application: LoanApplication): Promise<AssessLoanRiskOutput> {
-  if (!application.processedDocuments || application.processedDocuments.length === 0) {
-    console.warn("No supporting documents provided for risk assessment for application ID:", application.id);
-    // Optionally, proceed without documents or return a specific error/response
-  }
-
-  const applicationDataForAI = {
-    fullName: application.fullName,
-    email: application.email,
-    loanAmount: application.loanAmount,
-    loanPurpose: application.loanPurpose,
-    income: application.income,
-    employmentStatus: application.employmentStatus,
-    creditScore: application.creditScore,
-    submittedDate: application.submittedDate,
-    status: application.status,
-  };
-
-  const input: AssessLoanRiskInput = {
-    applicationData: JSON.stringify(applicationDataForAI),
-    supportingDocuments: application.processedDocuments?.map(doc => doc.dataUri) || [],
-  };
-
+export async function performRiskAssessmentAction(applicationId: string) {
   try {
-    console.log("Calling assessLoanRisk with input:", {
-      applicationDataLength: input.applicationData.length,
-      numDocuments: input.supportingDocuments.length,
-      firstDocUriLength: input.supportingDocuments[0]?.length
-    });
-    const result = await assessLoanRisk(input);
-    return result;
-  } catch (error) {
+    await dbConnect();
+    const application = await LoanApplicationModel.findById(applicationId);
+
+    if (!application) {
+      throw new Error("Application not found");
+    }
+
+    if (application.riskAssessment) {
+      console.log("Risk assessment already exists. Skipping.");
+      return {
+        success: true,
+        message: "Risk assessment already performed.",
+        assessment: application.riskAssessment,
+      };
+    }
+
+    // FIX: Use the correct function name 'assessLoanRisk' here.
+    const assessmentResult = await assessLoanRisk(application.toObject());
+
+    application.riskAssessment = assessmentResult;
+    await application.save();
+
+    revalidatePath(`/admin/applications/${applicationId}`);
+    revalidatePath(`/dashboard/application/${applicationId}`);
+
+    return {
+      success: true,
+      message: "Risk assessment performed successfully.",
+      assessment: assessmentResult,
+    };
+  } catch (error: any) {
     console.error("Error in performRiskAssessmentAction:", error);
-    // Check if error is an object and has a message property
-    const errorMessage = (error instanceof Error) ? error.message : "An unknown error occurred during risk assessment.";
-    throw new Error(`Failed to perform risk assessment: ${errorMessage}`);
+    return {
+      success: false,
+      message: error.message || "Failed to perform risk assessment.",
+      assessment: null,
+    };
   }
+}
+
+/**
+ * Extracts and verifies the JWT from cookies to get the user ID.
+ * @param request - The NextRequest object.
+ * @returns The user ID from the token payload.
+ * @throws An error if the token is missing, invalid, or expired.
+ */
+ // FIX: Server Actions must be async functions. The function is now correctly marked as 'async'.
+export async function getUserIdFromToken(request: NextRequest): Promise<string> {
+    try {
+        const token = request.cookies.get('token')?.value;
+        if (!token) {
+            throw new Error('Authentication token not found. Please log in.');
+        }
+
+        const decodedToken: any = jwt.verify(token, process.env.JWT_SECRET!);
+        const userId = decodedToken.id;
+
+        if (!userId) {
+            throw new Error('Authentication failed. User ID not found in token.');
+        }
+
+        return userId;
+    } catch (error: any) {
+        if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+            throw new Error('Your session has expired. Please log in again.');
+        }
+        throw error;
+    }
 }
