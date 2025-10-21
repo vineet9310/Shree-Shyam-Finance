@@ -4,7 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 // Import NotificationTypeEnum
-import type { LoanApplication, LoanApplicationStatus, PaymentHistoryEntry, SystemNotification, NotificationTypeEnum } from "@/lib/types";
+import type { LoanApplication, LoanApplicationStatus, PaymentHistoryEntry, SystemNotification, NotificationTypeEnum as NotificationTypeEnumType } from "@/lib/types";
+import { NotificationTypeEnum } from "@/lib/types";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -348,7 +349,7 @@ export default function DashboardPage() {
           <h1 className="text-3xl font-bold text-foreground">Welcome, {user?.name || user?.email}!</h1>
           <p className="text-muted-foreground">Here's an overview of your loan activities.</p>
         </div>
-        {user?.role !== 'admin' && (
+        {user && user.role === 'user' && (
           <Button asChild className="bg-primary hover:bg-primary/90 text-primary-foreground">
             <Link href={ROUTES.APPLY_LOAN}>
               <TrendingUp className="mr-2 h-4 w-4" /> Apply for New Loan
@@ -380,13 +381,13 @@ export default function DashboardPage() {
                 <li key={notif.id} className={`p-3 rounded-md border ${notif.isRead ? 'bg-card-foreground/5 opacity-70' : 'bg-accent/10 border-accent shadow-sm'}`}>
                   <div className="flex items-start gap-3">
                     <div className="mt-1 flex-shrink-0">
-                      {notif.type === 'loan_status_updated' && <MessageSquare className="h-5 w-5 text-blue-500" />}
-                      {notif.type === 'application_submitted' && <FileText className="h-5 w-5 text-sky-500" />}
-                      {notif.type === 'loan_rejected' && <XCircle className="h-5 w-5 text-red-500" />}
-                      {notif.type === 'loan_approved' && <CheckCircle2 className="h-5 w-5 text-green-500" />}
-                      {notif.type === 'loan_disbursed_confirmation' && <IndianRupee className="h-5 w-5 text-green-600" />}
-                      {notif.type === 'query_raised' && <MessageSquare className="h-5 w-5 text-yellow-500" />}
-                      {notif.type === 'document_request' && <FileText className="h-5 w-5 text-indigo-500" />}
+                      {notif.type === NotificationTypeEnum.LOAN_STATUS_UPDATED && <MessageSquare className="h-5 w-5 text-blue-500" />}
+                      {notif.type === NotificationTypeEnum.LOAN_APPLICATION_SUBMITTED && <FileText className="h-5 w-5 text-sky-500" />}
+                      {notif.type === NotificationTypeEnum.LOAN_REJECTED && <XCircle className="h-5 w-5 text-red-500" />}
+                      {notif.type === NotificationTypeEnum.LOAN_APPROVED && <CheckCircle2 className="h-5 w-5 text-green-500" />}
+                      {notif.type === NotificationTypeEnum.LOAN_DISBURSED_CONFIRMATION && <IndianRupee className="h-5 w-5 text-green-600" />}
+                      {notif.type === NotificationTypeEnum.QUERY_RAISED && <MessageSquare className="h-5 w-5 text-yellow-500" />}
+                      {notif.type === NotificationTypeEnum.DOCUMENT_REQUEST && <FileText className="h-5 w-5 text-indigo-500" />}
                       {notif.type.includes('reminder') && <Clock className="h-5 w-5 text-orange-500" />}
                       {notif.type.includes('alert') && <AlertTriangle className="h-5 w-5 text-red-600" />}
                       {!['loan_status_updated', 'application_submitted', 'loan_rejected', 'loan_approved', 'loan_disbursed_confirmation', 'query_raised', 'document_request', 'reminder', 'alert'].some(t => notif.type.includes(t)) && 

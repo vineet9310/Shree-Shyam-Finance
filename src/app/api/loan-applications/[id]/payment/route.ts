@@ -6,6 +6,7 @@ import LoanTransactionModel from '@/models/LoanTransaction';
 import NotificationModel from '@/models/Notification';
 import mongoose from 'mongoose';
 import type { SystemNotification } from '@/lib/types';
+import { LoanApplicationStatusEnum, NotificationTypeEnum } from '@/lib/types';
 
 const DAILY_PENALTY_RATE = 0.005; // 0.5% per day
 
@@ -126,15 +127,15 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
     // Update loan status if fully paid
     if (application.currentPrincipalOutstanding <= 0 && application.currentInterestOutstanding <= 0) {
-      application.status = 'PaidOff';
+      application.status = LoanApplicationStatusEnum.PAID_OFF;
       application.maturityDate = new Date(); // Loan is paid off
       console.log(`[API POST /loan-applications/${id}/payment] Loan application ${id} status updated to 'PaidOff'.`);
-    } else if (nextPaymentDueDate && paymentDate > nextPaymentDueDate && application.status !== 'Overdue') {
-        application.status = 'Overdue'; // Set to overdue if it wasn't already and payment is late
+    } else if (nextPaymentDueDate && paymentDate > nextPaymentDueDate && application.status !== LoanApplicationStatusEnum.OVERDUE) {
+        application.status = LoanApplicationStatusEnum.OVERDUE; // Set to overdue if it wasn't already and payment is late
         console.log(`[API POST /loan-applications/${id}/payment] Loan application ${id} status updated to 'Overdue'.`);
-    } else if (application.status === 'Overdue' && paymentDate <= nextPaymentDueDate!) {
+    } else if (application.status === LoanApplicationStatusEnum.OVERDUE && paymentDate <= nextPaymentDueDate!) {
         // If it was overdue but payment brought it current
-        application.status = 'Active';
+        application.status = LoanApplicationStatusEnum.ACTIVE;
         console.log(`[API POST /loan-applications/${id}/payment] Loan application ${id} status updated to 'Active' from 'Overdue'.`);
     }
 
@@ -164,14 +165,14 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
     // Create notification for borrower
     let notificationMessage = `A payment of ₹${paymentAmount.toLocaleString()} has been recorded for your loan (ID: ...${application.id.slice(-6)}).`;
-    let notificationType: SystemNotification['type'] = 'payment_received_confirmation';
+    let notificationType: SystemNotification['type'] = NotificationTypeEnum.PAYMENT_RECEIVED_CONFIRMATION;
     if (isLatePayment) {
         notificationMessage += ` A late fee of ₹${penaltyApplied.toLocaleString()} was applied.`;
-        notificationType = 'payment_overdue_alert'; // Or a specific 'payment_received_late' type
+        notificationType = NotificationTypeEnum.PAYMENT_OVERDUE_ALERT; // Or a specific 'payment_received_late' type
     }
-    if (application.status === 'PaidOff') {
+    if (application.status === LoanApplicationStatusEnum.PAID_OFF) {
         notificationMessage = `Congratulations! Your loan (ID: ...${application.id.slice(-6)}) has been fully paid off!`;
-        notificationType = 'loan_status_updated';
+        notificationType = NotificationTypeEnum.LOAN_STATUS_UPDATED;
     }
 
     const newNotification = new NotificationModel({

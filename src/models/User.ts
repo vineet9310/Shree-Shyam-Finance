@@ -1,16 +1,15 @@
 // src/models/User.ts
 import mongoose, { Schema, Document, models, Model } from 'mongoose';
-import type { User as UserType } from '@/lib/types'; // Using existing User type for structure
+import type { User as UserType } from '@/lib/types';
 
 // Interface for Mongoose Document
-export interface UserDocument extends Omit<UserType, 'id' | 'borrowerProfileId'>, Document {
-  // id: string; // Mongoose _id will be transformed to id by virtual/toJSON
-  borrowerProfileId?: mongoose.Types.ObjectId; // Link to BorrowerProfile model
+export interface UserDocument extends Omit<UserType, 'id' | 'borrowerProfileId' | 'createdAt' | 'updatedAt'>, Document {
+  borrowerProfileId?: mongoose.Types.ObjectId;
   passwordHash?: string;
-  passwordResetOtp?: string; // Added for OTP for password reset
-  passwordResetOtpExpires?: Date; // Added for OTP expiry time
-  createdAt?: Date; // Mongoose timestamps will add this
-  updatedAt?: Date; // Mongoose timestamps will add this
+  passwordResetOtp?: string;
+  passwordResetOtpExpires?: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 const UserSchema: Schema<UserDocument> = new Schema(
@@ -58,34 +57,29 @@ const UserSchema: Schema<UserDocument> = new Schema(
   {
     timestamps: true,
     toJSON: {
-        virtuals: true, // Ensure virtuals are included
+        virtuals: true,
         getters: true,
-        transform: function(doc, ret) {
-            ret.id = ret._id.toString(); // Ensure id is a string
+        transform: function(doc: any, ret: any) {
+            ret.id = ret._id?.toString();
             delete ret._id;
-            delete ret.__v;
-            // Do not delete passwordHash here, handle in API responses
+            if (ret.__v !== undefined) delete ret.__v;
         }
     },
     toObject: {
-        virtuals: true, // Ensure virtuals are included
+        virtuals: true,
         getters: true,
-        transform: function(doc, ret) {
-            ret.id = ret._id.toString(); // Ensure id is a string
+        transform: function(doc: any, ret: any) {
+            ret.id = ret._id?.toString();
             delete ret._id;
-            delete ret.__v;
-            // Do not delete passwordHash here, handle in API responses
+            if (ret.__v !== undefined) delete ret.__v;
         }
     }
   }
 );
 
-// Explicitly define virtual 'id' if not already present
-if (!UserSchema.virtuals['id']) {
-    UserSchema.virtual('id').get(function(this: UserDocument) {
-        return this._id.toHexString();
-    });
-}
+(UserSchema.virtuals as any)['id'] = UserSchema.virtual('id').get(function(this: any) {
+  return this._id?.toHexString();
+});
 
 
 const UserModel = (models.User as Model<UserDocument>) || mongoose.model<UserDocument>('User', UserSchema);

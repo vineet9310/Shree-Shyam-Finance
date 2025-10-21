@@ -55,27 +55,28 @@ const NotificationSchema: Schema<NotificationDocument> = new Schema(
     toJSON: {
       virtuals: true,
       getters: true,
-      transform: function (doc, ret) {
-        ret.id = ret._id.toString();
+      transform: function (doc: any, ret: any) {
+        ret.id = ret._id?.toString();
         delete ret._id;
-        delete ret.__v;
+        if (ret.__v !== undefined) delete ret.__v;
       },
     },
     toObject: {
       virtuals: true,
       getters: true,
-      transform: function (doc, ret) {
-        ret.id = ret._id.toString();
+      transform: function (doc: any, ret: any) {
+        ret.id = ret._id?.toString();
         delete ret._id;
-        delete ret.__v;
+        if (ret.__v !== undefined) delete ret.__v;
       },
     },
   }
 );
 
-if (!NotificationSchema.virtuals['id']) {
+const virtuals = NotificationSchema.virtuals as Record<string, any>;
+if (!virtuals['id']) {
   NotificationSchema.virtual('id').get(function (this: NotificationDocument) {
-    return this._id.toHexString();
+    return (this._id as any)?.toHexString?.() || (this._id as any)?.toString?.();
   });
 }
 

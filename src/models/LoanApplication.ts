@@ -7,7 +7,7 @@ import UserModel from './User'; // Assuming User.ts exports UserDocument or simi
 // Interface for Mongoose Document
 // Ensure this interface includes all fields that might be on the document,
 // especially those you expect to be populated or directly stored.
-export interface LoanApplicationDocument extends Omit<LoanApplicationType, 'id' | 'borrowerUserId' | 'guarantor' | 'submittedCollateral' | 'processedDocuments' | 'applicationDate' | 'approvedDate' | 'disbursementDate' | 'firstPaymentDueDate' | 'maturityDate' | 'lastPaymentDate' | 'nextPaymentDueDate' | 'createdAt' | 'updatedAt' | 'rejectionDetails' | 'repaymentSchedule'>, Document {
+export interface LoanApplicationDocument extends Omit<LoanApplicationType, 'id' | 'borrowerUserId' | 'guarantor' | 'submittedCollateral' | 'processedDocuments' | 'applicationDate' | 'approvedDate' | 'disbursementDate' | 'firstPaymentDueDate' | 'maturityDate' | 'lastPaymentDate' | 'nextPaymentDueDate' | 'lastReminderSentDate' | 'createdAt' | 'updatedAt' | 'rejectionDetails' | 'repaymentSchedule'>, Document {
   borrowerUserId: mongoose.Types.ObjectId | UserDocument; // Can be populated
   borrowerFullName: string;
   borrowerEmail: string;
@@ -25,6 +25,7 @@ export interface LoanApplicationDocument extends Omit<LoanApplicationType, 'id' 
   maturityDate?: Date;
   lastPaymentDate?: Date;
   nextPaymentDueDate?: Date;
+  lastReminderSentDate?: Date; // Add this field
   createdAt?: Date;
   updatedAt?: Date;
 
@@ -115,7 +116,7 @@ export type RejectionReasonSchemaType = mongoose.InferSchemaType<typeof Rejectio
 // Sub-schema for LoanRepaymentScheduleEntry
 const LoanRepaymentScheduleEntrySchema = new Schema<LoanRepaymentScheduleEntry>({
   period: { type: Number, required: true },
-  dueDate: { type: Date, required: true }, // Stored as Date
+  dueDate: { type: String, required: true }, // Stored as ISO string
   startingBalance: { type: Number, required: true },
   principalComponent: { type: Number, required: true },
   interestComponent: { type: Number, required: true },
@@ -158,10 +159,10 @@ const LoanApplicationSchema: Schema<LoanApplicationDocument> = new Schema(
 
     status: {
       type: String,
-      enum: ['QueryInitiated', 'PendingAdminVerification', 'AdditionalInfoRequired', 'Approved', 'Rejected', 'Active', 'PaidOff', 'Overdue', 'Defaulted'],
+      enum: ['QueryInitiated', 'PendingAdminVerification', 'AdditionalInfoRequired', 'Approved', 'Rejected', 'Active', 'PaidOff', 'Overdue', 'Defaulted', 'Submitted', 'Disbursed'],
       default: 'QueryInitiated',
       required: true,
-    },
+    } as any,
     adminVerificationNotes: String,
     adminAssignedTo: String,
 
@@ -187,6 +188,7 @@ const LoanApplicationSchema: Schema<LoanApplicationDocument> = new Schema(
     lastPaymentDate: Date,
     nextPaymentDueDate: Date,
     nextPaymentAmount: Number,
+    lastReminderSentDate: Date, // Track when last reminder was sent
 
     borrowerIdProofDocumentUrl: String,
     borrowerAddressProofDocumentUrl: String,
@@ -198,39 +200,10 @@ const LoanApplicationSchema: Schema<LoanApplicationDocument> = new Schema(
   {
     timestamps: true, // Automatically adds createdAt and updatedAt
     toJSON: {
-        virtuals: true, // Ensure virtuals like 'id' are included
-        getters: true,
-        transform: function(doc, ret) {
-            ret.id = ret._id.toString();
-            // Ensure populated borrowerUserId also has 'id'
-            if (ret.borrowerUserId && typeof ret.borrowerUserId === 'object' && ret.borrowerUserId._id && !ret.borrowerUserId.id) {
-              ret.borrowerUserId.id = ret.borrowerUserId._id.toString();
-            }
-            // Convert Date objects to ISO strings for consistent frontend handling
-            const dateFields = ['applicationDate', 'approvedDate', 'disbursementDate', 'firstPaymentDueDate', 'maturityDate', 'lastPaymentDate', 'nextPaymentDueDate', 'createdAt', 'updatedAt'];
-            dateFields.forEach(field => {
-              if (ret[field] && ret[field] instanceof Date) {
-                ret[field] = ret[field].toISOString();
-              }
-            });
-            if (ret.rejectionDetails && ret.rejectionDetails.rejectedAt instanceof Date) {
-              ret.rejectionDetails.rejectedAt = ret.rejectionDetails.rejectedAt.toISOString();
-            }
-            if (ret.repaymentSchedule && Array.isArray(ret.repaymentSchedule)) {
-              ret.repaymentSchedule = ret.repaymentSchedule.map((entry: any) => ({
-                ...entry,
-                dueDate: entry.dueDate instanceof Date ? entry.dueDate.toISOString() : entry.dueDate,
-              }));
-            }
-            delete ret._id;
-            delete ret.__v;
-        }
-    },
-    toObject: { // Also apply transformations for toObject if used elsewhere
         virtuals: true,
         getters: true,
-        transform: function(doc, ret) {
-            ret.id = ret._id.toString();
+        transform: function(doc: any, ret: any) {
+            ret.id = ret._id?.toString();
             if (ret.borrowerUserId && typeof ret.borrowerUserId === 'object' && ret.borrowerUserId._id && !ret.borrowerUserId.id) {
               ret.borrowerUserId.id = ret.borrowerUserId._id.toString();
             }
@@ -240,7 +213,7 @@ const LoanApplicationSchema: Schema<LoanApplicationDocument> = new Schema(
                 ret[field] = ret[field].toISOString();
               }
             });
-            if (ret.rejectionDetails && ret.rejectionDetails.rejectedAt instanceof Date) {
+            if (ret.rejectionDetails?.rejectedAt instanceof Date) {
               ret.rejectionDetails.rejectedAt = ret.rejectionDetails.rejectedAt.toISOString();
             }
             if (ret.repaymentSchedule && Array.isArray(ret.repaymentSchedule)) {
@@ -250,18 +223,43 @@ const LoanApplicationSchema: Schema<LoanApplicationDocument> = new Schema(
               }));
             }
             delete ret._id;
-            delete ret.__v;
+            if (ret.__v !== undefined) delete ret.__v;
+        }
+    },
+    toObject: {
+        virtuals: true,
+        getters: true,
+        transform: function(doc: any, ret: any) {
+            ret.id = ret._id?.toString();
+            if (ret.borrowerUserId && typeof ret.borrowerUserId === 'object' && ret.borrowerUserId._id && !ret.borrowerUserId.id) {
+              ret.borrowerUserId.id = ret.borrowerUserId._id.toString();
+            }
+            const dateFields = ['applicationDate', 'approvedDate', 'disbursementDate', 'firstPaymentDueDate', 'maturityDate', 'lastPaymentDate', 'nextPaymentDueDate', 'createdAt', 'updatedAt'];
+            dateFields.forEach(field => {
+              if (ret[field] && ret[field] instanceof Date) {
+                ret[field] = ret[field].toISOString();
+              }
+            });
+            if (ret.rejectionDetails?.rejectedAt instanceof Date) {
+              ret.rejectionDetails.rejectedAt = ret.rejectionDetails.rejectedAt.toISOString();
+            }
+            if (ret.repaymentSchedule && Array.isArray(ret.repaymentSchedule)) {
+              ret.repaymentSchedule = ret.repaymentSchedule.map((entry: any) => ({
+                ...entry,
+                dueDate: entry.dueDate instanceof Date ? entry.dueDate.toISOString() : entry.dueDate,
+              }));
+            }
+            delete ret._id;
+            if (ret.__v !== undefined) delete ret.__v;
         }
     }
   }
 );
 
-// Explicitly define virtual 'id' if not already present through transform (belt and braces)
-if (!LoanApplicationSchema.virtuals['id']) {
-  LoanApplicationSchema.virtual('id').get(function(this: LoanApplicationDocument) {
-    return this._id.toHexString();
-  });
-}
+// Explicitly define virtual 'id'
+(LoanApplicationSchema.virtuals as any)['id'] = LoanApplicationSchema.virtual('id').get(function(this: any) {
+  return this._id?.toHexString();
+});
 
 // Ensure the model is correctly typed and registered
 const LoanApplicationModel = (models.LoanApplication as Model<LoanApplicationDocument, {}, {}>) || // Added empty {} for methods and virtuals if none

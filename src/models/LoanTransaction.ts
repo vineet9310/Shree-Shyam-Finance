@@ -7,7 +7,7 @@ import { LoanTransactionVerificationStatusEnum } from '@/lib/types';
 
 
 // Interface for Mongoose Document for LoanTransaction
-export interface LoanTransactionDocument extends Omit<PaymentRecordType, 'id' | 'loanApplicationId' | 'borrowerUserId' | 'recordedByAdminId' | 'paymentDate' | 'recordedAt'>, Document {
+export interface LoanTransactionDocument extends Omit<PaymentRecordType, 'id' | 'loanApplicationId' | 'borrowerUserId' | 'recordedByAdminId' | 'paymentDate' | 'recordedAt' | 'submittedByUserId' | 'adminVerifierId' | 'adminVerificationTimestamp'>, Document {
   loanApplicationId: mongoose.Types.ObjectId;
   borrowerUserId: mongoose.Types.ObjectId;
   recordedByAdminId?: mongoose.Types.ObjectId; 
@@ -18,7 +18,7 @@ export interface LoanTransactionDocument extends Omit<PaymentRecordType, 'id' | 
   
   verificationStatus: LoanTransactionVerificationStatusEnum; 
   adminVerifierId?: mongoose.Types.ObjectId; 
-  adminVerificationTimestamp?: Date;
+  adminVerificationTimestamp?: Date; // Date type for Mongoose
   adminVerificationNotes?: string; 
 
   recordedAt: Date; 
@@ -111,35 +111,33 @@ const LoanTransactionSchema: Schema<LoanTransactionDocument> = new Schema(
     toJSON: {
       virtuals: true,
       getters: true,
-      transform: function(doc, ret) {
-        ret.id = ret._id.toString();
-        if (ret.paymentDate) ret.paymentDate = ret.paymentDate.toISOString();
-        if (ret.recordedAt) ret.recordedAt = ret.recordedAt.toISOString();
-        if (ret.adminVerificationTimestamp) ret.adminVerificationTimestamp = ret.adminVerificationTimestamp.toISOString();
+      transform: function(doc: any, ret: any) {
+        ret.id = ret._id?.toString();
+        if (ret.paymentDate) ret.paymentDate = new Date(ret.paymentDate).toISOString();
+        if (ret.recordedAt) ret.recordedAt = new Date(ret.recordedAt).toISOString();
+        if (ret.adminVerificationTimestamp) ret.adminVerificationTimestamp = new Date(ret.adminVerificationTimestamp).toISOString();
         delete ret._id;
-        delete ret.__v;
+        if (ret.__v !== undefined) delete ret.__v;
       },
     },
     toObject: {
       virtuals: true,
       getters: true,
-      transform: function(doc, ret) {
-        ret.id = ret._id.toString();
-        if (ret.paymentDate) ret.paymentDate = ret.paymentDate.toISOString();
-        if (ret.recordedAt) ret.recordedAt = ret.recordedAt.toISOString();
-        if (ret.adminVerificationTimestamp) ret.adminVerificationTimestamp = ret.adminVerificationTimestamp.toISOString();
+      transform: function(doc: any, ret: any) {
+        ret.id = ret._id?.toString();
+        if (ret.paymentDate) ret.paymentDate = new Date(ret.paymentDate).toISOString();
+        if (ret.recordedAt) ret.recordedAt = new Date(ret.recordedAt).toISOString();
+        if (ret.adminVerificationTimestamp) ret.adminVerificationTimestamp = new Date(ret.adminVerificationTimestamp).toISOString();
         delete ret._id;
-        delete ret.__v;
+        if (ret.__v !== undefined) delete ret.__v;
       },
     },
   }
 );
 
-if (!LoanTransactionSchema.virtuals['id']) {
-  LoanTransactionSchema.virtual('id').get(function(this: LoanTransactionDocument) {
-    return this._id.toHexString();
-  });
-}
+(LoanTransactionSchema.virtuals as any)['id'] = LoanTransactionSchema.virtual('id').get(function(this: any) {
+  return this._id?.toHexString();
+});
 
 // More robust model definition:
 // Check if mongoose.models exists and if the model is already compiled.

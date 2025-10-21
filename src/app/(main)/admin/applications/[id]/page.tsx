@@ -5,6 +5,7 @@ import { useEffect, useState, useRef, ChangeEvent } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import type { LoanApplication } from '@/lib/types';
+import { LoanApplicationStatusEnum } from '@/lib/types';
 import { ApplicationDetails } from '@/components/custom/ApplicationDetails';
 import { RiskAssessmentClient } from '@/components/custom/RiskAssessmentClient';
 import { ArrowLeft, CheckCircle, XCircle, Edit3, Loader2, AlertTriangleIcon, Mic, Image as ImageIcon, Volume2, PlayCircle, Trash2, IndianRupee, CalendarDays } from "lucide-react"; 
@@ -630,7 +631,7 @@ export default function AdminApplicationDetailsPage() {
               </div>
               <AlertDialogFooter>
                 <AlertDialogCancel disabled={isUpdatingStatus}>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={() => handleUpdateApplicationStatus('Approved')} className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isUpdatingStatus}>
+                <AlertDialogAction onClick={() => handleUpdateApplicationStatus(LoanApplicationStatusEnum.APPROVED)} className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isUpdatingStatus}>
                   {isUpdatingStatus && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Confirm Approve
                 </AlertDialogAction>
@@ -718,7 +719,7 @@ export default function AdminApplicationDetailsPage() {
               </div>
               <AlertDialogFooter>
                 <AlertDialogCancel disabled={isUpdatingStatus}>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={() => handleUpdateApplicationStatus('Rejected')} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground" disabled={isUpdatingStatus}>
+                <AlertDialogAction onClick={() => handleUpdateApplicationStatus(LoanApplicationStatusEnum.REJECTED)} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground" disabled={isUpdatingStatus}>
                   {isUpdatingStatus && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Confirm Reject
                 </AlertDialogAction>

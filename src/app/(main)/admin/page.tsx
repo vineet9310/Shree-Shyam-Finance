@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { LoanApplication, LoanApplicationStatus, SystemNotification, NotificationTypeEnum as NotificationTypeEnumType } from "@/lib/types"; 
+import { NotificationTypeEnum } from "@/lib/types"; 
 import { Eye, ShieldCheck, Clock, AlertTriangle, CheckCircle2, FileText, UserCircle, IndianRupee, Loader2, BellRing, CalendarDays, Landmark, Mail, MessageSquare, Info, Volume2, Image as ImageIcon, XCircle, Inbox } from "lucide-react"; 
 import { ROUTES } from '@/lib/constants';
 import FormattedDate from "@/components/custom/FormattedDate";
@@ -16,27 +17,30 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from '@/context/AuthContext'; 
 
 const StatusBadge = ({ status }: { status: LoanApplicationStatus }) => {
-  let variant: "default" | "secondary" | "destructive" | "outline" | "success" | "warning" | "info" = "outline"; 
+  let variant: "default" | "secondary" | "destructive" | "outline" = "outline"; 
   let icon = <Clock className="mr-1 h-3 w-3" />;
   let badgeClass = "capitalize text-xs flex items-center whitespace-nowrap px-2 py-0.5"; 
 
   switch (status) {
     case "Approved":
-      variant = "success"; 
+      variant = "default"; // Use default with custom class for green
+      badgeClass += " bg-green-100 text-green-800 hover:bg-green-200";
       icon = <CheckCircle2 className="mr-1 h-3 w-3" />;
       break;
     case "Active":
-      variant = "info"; 
+      variant = "default"; // Use default with custom class for blue
+      badgeClass += " bg-blue-100 text-blue-800 hover:bg-blue-200";
       icon = <CheckCircle2 className="mr-1 h-3 w-3" />;
       break;
     case "PaidOff":
-      variant = "success";
+      variant = "default"; // Use default with custom class for green
+      badgeClass += " bg-green-100 text-green-800 hover:bg-green-200";
       icon = <CheckCircle2 className="mr-1 h-3 w-3" />;
       break;
     case "QueryInitiated":
-      variant = "warning"; 
+      variant = "default"; // Use default with custom class for yellow
+      badgeClass += " bg-yellow-100 text-yellow-800 hover:bg-yellow-200 animate-pulse";
       icon = <BellRing className="mr-1 h-3 w-3" />;
-      badgeClass += " animate-pulse"; 
       break;
     case "PendingAdminVerification":
       variant = "secondary";
@@ -127,7 +131,7 @@ export default function AdminDashboardPage() {
           const sortedNotifications = [...data.notifications].sort((a: SystemNotification, b: SystemNotification) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
           // Filter out payment verification notifications as they are on a dedicated page
           const generalNotifications = sortedNotifications.filter(
-            (n: SystemNotification) => n.type !== "USER_PAYMENT_SUBMITTED_FOR_VERIFICATION"
+            (n: SystemNotification) => n.type !== NotificationTypeEnum.USER_PAYMENT_SUBMITTED_FOR_VERIFICATION
           );
           setAdminNotifications(generalNotifications.slice(0, 20)); 
         } else {
@@ -156,7 +160,7 @@ export default function AdminDashboardPage() {
 
   const newApplicationCount = applications.filter(app => app && app.status === 'QueryInitiated').length;
   // Count of general unread notifications
-  const generalNotificationCount = adminNotifications.filter(n => n.type !== "USER_PAYMENT_SUBMITTED_FOR_VERIFICATION" && !n.isRead).length;
+  const generalNotificationCount = adminNotifications.filter(n => n.type !== NotificationTypeEnum.USER_PAYMENT_SUBMITTED_FOR_VERIFICATION && !n.isRead).length;
 
 
   const playNotificationAudio = (audioUrl: string) => { 

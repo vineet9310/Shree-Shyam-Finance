@@ -206,8 +206,8 @@ export function DetailedLoanApplicationForm() {
         borrowerEmail: user.email || "",
         borrowerContactNo: user.contactNo || "",
         borrowerAddress: user.address || "",
-        borrowerIdProofType: user.idProofType || undefined, // Populate from user if available
-        borrowerAddressProofType: user.addressProofType || undefined, // Populate from user if available
+        borrowerIdProofType: user.idProofType as any || undefined, // Populate from user if available
+        borrowerAddressProofType: user.addressProofType as any || undefined, // Populate from user if available
         loanAmount: '' as any,
         loanPurpose: "",
         monthlyIncome: user.monthlyIncome || '' as any, // Populate from user
@@ -280,9 +280,9 @@ export function DetailedLoanApplicationForm() {
       try {
         const base64Uri = await fileToBase64(file);
         if (typeof index === 'number') {
-          form.setValue(`collaterals.${index}.${fieldName as keyof typeof collateralFields[number]}`, base64Uri, { shouldValidate: true });
+          form.setValue(`collaterals.${index}.${fieldName as keyof typeof collateralFields[number]}` as any, base64Uri, { shouldValidate: true });
         } else {
-          form.setValue(fieldName, base64Uri, { shouldValidate: true });
+          form.setValue(fieldName as any, base64Uri, { shouldValidate: true });
         }
       } catch (error) {
         console.error("Error converting file to Base64:", error);

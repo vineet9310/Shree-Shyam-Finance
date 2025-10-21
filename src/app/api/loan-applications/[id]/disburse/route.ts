@@ -5,7 +5,7 @@ import LoanApplicationModel from "@/models/LoanApplication";
 import LoanTransactionModel from "@/models/LoanTransaction"; // Import the new transaction model
 import NotificationModel from "@/models/Notification";
 import mongoose from "mongoose";
-import { LoanTransactionTypeEnum, NotificationTypeEnum } from "@/lib/types"; // Import necessary enums
+import { LoanApplicationStatusEnum, LoanTransactionTypeEnum, NotificationTypeEnum } from "@/lib/types"; // Import necessary enums
 
 export async function POST(
   request: NextRequest,
@@ -114,7 +114,7 @@ export async function POST(
 
     try {
       // Update Loan Application
-      application.status = "Active";
+      application.status = LoanApplicationStatusEnum.ACTIVE;
       application.disbursementDate = new Date();
       application.principalDisbursed = disbursementAmount;
       application.currentPrincipalOutstanding = disbursementAmount; // Reset outstanding to disbursed amount

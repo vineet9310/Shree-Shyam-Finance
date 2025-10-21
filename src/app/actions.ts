@@ -27,9 +27,28 @@ export async function performRiskAssessmentAction(applicationId: string) {
     }
 
     // FIX: Use the correct function name 'assessLoanRisk' here.
-    const assessmentResult = await assessLoanRisk(application.toObject());
+    // Convert application to proper format
+    const applicationData = JSON.stringify(application.toObject());
+    const supportingDocuments = (application as any).processedDocuments?.map((doc: any) => doc.dataUri) || [];
+    
+    const assessmentResult = await assessLoanRisk({
+      applicationData,
+      supportingDocuments
+    });
 
-    application.riskAssessment = assessmentResult;
+    // Map the AI result to our RiskAssessment type
+    const riskAssessment = {
+      score: assessmentResult.riskScore,
+      reasoning: assessmentResult.riskAssessment,
+      recommendation: assessmentResult.recommendedAction.toLowerCase().includes('approve') 
+        ? 'approve' as const
+        : assessmentResult.recommendedAction.toLowerCase().includes('reject')
+        ? 'reject' as const
+        : 'further_review' as const,
+      assessedAt: new Date().toISOString(),
+    };
+
+    application.riskAssessment = riskAssessment;
     await application.save();
 
     revalidatePath(`/admin/applications/${applicationId}`);
@@ -38,7 +57,7 @@ export async function performRiskAssessmentAction(applicationId: string) {
     return {
       success: true,
       message: "Risk assessment performed successfully.",
-      assessment: assessmentResult,
+      assessment: riskAssessment,
     };
   } catch (error: any) {
     console.error("Error in performRiskAssessmentAction:", error);

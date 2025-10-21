@@ -134,6 +134,9 @@ export enum LoanApplicationStatusEnum {
   DISBURSED = 'Disbursed', 
 }
 
+// Type alias for string values
+export type LoanApplicationStatus = 'QueryInitiated' | 'PendingAdminVerification' | 'AdditionalInfoRequired' | 'Approved' | 'Rejected' | 'Active' | 'PaidOff' | 'Overdue' | 'Defaulted' | 'Submitted' | 'Disbursed';
+
 // Define LoanTransactionVerificationStatusEnum here
 export enum LoanTransactionVerificationStatusEnum {
   PENDING_VERIFICATION = 'pending_verification', // User submitted, admin needs to check
@@ -222,6 +225,7 @@ export interface LoanApplication {
   lastPaymentDate?: string;
   nextPaymentDueDate?: string;
   nextPaymentAmount?: number;
+  lastReminderSentDate?: string; // Track when last reminder was sent
 
   borrowerIdProofDocumentUrl?: string;
   borrowerAddressProofDocumentUrl?: string;
@@ -291,6 +295,7 @@ export enum NotificationTypeEnum {
   PAYMENT_DUE_REMINDER = 'payment_due_reminder',
   PAYMENT_RECEIVED_CONFIRMATION = 'payment_received_confirmation',
   PAYMENT_OVERDUE_ALERT = 'payment_overdue_alert',
+  LOAN_DEFAULT_ALERT = 'loan_default_alert',
   DOCUMENT_REQUEST = 'document_request',
   GENERAL_ADMIN_ALERT = 'general_admin_alert',
   GENERAL_USER_INFO = 'general_user_info',
@@ -358,3 +363,8 @@ export interface PaymentHistoryEntry {
   amount: number; 
   status: 'Paid' | 'Missed' | 'Upcoming'; 
 }
+
+// Additional type aliases for compatibility
+export type ILoanApplication = LoanApplication;
+export type ILoanTransaction = PaymentRecord;
+export type IUser = User;

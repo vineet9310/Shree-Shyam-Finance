@@ -30,8 +30,8 @@ export function RiskAssessmentClient({ application }: RiskAssessmentClientProps)
         // The action itself also has a check.
         console.warn("Attempting risk assessment without processed documents for application:", application.id);
       }
-      const result = await performRiskAssessmentAction(application);
-      setAssessmentResult(result);
+      const result = await performRiskAssessmentAction(application.id);
+      setAssessmentResult(result as any);
     } catch (e) {
       setError(e instanceof Error ? e.message : "An unknown error occurred.");
     } finally {

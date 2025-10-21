@@ -25,7 +25,8 @@ import { AlertCircle, CheckCircle2, Eye, XCircle } from 'lucide-react';
 
 interface ITransactionDetails extends ILoanTransaction {
   user: Pick<IUser, 'name' | 'email'>;
-  loanApplication: Pick<ILoanApplication, 'loanId'>;
+  loanApplication: Pick<ILoanApplication, 'id'>;
+  createdAt?: string; // Add optional createdAt
 }
 
 export default function PaymentVerificationDetailPage() {
@@ -131,16 +132,16 @@ export default function PaymentVerificationDetailPage() {
         <CardHeader><CardTitle>Transaction Details</CardTitle></CardHeader>
         <CardContent className="grid gap-2">
             <DetailRow label="Applicant Name" value={details.user.name} />
-            <DetailRow label="Loan ID" value={details.loanApplication.loanId} />
+            <DetailRow label="Loan ID" value={details.loanApplication.id || 'N/A'} />
             <DetailRow 
                 label="Payment Status" 
-                value={details.verificationStatus.replace(/_/g, ' ')} 
+                value={details.verificationStatus ? details.verificationStatus.replace(/_/g, ' ') : 'Pending'} 
                 isBadge={true}
-                badgeVariant={getStatusBadgeVariant(details.verificationStatus)}
+                badgeVariant={details.verificationStatus ? getStatusBadgeVariant(details.verificationStatus) : 'default'}
             />
             <DetailRow label="Amount Submitted" value={`₹${details.amountPaid.toLocaleString('en-IN')}`} />
             <DetailRow label="Payment Method" value={details.paymentMethod} />
-            <DetailRow label="Submitted On" value={format(new Date(details.createdAt), 'PPpp')} />
+            <DetailRow label="Submitted On" value={details.createdAt ? format(new Date(details.createdAt), 'PPpp') : format(new Date(details.recordedAt), 'PPpp')} />
             <DetailRow label="Payment Reference ID" value={details.transactionReference || 'N/A'} />
             <div className="py-3">
               <p className="text-sm text-muted-foreground mb-2">User Notes</p>

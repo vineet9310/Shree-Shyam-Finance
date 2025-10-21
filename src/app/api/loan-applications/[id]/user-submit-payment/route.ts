@@ -123,13 +123,13 @@ export async function POST(
       for (const adminUser of adminUsers) {
         const adminNotification = new NotificationModel({
           recipientUserId: adminUser._id,
-          loanApplicationId: application._id,
-          paymentRecordId: newTransaction._id, 
-          message: `Payment proof of ₹${paymentAmount.toLocaleString()} submitted by ${borrowerName} for loan ...${application._id.toString().slice(-6)}. Needs verification.`,
+          loanApplicationId: application._id as mongoose.Types.ObjectId,
+          paymentRecordId: newTransaction._id as mongoose.Types.ObjectId, 
+          message: `Payment proof of ₹${paymentAmount.toLocaleString()} submitted by ${borrowerName} for loan ...${(application._id as any).toString().slice(-6)}. Needs verification.`,
           type: NotificationTypeEnum.USER_PAYMENT_SUBMITTED_FOR_VERIFICATION,
           // *** YEH FINAL FIX HAI ***
           // Ab link hamesha sahi verification page par jayega.
-          linkTo: `/admin/payment-verifications/${newTransaction._id.toString()}`, 
+          linkTo: `/admin/payment-verifications/${(newTransaction._id as any).toString()}`, 
         });
         await adminNotification.save();
       }
@@ -139,9 +139,9 @@ export async function POST(
 
     const userNotification = new NotificationModel({
       recipientUserId: new mongoose.Types.ObjectId(borrowerUserId),
-      loanApplicationId: application._id,
-      paymentRecordId: newTransaction._id,
-      message: `Your payment proof of ₹${paymentAmount.toLocaleString()} for loan ...${application._id.toString().slice(-6)} has been submitted and is pending verification.`,
+      loanApplicationId: application._id as mongoose.Types.ObjectId,
+      paymentRecordId: newTransaction._id as mongoose.Types.ObjectId,
+      message: `Your payment proof of ₹${paymentAmount.toLocaleString()} for loan ...${(application._id as any).toString().slice(-6)} has been submitted and is pending verification.`,
       type: NotificationTypeEnum.PAYMENT_SUBMISSION_RECEIVED,
       linkTo: `/dashboard/application/${application._id}`,
     });

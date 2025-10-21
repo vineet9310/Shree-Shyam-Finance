@@ -6,56 +6,15 @@ import UserModel from '@/models/User';
 import NotificationModel from '@/models/Notification';
 import mongoose from 'mongoose';
 import { uploadImageToCloudinary } from '@/lib/cloudinary';
-import type { LoanApplicationStatus, SystemNotification, LoanRepaymentScheduleEntry } from '@/lib/types';
+import type { SystemNotification } from '@/lib/types';
+import { NotificationTypeEnum } from '@/lib/types';
+import { calculateEMI, generateRepaymentSchedule, calculateProcessingFee } from '@/lib/loan-calculations';
+
+// Type for loan application status matching database schema
+type LoanStatus = 'QueryInitiated' | 'PendingAdminVerification' | 'AdditionalInfoRequired' | 'Approved' | 'Rejected' | 'Active' | 'PaidOff' | 'Overdue' | 'Defaulted' | 'Submitted' | 'Disbursed';
 
 // Helper to check if a string is a valid data URI
 const isDataURI = (str: string) => typeof str === 'string' && str.startsWith('data:');
-
-// Helper function to calculate EMI (Equated Monthly Installment)
-// This is a simplified calculation and might need adjustment for real-world scenarios
-function calculateEMI(principal: number, annualInterestRate: number, loanTermMonths: number): { emi: number, repaymentSchedule: LoanRepaymentScheduleEntry[] } {
-  if (principal <= 0 || annualInterestRate < 0 || loanTermMonths <= 0) {
-    return { emi: 0, repaymentSchedule: [] };
-  }
-
-  const monthlyInterestRate = annualInterestRate / 12 / 100; // Convert annual percentage to monthly decimal
-
-  let emi = 0;
-  if (monthlyInterestRate === 0) {
-    emi = principal / loanTermMonths;
-  } else {
-    emi = principal * monthlyInterestRate * Math.pow(1 + monthlyInterestRate, loanTermMonths) / (Math.pow(1 + monthlyInterestRate, loanTermMonths) - 1);
-  }
-
-  const repaymentSchedule: LoanRepaymentScheduleEntry[] = [];
-  let outstandingBalance = principal;
-  let currentDate = new Date(); // Start date for repayment schedule generation
-
-  for (let i = 1; i <= loanTermMonths; i++) {
-    const interestComponent = outstandingBalance * monthlyInterestRate;
-    const principalComponent = emi - interestComponent;
-    const endingBalance = outstandingBalance - principalComponent;
-
-    // Calculate due date for the current period (e.g., 1 month from previous due date)
-    const dueDate = new Date(currentDate);
-    dueDate.setMonth(dueDate.getMonth() + 1);
-    currentDate = dueDate; // Update current date for next iteration
-
-    repaymentSchedule.push({
-      period: i,
-      dueDate: dueDate.toISOString(),
-      startingBalance: parseFloat(outstandingBalance.toFixed(2)),
-      principalComponent: parseFloat(principalComponent.toFixed(2)),
-      interestComponent: parseFloat(interestComponent.toFixed(2)),
-      endingBalance: parseFloat(Math.max(0, endingBalance).toFixed(2)), // Ensure balance doesn't go negative
-      paymentAmount: parseFloat(emi.toFixed(2)),
-      isPaid: false,
-    });
-    outstandingBalance = endingBalance;
-  }
-
-  return { emi: parseFloat(emi.toFixed(2)), repaymentSchedule };
-}
 
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
@@ -105,24 +64,24 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   }
 
   try {
-    const body = await request.json(); // Get the whole body
+    const body = await request.json();
     const { status, rejectionReasonText, rejectionReasonImage, rejectionReasonAudio, adminId, approvedAmount, interestRate, loanTermMonths, repaymentFrequency } :
       {
-        status: LoanApplicationStatus,
+        status: LoanStatus,
         rejectionReasonText?: string,
-        rejectionReasonImage?: string, // Base64 from frontend
-        rejectionReasonAudio?: string, // Base64 from frontend
-        adminId?: string, // Admin's user ID
-        approvedAmount?: number; // For approval
-        interestRate?: number; // For approval
-        loanTermMonths?: number; // For approval
-        repaymentFrequency?: 'daily' | 'weekly' | 'monthly' | 'custom'; // For approval
+        rejectionReasonImage?: string,
+        rejectionReasonAudio?: string,
+        adminId?: string,
+        approvedAmount?: number;
+        interestRate?: number;
+        loanTermMonths?: number;
+        repaymentFrequency?: 'daily' | 'weekly' | 'monthly';
       } = body;
 
     console.log(`[API PUT /loan-applications/${id}] New status received: ${status}`);
     console.log(`[API PUT /loan-applications/${id}] Rejection details received: text="${rejectionReasonText?.substring(0, 50)}...", image=${!!rejectionReasonImage}, audio=${!!rejectionReasonAudio}, adminId=${adminId}`);
 
-    const validStatuses: LoanApplicationStatus[] = ['Approved', 'Rejected', 'PendingAdminVerification', 'AdditionalInfoRequired', 'QueryInitiated', 'Active', 'PaidOff', 'Overdue', 'Defaulted'];
+    const validStatuses: LoanStatus[] = ['Approved', 'Rejected', 'PendingAdminVerification', 'AdditionalInfoRequired', 'QueryInitiated', 'Active', 'PaidOff', 'Overdue', 'Defaulted', 'Submitted', 'Disbursed'];
     if (!status || !validStatuses.includes(status)) {
       console.log(`[API PUT /loan-applications/${id}] Invalid status value: ${status}`);
       return NextResponse.json({ success: false, message: 'Invalid status value' }, { status: 400 });
@@ -152,29 +111,51 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       updateData.interestRate = interestRate;
       updateData.loanTermMonths = loanTermMonths;
       updateData.repaymentFrequency = repaymentFrequency;
-      updateData.currentPrincipalOutstanding = approvedAmount; // Initially, outstanding principal is the approved amount
-      updateData.currentInterestOutstanding = 0; // Initially, no outstanding interest
+      updateData.interestType = 'compound_monthly'; // Default to compound interest
+      updateData.currentPrincipalOutstanding = approvedAmount;
+      updateData.currentInterestOutstanding = 0;
 
-      // Calculate repayment schedule
-      const { emi, repaymentSchedule } = calculateEMI(approvedAmount, interestRate, loanTermMonths);
+      // Calculate processing fee (2% of approved amount)
+      const processingFee = calculateProcessingFee(approvedAmount, 2);
+      updateData.processingFee = processingFee;
+
+      // Generate comprehensive repayment schedule
+      const repaymentSchedule = generateRepaymentSchedule(
+        approvedAmount,
+        interestRate,
+        loanTermMonths,
+        new Date(),
+        'compound_monthly',
+        repaymentFrequency
+      );
+      
       updateData.repaymentSchedule = repaymentSchedule;
+
+      // Calculate EMI for tracking
+      const emi = calculateEMI(approvedAmount, interestRate, loanTermMonths);
       updateData.nextPaymentAmount = emi;
 
-      // Set first payment due date
+      // Set first payment due date from schedule
       if (repaymentSchedule.length > 0) {
         updateData.firstPaymentDueDate = new Date(repaymentSchedule[0].dueDate);
         updateData.nextPaymentDueDate = new Date(repaymentSchedule[0].dueDate);
+        updateData.maturityDate = new Date(repaymentSchedule[repaymentSchedule.length - 1].dueDate);
       } else {
-        // Fallback if no schedule generated (shouldn't happen with valid inputs)
+        // Fallback if no schedule generated
         const oneMonthFromNow = new Date();
         oneMonthFromNow.setMonth(oneMonthFromNow.getMonth() + 1);
         updateData.firstPaymentDueDate = oneMonthFromNow;
         updateData.nextPaymentDueDate = oneMonthFromNow;
+        
+        const maturityDate = new Date();
+        maturityDate.setMonth(maturityDate.getMonth() + loanTermMonths);
+        updateData.maturityDate = maturityDate;
       }
 
-      // Ensure rejection details are cleared if status changes from Rejected to Approved
+      // Ensure rejection details are cleared
       updateData.rejectionDetails = undefined;
 
+      console.log(`[API PUT /loan-applications/${id}] Loan approved with EMI: ₹${emi}, Processing Fee: ₹${processingFee}, Schedule periods: ${repaymentSchedule.length}`);
     } else if (status === 'Rejected' && oldStatus !== 'Rejected') {
       const rejectionDetails: any = {
         text: rejectionReasonText,
@@ -233,15 +214,16 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     console.log(`[API PUT /loan-applications/${id}] Checking if notification needs to be created. Old status: ${oldStatus}, New status: ${updatedApplication.status}, Borrower User ID: ${updatedApplication.borrowerUserId}`);
     if (oldStatus !== updatedApplication.status && updatedApplication.borrowerUserId) {
       let notificationMessage = `Your loan application (ID: ...${updatedApplication.id.slice(-6)}) status has been updated to ${updatedApplication.status}.`;
-      let notificationType: SystemNotification['type'] = 'loan_status_updated';
+      let notificationType = NotificationTypeEnum.LOAN_STATUS_UPDATED;
       let rejectionReasonTextForNotif: string | undefined;
       let rejectionReasonImageUrlForNotif: string | undefined;
       let rejectionReasonAudioUrlForNotif: string | undefined;
 
       if (updatedApplication.status === 'Approved') {
         notificationMessage = `Congratulations! Your loan application for ${updatedApplication.purpose.substring(0,20)}... has been approved.`;
+        notificationType = NotificationTypeEnum.LOAN_APPROVED;
       } else if (updatedApplication.status === 'Rejected') {
-        notificationType = 'loan_rejected_details';
+        notificationType = NotificationTypeEnum.LOAN_REJECTED;
         notificationMessage = `We regret to inform you that your loan application for ${updatedApplication.purpose.substring(0,20)}... has been rejected.`;
         if (updatedApplication.rejectionDetails) {
             rejectionReasonTextForNotif = updatedApplication.rejectionDetails.text;
