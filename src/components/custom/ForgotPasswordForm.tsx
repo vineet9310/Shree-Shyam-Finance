@@ -112,16 +112,26 @@ export default function ForgotPasswordForm() {
 
   const onRequestOtpSubmit = async (values: RequestOtpFormValues) => {
     setIsLoading(true);
-    // Simulate API call for sending OTP
     console.log("Requesting OTP for:", values.email);
     try {
-      // Replace with actual API call to /api/users/forgot-password
       const response = await fetch('/api/users/forgot-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: values.email }),
       });
-      const result = await response.json();
+
+      let result;
+      try {
+        result = await response.json();
+      } catch (parseError) {
+        console.error("JSON parse error:", parseError);
+        toast({
+          title: "Server Error",
+          description: "Unexpected server response. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
 
       if (response.ok && result.success) {
         setEmailForReset(values.email);

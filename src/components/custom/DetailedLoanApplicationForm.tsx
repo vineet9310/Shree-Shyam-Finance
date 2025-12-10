@@ -96,7 +96,7 @@ const loanApplicationFormSchema = z.object({
   borrowerContactNo: z.string().min(10, "Contact number must be at least 10 digits.").max(15),
   borrowerEmail: z.string().email("Invalid email address."),
   borrowerAddress: z.string().min(10, "Address must be at least 10 characters."),
-  borrowerIdProofType: z.enum(["aadhaar", "pan", "voter_id", "driving_license", "passport", "other"], { required_error: "Your ID proof type is required."}),
+  borrowerIdProofType: z.enum(["aadhaar", "pan", "voter_id", "driving_license", "passport", "other"], { required_error: "Your ID proof type is required." }),
   borrowerIdProofDocument: fileSchema, // Now expects string | undefined
   borrowerAddressProofType: z.enum(["aadhaar", "utility_bill", "rent_agreement", "passport", "other"], { required_error: "Your address proof type is required." }),
   borrowerAddressProofDocument: fileSchema, // Now expects string | undefined
@@ -169,7 +169,7 @@ export function DetailedLoanApplicationForm() {
   const form = useForm<LoanApplicationFormValues>({
     resolver: zodResolver(loanApplicationFormSchema),
     defaultValues: {
-      borrowerFullName:  "",
+      borrowerFullName: "",
       borrowerContactNo: "",
       borrowerEmail: "",
       borrowerAddress: "",
@@ -222,27 +222,27 @@ export function DetailedLoanApplicationForm() {
       });
       setShowGuarantor(false);
     } else {
-        console.log("[DetailedLoanApplicationForm] useEffect - User is null, resetting to initial defaults.");
-        form.reset({
-            borrowerFullName: "",
-            borrowerEmail: "",
-            borrowerContactNo: "",
-            borrowerAddress: "",
-            borrowerIdProofType: undefined,
-            borrowerAddressProofType: undefined,
-            loanAmount: '' as any,
-            loanPurpose: "",
-            monthlyIncome: '' as any,
-            employmentStatus: undefined,
-            jobType: "",
-            businessDescription: "",
-            creditScore: '' as any,
-            hasGuarantor: false,
-            guarantor: { fullName: "", address: "", contactNo: "", idProofType: undefined, idProofDocument: undefined, addressProofType: undefined, addressProofDocument: undefined, relationshipToBorrower: "" },
-            collaterals: [],
-            generalSupportingDocuments: [],
-        });
-        setShowGuarantor(false);
+      console.log("[DetailedLoanApplicationForm] useEffect - User is null, resetting to initial defaults.");
+      form.reset({
+        borrowerFullName: "",
+        borrowerEmail: "",
+        borrowerContactNo: "",
+        borrowerAddress: "",
+        borrowerIdProofType: undefined,
+        borrowerAddressProofType: undefined,
+        loanAmount: '' as any,
+        loanPurpose: "",
+        monthlyIncome: '' as any,
+        employmentStatus: undefined,
+        jobType: "",
+        businessDescription: "",
+        creditScore: '' as any,
+        hasGuarantor: false,
+        guarantor: { fullName: "", address: "", contactNo: "", idProofType: undefined, idProofDocument: undefined, addressProofType: undefined, addressProofDocument: undefined, relationshipToBorrower: "" },
+        collaterals: [],
+        generalSupportingDocuments: [],
+      });
+      setShowGuarantor(false);
     }
   }, [user, form.reset]);
 
@@ -345,12 +345,12 @@ export function DetailedLoanApplicationForm() {
       if (messages.length > 0) {
         errorMessages += messages.join('; ');
       } else if (errors.root?.message) {
-         errorMessages += errors.root.message;
+        errorMessages += errors.root.message;
       } else {
         errorMessages = "Please fill all required fields correctly and try again.";
       }
     } else if (errors.root?.message) {
-       errorMessages = errors.root.message;
+      errorMessages = errors.root.message;
     } else {
       errorMessages = "An unknown validation error occurred. Please check all fields.";
     }
@@ -369,20 +369,20 @@ export function DetailedLoanApplicationForm() {
 
 
     if (!user || !user.email) {
-        toast({
-            title: "Authentication Error",
-            description: "User details not found. Please log in again to submit the application.",
-            variant: "destructive",
-        });
-        setIsSubmitting(false);
-        return;
+      toast({
+        title: "Authentication Error",
+        description: "User details not found. Please log in again to submit the application.",
+        variant: "destructive",
+      });
+      setIsSubmitting(false);
+      return;
     }
     setIsSubmitting(true);
 
     const submissionPayload: LoanApplicationFormValues = {
-        ...values,
-        borrowerEmail: user.email,
-        borrowerFullName: user.name || values.borrowerFullName,
+      ...values,
+      borrowerEmail: user.email,
+      borrowerFullName: user.name || values.borrowerFullName,
     };
 
     if (submissionPayload.hasGuarantor === false || !submissionPayload.hasGuarantor) {
@@ -432,23 +432,23 @@ export function DetailedLoanApplicationForm() {
           variant: "default",
         });
         form.reset({
-            borrowerFullName: user?.name || "",
-            borrowerEmail: user?.email || "",
-            borrowerContactNo: user?.contactNo || "",
-            borrowerAddress: user?.address || "",
-            borrowerIdProofType: undefined,
-            borrowerAddressProofType: undefined,
-            loanAmount: '' as any,
-            loanPurpose: "",
-            monthlyIncome: user?.monthlyIncome || '' as any,
-            employmentStatus: user?.employmentStatus || undefined,
-            jobType: user?.jobType || "",
-            businessDescription: user?.businessDescription || "",
-            creditScore: user?.creditScore || '' as any,
-            hasGuarantor: false,
-            guarantor: { fullName: "", address: "", contactNo: "", idProofType: undefined, idProofDocument: undefined, addressProofType: undefined, addressProofDocument: undefined, relationshipToBorrower: "" },
-            collaterals: [],
-            generalSupportingDocuments: [],
+          borrowerFullName: user?.name || "",
+          borrowerEmail: user?.email || "",
+          borrowerContactNo: user?.contactNo || "",
+          borrowerAddress: user?.address || "",
+          borrowerIdProofType: undefined,
+          borrowerAddressProofType: undefined,
+          loanAmount: '' as any,
+          loanPurpose: "",
+          monthlyIncome: user?.monthlyIncome || '' as any,
+          employmentStatus: user?.employmentStatus || undefined,
+          jobType: user?.jobType || "",
+          businessDescription: user?.businessDescription || "",
+          creditScore: user?.creditScore || '' as any,
+          hasGuarantor: false,
+          guarantor: { fullName: "", address: "", contactNo: "", idProofType: undefined, idProofDocument: undefined, addressProofType: undefined, addressProofDocument: undefined, relationshipToBorrower: "" },
+          collaterals: [],
+          generalSupportingDocuments: [],
         });
         setShowGuarantor(false);
         router.push(ROUTES.DASHBOARD);
@@ -474,169 +474,157 @@ export function DetailedLoanApplicationForm() {
   const employmentStatus = form.watch("employmentStatus");
 
   return (
-    <Card className="w-full max-w-3xl mx-auto shadow-xl my-8">
-      <CardHeader>
-        <CardTitle className="text-2xl flex items-center gap-2"><FileText className="h-7 w-7 text-primary" />New Loan Application</CardTitle>
-        <CardDescription>Please fill in all details accurately. This information will be used to assess your loan eligibility.</CardDescription>
+    <Card className="w-full max-w-4xl mx-auto shadow-xl my-4 md:my-6">
+      <CardHeader className="pb-4">
+        <CardTitle className="text-xl md:text-2xl flex items-center gap-2"><FileText className="h-6 w-6 text-primary" />New Loan Application</CardTitle>
+        <CardDescription className="text-sm">Fill in your details accurately to assess loan eligibility.</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-0">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="space-y-8">
+          <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="space-y-4">
 
-            <Accordion type="multiple" defaultValue={["borrower_details", "loan_details", "financial_profile"]} className="w-full">
+            <Accordion type="multiple" defaultValue={["borrower_details", "loan_details"]} className="w-full space-y-2">
               {/* Borrower Details Section */}
-              <AccordionItem value="borrower_details">
-                <AccordionTrigger className="text-lg font-semibold"><UserCircle className="mr-2 h-5 w-5 text-primary"/>Borrower Details</AccordionTrigger>
-                <AccordionContent className="space-y-4 pt-4">
-                  <FormField control={form.control} name="borrowerFullName" render={({ field }) => (
-                    <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input placeholder="e.g., Ramesh Kumar" {...field} value={field.value || ""} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
-                  )} />
-                  <FormField control={form.control} name="borrowerContactNo" render={({ field }) => (
-                    <FormItem><FormLabel>Contact Number</FormLabel><FormControl><Input type="tel" placeholder="e.g., 9876543210" {...field} value={field.value || ""} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
-                  )} />
-                  <FormField control={form.control} name="borrowerEmail" render={({ field }) => (
-                    <FormItem><FormLabel>Email Address</FormLabel><FormControl><Input type="email" placeholder="ramesh@example.com" {...field} value={field.value || ""} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
-                  )} />
-                  <FormField control={form.control} name="borrowerAddress" render={({ field }) => (
-                    <FormItem><FormLabel>Full Address</FormLabel><FormControl><Textarea placeholder="House No, Street, City, State, Pincode" {...field} value={field.value || ""} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
-                  )} />
-                  <FormField control={form.control} name="borrowerIdProofType" render={({ field }) => (
-                    <FormItem><FormLabel>ID Proof Type</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}><FormControl><SelectTrigger><SelectValue placeholder="Select ID Proof" /></SelectTrigger></FormControl><SelectContent>
-                      <SelectItem value="aadhaar">Aadhaar Card</SelectItem><SelectItem value="pan">PAN Card</SelectItem><SelectItem value="voter_id">Voter ID</SelectItem>
-                      <SelectItem value="driving_license">Driving License</SelectItem><SelectItem value="passport">Passport</SelectItem><SelectItem value="other">Other</SelectItem>
-                    </SelectContent></Select><FormMessage /></FormItem>
-                  )} />
-                  {renderFileInput("borrowerIdProofDocument", "Upload ID Proof Document")}
-
-                  <FormField control={form.control} name="borrowerAddressProofType" render={({ field }) => (
-                    <FormItem><FormLabel>Address Proof Type</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}><FormControl><SelectTrigger><SelectValue placeholder="Select Address Proof" /></SelectTrigger></FormControl><SelectContent>
-                       <SelectItem value="aadhaar">Aadhaar Card</SelectItem><SelectItem value="utility_bill">Utility Bill (Electricity, Water)</SelectItem><SelectItem value="rent_agreement">Rent Agreement</SelectItem>
-                       <SelectItem value="passport">Passport</SelectItem><SelectItem value="other">Other</SelectItem>
-                    </SelectContent></Select><FormMessage /></FormItem>
-                  )} />
-                  {renderFileInput("borrowerAddressProofDocument", "Upload Address Proof Document")}
+              <AccordionItem value="borrower_details" className="border rounded-lg px-4">
+                <AccordionTrigger className="text-base font-semibold py-3"><UserCircle className="mr-2 h-5 w-5 text-primary" />Borrower Details</AccordionTrigger>
+                <AccordionContent className="pt-2 pb-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField control={form.control} name="borrowerFullName" render={({ field }) => (
+                      <FormItem><FormLabel className="text-sm">Full Name</FormLabel><FormControl><Input placeholder="e.g., Ramesh Kumar" {...field} value={field.value || ""} disabled={isSubmitting} className="h-9" /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={form.control} name="borrowerContactNo" render={({ field }) => (
+                      <FormItem><FormLabel className="text-sm">Contact Number</FormLabel><FormControl><Input type="tel" placeholder="e.g., 9876543210" {...field} value={field.value || ""} disabled={isSubmitting} className="h-9" /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={form.control} name="borrowerEmail" render={({ field }) => (
+                      <FormItem><FormLabel className="text-sm">Email Address</FormLabel><FormControl><Input type="email" placeholder="ramesh@example.com" {...field} value={field.value || ""} disabled={isSubmitting} className="h-9" /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={form.control} name="borrowerAddress" render={({ field }) => (
+                      <FormItem className="md:col-span-2"><FormLabel className="text-sm">Full Address</FormLabel><FormControl><Textarea placeholder="House No, Street, City, State, Pincode" {...field} value={field.value || ""} disabled={isSubmitting} className="min-h-[60px]" /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={form.control} name="borrowerIdProofType" render={({ field }) => (
+                      <FormItem><FormLabel className="text-sm">ID Proof Type</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}><FormControl><SelectTrigger className="h-9"><SelectValue placeholder="Select ID Proof" /></SelectTrigger></FormControl><SelectContent>
+                        <SelectItem value="aadhaar">Aadhaar Card</SelectItem><SelectItem value="pan">PAN Card</SelectItem><SelectItem value="voter_id">Voter ID</SelectItem>
+                        <SelectItem value="driving_license">Driving License</SelectItem><SelectItem value="passport">Passport</SelectItem><SelectItem value="other">Other</SelectItem>
+                      </SelectContent></Select><FormMessage /></FormItem>
+                    )} />
+                    <div>{renderFileInput("borrowerIdProofDocument", "Upload ID Proof")}</div>
+                    <FormField control={form.control} name="borrowerAddressProofType" render={({ field }) => (
+                      <FormItem><FormLabel className="text-sm">Address Proof Type</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}><FormControl><SelectTrigger className="h-9"><SelectValue placeholder="Select Address Proof" /></SelectTrigger></FormControl><SelectContent>
+                        <SelectItem value="aadhaar">Aadhaar Card</SelectItem><SelectItem value="utility_bill">Utility Bill</SelectItem><SelectItem value="rent_agreement">Rent Agreement</SelectItem>
+                        <SelectItem value="passport">Passport</SelectItem><SelectItem value="other">Other</SelectItem>
+                      </SelectContent></Select><FormMessage /></FormItem>
+                    )} />
+                    <div>{renderFileInput("borrowerAddressProofDocument", "Upload Address Proof")}</div>
+                  </div>
                 </AccordionContent>
               </AccordionItem>
 
-              {/* Loan Details Section */}
-              <AccordionItem value="loan_details">
-                <AccordionTrigger className="text-lg font-semibold"><IndianRupee className="mr-2 h-5 w-5 text-primary"/>Loan Details</AccordionTrigger>
-                <AccordionContent className="space-y-4 pt-4">
-                  <FormField control={form.control} name="loanAmount" render={({ field }) => (
-                    <FormItem><FormLabel>Loan Amount Requested (₹)</FormLabel><FormControl><Input type="number" placeholder="e.g., 50000" {...field} value={field.value || ""} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
-                  )} />
-                  <FormField control={form.control} name="loanPurpose" render={({ field }) => (
-                    <FormItem><FormLabel>Purpose of Loan</FormLabel><FormControl><Textarea placeholder="Detailed reason for needing the loan..." {...field} value={field.value || ""} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
-                  )} />
-                </AccordionContent>
-              </AccordionItem>
-
-              {/* Financial Profile Section */}
-              <AccordionItem value="financial_profile">
-                <AccordionTrigger className="text-lg font-semibold"><Briefcase className="mr-2 h-5 w-5 text-primary"/>Financial Profile</AccordionTrigger>
-                <AccordionContent className="space-y-4 pt-4">
-                  <FormField control={form.control} name="monthlyIncome" render={({ field }) => (
-                    <FormItem><FormLabel>Monthly Income (₹)</FormLabel><FormControl><Input type="number" placeholder="e.g., 50000" {...field} value={field.value || ""} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
-                  )} />
-                  <FormField control={form.control} name="employmentStatus" render={({ field }) => (
-                    <FormItem><FormLabel>Employment Status</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}><FormControl><SelectTrigger><SelectValue placeholder="Select employment status" /></SelectTrigger></FormControl><SelectContent>
-                      <SelectItem value="employed">Employed</SelectItem><SelectItem value="self-employed">Self-Employed</SelectItem><SelectItem value="unemployed">Unemployed</SelectItem>
-                      <SelectItem value="student">Student</SelectItem><SelectItem value="retired">Retired</SelectItem>
-                    </SelectContent></Select><FormMessage /></FormItem>
-                  )} />
-
-                  {employmentStatus === 'employed' && (
-                    <FormField control={form.control} name="jobType" render={({ field }) => (
-                      <FormItem><FormLabel>Job Type</FormLabel><FormControl><Input placeholder="e.g., Software Engineer, Teacher" {...field} value={field.value || ""} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
+              {/* Loan Details & Financial Profile Combined */}
+              <AccordionItem value="loan_details" className="border rounded-lg px-4">
+                <AccordionTrigger className="text-base font-semibold py-3"><IndianRupee className="mr-2 h-5 w-5 text-primary" />Loan & Financial Details</AccordionTrigger>
+                <AccordionContent className="pt-2 pb-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField control={form.control} name="loanAmount" render={({ field }) => (
+                      <FormItem><FormLabel className="text-sm">Loan Amount (₹)</FormLabel><FormControl><Input type="number" placeholder="e.g., 50000" {...field} value={field.value || ""} disabled={isSubmitting} className="h-9" /></FormControl><FormMessage /></FormItem>
                     )} />
-                  )}
-
-                  {employmentStatus === 'self-employed' && (
-                    <FormField control={form.control} name="businessDescription" render={({ field }) => (
-                      <FormItem><FormLabel>Business Description</FormLabel><FormControl><Textarea placeholder="Describe your business (e.g., owns a grocery store, freelance graphic designer)" {...field} value={field.value || ""} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
+                    <FormField control={form.control} name="monthlyIncome" render={({ field }) => (
+                      <FormItem><FormLabel className="text-sm">Monthly Income (₹)</FormLabel><FormControl><Input type="number" placeholder="e.g., 50000" {...field} value={field.value || ""} disabled={isSubmitting} className="h-9" /></FormControl><FormMessage /></FormItem>
                     )} />
-                  )}
-
-                  <FormField control={form.control} name="creditScore" render={({ field }) => (
-                    <FormItem><FormLabel>Credit Score (Optional)</FormLabel><FormControl><Input type="number" placeholder="e.g., 750" {...field} value={field.value || ""} disabled={isSubmitting} /></FormControl><FormDescription>Providing your credit score can help with faster processing.</FormDescription><FormMessage /></FormItem>
-                  )} />
+                    <FormField control={form.control} name="loanPurpose" render={({ field }) => (
+                      <FormItem className="md:col-span-2"><FormLabel className="text-sm">Purpose of Loan</FormLabel><FormControl><Textarea placeholder="Reason for loan..." {...field} value={field.value || ""} disabled={isSubmitting} className="min-h-[60px]" /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={form.control} name="employmentStatus" render={({ field }) => (
+                      <FormItem><FormLabel className="text-sm">Employment Status</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}><FormControl><SelectTrigger className="h-9"><SelectValue placeholder="Select status" /></SelectTrigger></FormControl><SelectContent>
+                        <SelectItem value="employed">Employed</SelectItem><SelectItem value="self-employed">Self-Employed</SelectItem><SelectItem value="unemployed">Unemployed</SelectItem>
+                        <SelectItem value="student">Student</SelectItem><SelectItem value="retired">Retired</SelectItem>
+                      </SelectContent></Select><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={form.control} name="creditScore" render={({ field }) => (
+                      <FormItem><FormLabel className="text-sm">Credit Score (Optional)</FormLabel><FormControl><Input type="number" placeholder="e.g., 750" {...field} value={field.value || ""} disabled={isSubmitting} className="h-9" /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    {employmentStatus === 'employed' && (
+                      <FormField control={form.control} name="jobType" render={({ field }) => (
+                        <FormItem className="md:col-span-2"><FormLabel className="text-sm">Job Type</FormLabel><FormControl><Input placeholder="e.g., Software Engineer" {...field} value={field.value || ""} disabled={isSubmitting} className="h-9" /></FormControl><FormMessage /></FormItem>
+                      )} />
+                    )}
+                    {employmentStatus === 'self-employed' && (
+                      <FormField control={form.control} name="businessDescription" render={({ field }) => (
+                        <FormItem className="md:col-span-2"><FormLabel className="text-sm">Business Description</FormLabel><FormControl><Textarea placeholder="Describe your business..." {...field} value={field.value || ""} disabled={isSubmitting} className="min-h-[60px]" /></FormControl><FormMessage /></FormItem>
+                      )} />
+                    )}
+                  </div>
                 </AccordionContent>
               </AccordionItem>
 
               {/* Guarantor Details Section (Conditional) */}
-              <AccordionItem value="guarantor_details">
-                <AccordionTrigger className="text-lg font-semibold"><Users className="mr-2 h-5 w-5 text-primary"/>Guarantor Details (Optional)</AccordionTrigger>
-                <AccordionContent className="space-y-4 pt-4">
-                    <FormField control={form.control} name="hasGuarantor" render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                            <div className="space-y-0.5">
-                                <FormLabel>Add a Guarantor?</FormLabel>
-                                <FormDescription>Select if you are providing a guarantor for this loan.</FormDescription>
-                            </div>
-                            <FormControl>
-                                <Button type="button" variant={field.value ? "default" : "outline"} onClick={() => { field.onChange(!field.value); setShowGuarantor(!field.value); }} disabled={isSubmitting}>
-                                    {field.value ? "Remove Guarantor" : "Add Guarantor"}
-                                </Button>
-                            </FormControl>
-                        </FormItem>
-                    )} />
-                    {showGuarantor && form.watch("hasGuarantor") && (
-                        <>
-                            <FormField control={form.control} name="guarantor.fullName" render={({ field }) => (
-                                <FormItem><FormLabel>Guarantor Full Name</FormLabel><FormControl><Input placeholder="Guarantor's Name" {...field} value={field.value || ""} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
-                            )} />
-                            <FormField control={form.control} name="guarantor.contactNo" render={({ field }) => (
-                                <FormItem><FormLabel>Guarantor Contact Number</FormLabel><FormControl><Input type="tel" placeholder="Guarantor's Contact" {...field} value={field.value || ""} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
-                            )} />
-                            <FormField control={form.control} name="guarantor.address" render={({ field }) => (
-                                <FormItem><FormLabel>Guarantor Address</FormLabel><FormControl><Textarea placeholder="Guarantor's Full Address" {...field} value={field.value || ""} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
-                            )} />
-                            <FormField control={form.control} name="guarantor.idProofType" render={({ field }) => (
-                                <FormItem><FormLabel>Guarantor ID Proof Type</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}><FormControl><SelectTrigger><SelectValue placeholder="Select ID Proof" /></SelectTrigger></FormControl><SelectContent>
-                                <SelectItem value="aadhaar">Aadhaar Card</SelectItem><SelectItem value="pan">PAN Card</SelectItem><SelectItem value="voter_id">Voter ID</SelectItem>
-                                <SelectItem value="driving_license">Driving License</SelectItem><SelectItem value="passport">Passport</SelectItem><SelectItem value="other">Other</SelectItem>
-                                </SelectContent></Select><FormMessage /></FormItem>
-                            )} />
-                            {renderFileInput("guarantor.idProofDocument", "Upload Guarantor ID Proof", undefined, "idProofDocument")}
-
-                            <FormField control={form.control} name="guarantor.addressProofType" render={({ field }) => (
-                                <FormItem><FormLabel>Guarantor Address Proof Type</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}><FormControl><SelectTrigger><SelectValue placeholder="Select Address Proof" /></SelectTrigger></FormControl><SelectContent>
-                                <SelectItem value="aadhaar">Aadhaar Card</SelectItem><SelectItem value="utility_bill">Utility Bill</SelectItem><SelectItem value="rent_agreement">Rent Agreement</SelectItem>
-                                <SelectItem value="passport">Passport</SelectItem><SelectItem value="other">Other</SelectItem>
-                                </SelectContent></Select><FormMessage /></FormItem>
-                            )} />
-                             {renderFileInput("guarantor.addressProofDocument", "Upload Guarantor Address Proof", undefined, "addressProofDocument")}
-                            <FormField control={form.control} name="guarantor.relationshipToBorrower" render={({ field }) => (
-                                <FormItem><FormLabel>Relationship to Borrower</FormLabel><FormControl><Input placeholder="e.g., Parent, Sibling, Friend" {...field} value={field.value || ""} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
-                            )} />
-                        </>
-                    )}
+              <AccordionItem value="guarantor_details" className="border rounded-lg px-4">
+                <AccordionTrigger className="text-base font-semibold py-3"><Users className="mr-2 h-5 w-5 text-primary" />Guarantor (Optional)</AccordionTrigger>
+                <AccordionContent className="pt-2 pb-4">
+                  <FormField control={form.control} name="hasGuarantor" render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 mb-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-sm">Add a Guarantor?</FormLabel>
+                        <FormDescription className="text-xs">Optional - provide if available</FormDescription>
+                      </div>
+                      <FormControl>
+                        <Button type="button" size="sm" variant={field.value ? "default" : "outline"} onClick={() => { field.onChange(!field.value); setShowGuarantor(!field.value); }} disabled={isSubmitting}>
+                          {field.value ? "Remove" : "Add"}
+                        </Button>
+                      </FormControl>
+                    </FormItem>
+                  )} />
+                  {showGuarantor && form.watch("hasGuarantor") && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField control={form.control} name="guarantor.fullName" render={({ field }) => (
+                        <FormItem><FormLabel className="text-sm">Full Name</FormLabel><FormControl><Input placeholder="Name" {...field} value={field.value || ""} disabled={isSubmitting} className="h-9" /></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <FormField control={form.control} name="guarantor.contactNo" render={({ field }) => (
+                        <FormItem><FormLabel className="text-sm">Contact</FormLabel><FormControl><Input type="tel" placeholder="Phone" {...field} value={field.value || ""} disabled={isSubmitting} className="h-9" /></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <FormField control={form.control} name="guarantor.address" render={({ field }) => (
+                        <FormItem className="md:col-span-2"><FormLabel className="text-sm">Address</FormLabel><FormControl><Textarea placeholder="Full Address" {...field} value={field.value || ""} disabled={isSubmitting} className="min-h-[50px]" /></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <FormField control={form.control} name="guarantor.idProofType" render={({ field }) => (
+                        <FormItem><FormLabel className="text-sm">ID Proof Type</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}><FormControl><SelectTrigger className="h-9"><SelectValue placeholder="Select" /></SelectTrigger></FormControl><SelectContent>
+                          <SelectItem value="aadhaar">Aadhaar</SelectItem><SelectItem value="pan">PAN</SelectItem><SelectItem value="voter_id">Voter ID</SelectItem>
+                          <SelectItem value="driving_license">DL</SelectItem><SelectItem value="passport">Passport</SelectItem><SelectItem value="other">Other</SelectItem>
+                        </SelectContent></Select><FormMessage /></FormItem>
+                      )} />
+                      <div>{renderFileInput("guarantor.idProofDocument", "ID Proof", undefined, "idProofDocument")}</div>
+                      <FormField control={form.control} name="guarantor.addressProofType" render={({ field }) => (
+                        <FormItem><FormLabel className="text-sm">Address Proof Type</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}><FormControl><SelectTrigger className="h-9"><SelectValue placeholder="Select" /></SelectTrigger></FormControl><SelectContent>
+                          <SelectItem value="aadhaar">Aadhaar</SelectItem><SelectItem value="utility_bill">Utility Bill</SelectItem><SelectItem value="rent_agreement">Rent Agreement</SelectItem>
+                          <SelectItem value="passport">Passport</SelectItem><SelectItem value="other">Other</SelectItem>
+                        </SelectContent></Select><FormMessage /></FormItem>
+                      )} />
+                      <div>{renderFileInput("guarantor.addressProofDocument", "Address Proof", undefined, "addressProofDocument")}</div>
+                      <FormField control={form.control} name="guarantor.relationshipToBorrower" render={({ field }) => (
+                        <FormItem className="md:col-span-2"><FormLabel className="text-sm">Relationship</FormLabel><FormControl><Input placeholder="e.g., Parent, Friend" {...field} value={field.value || ""} disabled={isSubmitting} className="h-9" /></FormControl><FormMessage /></FormItem>
+                      )} />
+                    </div>
+                  )}
                 </AccordionContent>
               </AccordionItem>
 
               {/* Collateral Details Section */}
               <AccordionItem value="collateral_details">
-                <AccordionTrigger className="text-lg font-semibold"><Paperclip className="mr-2 h-5 w-5 text-primary"/>Collateral Details (Optional)</AccordionTrigger>
+                <AccordionTrigger className="text-lg font-semibold"><Paperclip className="mr-2 h-5 w-5 text-primary" />Collateral Details (Optional)</AccordionTrigger>
                 <AccordionContent className="space-y-4 pt-4">
                   {collateralFields.map((item, index) => (
                     <Card key={item.id} className="p-4 space-y-3 relative bg-card-foreground/5">
-                      <Button type="button" variant="ghost" size="icon" className="absolute top-2 right-2 h-6 w-6" onClick={() => removeCollateral(index)} disabled={isSubmitting}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                      <h4 className="font-medium">Collateral Item #{index + 1}</h4>
                       <FormField control={form.control} name={`collaterals.${index}.type`} render={({ field }) => (
-                        <FormItem><FormLabel>Type of Collateral</FormLabel>
+                        <FormItem><FormLabel className="text-sm">Type</FormLabel>
                           <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}>
-                            <FormControl><SelectTrigger><SelectValue placeholder="Select collateral type" /></SelectTrigger></FormControl>
-                            <SelectContent>{collateralTypes.map(ct => <SelectItem key={ct.value} value={ct.value}><ct.icon className="inline-block mr-2 h-4 w-4"/>{ct.label}</SelectItem>)}</SelectContent>
+                            <FormControl><SelectTrigger className="h-9"><SelectValue placeholder="Select type" /></SelectTrigger></FormControl>
+                            <SelectContent>{collateralTypes.map(ct => <SelectItem key={ct.value} value={ct.value}><ct.icon className="inline-block mr-2 h-4 w-4" />{ct.label}</SelectItem>)}</SelectContent>
                           </Select><FormMessage />
                         </FormItem>
                       )} />
-                      <FormField control={form.control} name={`collaterals.${index}.description`} render={({ field }) => (
-                        <FormItem><FormLabel>Description</FormLabel><FormControl><Textarea placeholder="Describe about your Collateral item...." {...field} value={field.value || ""} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
-                      )} />
                       <FormField control={form.control} name={`collaterals.${index}.estimatedValue`} render={({ field }) => (
-                        <FormItem><FormLabel>Estimated Value (₹)</FormLabel><FormControl><Input type="number" placeholder="Approximate market value" {...field} value={field.value || ''} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel className="text-sm">Estimated Value (₹)</FormLabel><FormControl><Input type="number" placeholder="Value" {...field} value={field.value || ''} disabled={isSubmitting} className="h-9" /></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <FormField control={form.control} name={`collaterals.${index}.description`} render={({ field }) => (
+                        <FormItem className="md:col-span-2"><FormLabel className="text-sm">Description</FormLabel><FormControl><Textarea placeholder="Describe the collateral..." {...field} value={field.value || ""} disabled={isSubmitting} className="min-h-[50px]" /></FormControl><FormMessage /></FormItem>
                       )} />
 
                       {form.watch(`collaterals.${index}.type`) === 'atm_card' && (
@@ -650,36 +638,36 @@ export function DetailedLoanApplicationForm() {
                       )}
                       {form.watch(`collaterals.${index}.type`) === 'blank_cheque' && (
                         <>
-                           {renderFileInput(`collaterals.${index}.chequeImage`, "Blank Cheque Photo", index, "chequeImage")}
-                           <FormField control={form.control} name={`collaterals.${index}.chequeNumber`} render={({ field }) => (
+                          {renderFileInput(`collaterals.${index}.chequeImage`, "Blank Cheque Photo", index, "chequeImage")}
+                          <FormField control={form.control} name={`collaterals.${index}.chequeNumber`} render={({ field }) => (
                             <FormItem><FormLabel>Cheque Number</FormLabel><FormControl><Input placeholder="Enter cheque number" {...field} value={field.value || ""} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
                           )} />
                         </>
                       )}
-                       {form.watch(`collaterals.${index}.type`) === 'bank_statement' && renderFileInput(`collaterals.${index}.bankStatementFile`, "Bank Statement (PDF)", index, "bankStatementFile")}
-                       {(form.watch(`collaterals.${index}.type`) === 'vehicle_bike' || form.watch(`collaterals.${index}.type`) === 'vehicle_car' || form.watch(`collaterals.${index}.type`) === 'vehicle_scooty') && (
-                         <>
-                            {renderFileInput(`collaterals.${index}.vehicleRcImage`, "Vehicle RC Photo", index, "vehicleRcImage")}
-                            {renderFileInput(`collaterals.${index}.vehicleImage`, "Vehicle Photo", index, "vehicleImage")}
-                             <FormField control={form.control} name={`collaterals.${index}.vehicleChallanDetails`} render={({ field }) => (
-                              <FormItem><FormLabel>Challan Details (if any)</FormLabel><FormControl><Textarea placeholder="Describe any outstanding challans" {...field} value={field.value || ""} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
-                            )} />
-                         </>
-                       )}
-                       {(form.watch(`collaterals.${index}.type`) === 'property_house' || form.watch(`collaterals.${index}.type`) === 'property_land') && (
-                         <>
-                            {renderFileInput(`collaterals.${index}.propertyPapersFile`, "Property Papers (PDF/Images)", index, "propertyPapersFile")}
-                            {renderFileInput(`collaterals.${index}.propertyImage`, "Property Photo (Optional)", index, "propertyImage")}
-                         </>
-                       )}
-                        {(form.watch(`collaterals.${index}.type`) === 'gold_jewelry' || form.watch(`collaterals.${index}.type`) === 'other_asset') && (
-                         <>
-                             <FormField control={form.control} name={`collaterals.${index}.assetDetails`} render={({ field }) => (
-                              <FormItem><FormLabel>Asset Details</FormLabel><FormControl><Textarea placeholder="Describe the asset (e.g., weight, purity for gold)" {...field} value={field.value || ""} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
-                            )} />
-                            {renderFileInput(`collaterals.${index}.assetImage`, "Asset Photo (Optional)", index, "assetImage")}
-                         </>
-                       )}
+                      {form.watch(`collaterals.${index}.type`) === 'bank_statement' && renderFileInput(`collaterals.${index}.bankStatementFile`, "Bank Statement (PDF)", index, "bankStatementFile")}
+                      {(form.watch(`collaterals.${index}.type`) === 'vehicle_bike' || form.watch(`collaterals.${index}.type`) === 'vehicle_car' || form.watch(`collaterals.${index}.type`) === 'vehicle_scooty') && (
+                        <>
+                          {renderFileInput(`collaterals.${index}.vehicleRcImage`, "Vehicle RC Photo", index, "vehicleRcImage")}
+                          {renderFileInput(`collaterals.${index}.vehicleImage`, "Vehicle Photo", index, "vehicleImage")}
+                          <FormField control={form.control} name={`collaterals.${index}.vehicleChallanDetails`} render={({ field }) => (
+                            <FormItem><FormLabel>Challan Details (if any)</FormLabel><FormControl><Textarea placeholder="Describe any outstanding challans" {...field} value={field.value || ""} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
+                          )} />
+                        </>
+                      )}
+                      {(form.watch(`collaterals.${index}.type`) === 'property_house' || form.watch(`collaterals.${index}.type`) === 'property_land') && (
+                        <>
+                          {renderFileInput(`collaterals.${index}.propertyPapersFile`, "Property Papers (PDF/Images)", index, "propertyPapersFile")}
+                          {renderFileInput(`collaterals.${index}.propertyImage`, "Property Photo (Optional)", index, "propertyImage")}
+                        </>
+                      )}
+                      {(form.watch(`collaterals.${index}.type`) === 'gold_jewelry' || form.watch(`collaterals.${index}.type`) === 'other_asset') && (
+                        <>
+                          <FormField control={form.control} name={`collaterals.${index}.assetDetails`} render={({ field }) => (
+                            <FormItem><FormLabel>Asset Details</FormLabel><FormControl><Textarea placeholder="Describe the asset (e.g., weight, purity for gold)" {...field} value={field.value || ""} disabled={isSubmitting} /></FormControl><FormMessage /></FormItem>
+                          )} />
+                          {renderFileInput(`collaterals.${index}.assetImage`, "Asset Photo (Optional)", index, "assetImage")}
+                        </>
+                      )}
                     </Card>
                   ))}
                   <Button
@@ -706,39 +694,39 @@ export function DetailedLoanApplicationForm() {
                     })}
                     disabled={isSubmitting}
                   >
-                    <UploadCloud className="mr-2 h-4 w-4"/> Add Collateral Item
+                    <UploadCloud className="mr-2 h-4 w-4" /> Add Collateral Item
                   </Button>
                 </AccordionContent>
               </AccordionItem>
 
-              <AccordionItem value="general_docs">
-                    <AccordionTrigger className="text-lg font-semibold"><Briefcase className="mr-2 h-5 w-5 text-primary"/>Other Supporting Documents (Optional)</AccordionTrigger>
-                    <AccordionContent className="space-y-4 pt-4">
-                        <FormField
-                            control={form.control}
-                            name="generalSupportingDocuments" // Use the array field name
-                            render={() => (
-                                <FormItem>
-                                    <FormLabel>Upload Document (e.g., Payslip, Business Proof)</FormLabel>
-                                    <FormControl>
-                                        <Input
-                                            type="file"
-                                            onChange={(e) => handleFileChange(e, 'generalSupportingDocuments.0')} // Target first element of the array
-                                            accept=".jpg,.jpeg,.png,.pdf"
-                                            className="block w-full text-sm text-foreground file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
-                                            disabled={isSubmitting}
-                                        />
-                                    </FormControl>
-                                    {form.watch('generalSupportingDocuments.0') && typeof form.watch('generalSupportingDocuments.0') === 'string' && (
-                                      <FormDescription>Selected: {form.watch('generalSupportingDocuments.0')?.substring(0, 50)}...</FormDescription> // Display truncated Base64 string
-                                    )}
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormDescription>You can add more documents if needed later or as requested.</FormDescription>
-                    </AccordionContent>
-                </AccordionItem>
+              <AccordionItem value="general_docs" className="border rounded-lg px-4">
+                <AccordionTrigger className="text-base font-semibold py-3"><Briefcase className="mr-2 h-5 w-5 text-primary" />Other Documents (Optional)</AccordionTrigger>
+                <AccordionContent className="pt-2 pb-4">
+                  <FormField
+                    control={form.control}
+                    name="generalSupportingDocuments" // Use the array field name
+                    render={() => (
+                      <FormItem>
+                        <FormLabel>Upload Document (e.g., Payslip, Business Proof)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="file"
+                            onChange={(e) => handleFileChange(e, 'generalSupportingDocuments.0')} // Target first element of the array
+                            accept=".jpg,.jpeg,.png,.pdf"
+                            className="block w-full text-sm text-foreground file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                            disabled={isSubmitting}
+                          />
+                        </FormControl>
+                        {form.watch('generalSupportingDocuments.0') && typeof form.watch('generalSupportingDocuments.0') === 'string' && (
+                          <FormDescription>Selected: {form.watch('generalSupportingDocuments.0')?.substring(0, 50)}...</FormDescription> // Display truncated Base64 string
+                        )}
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormDescription>You can add more documents if needed later or as requested.</FormDescription>
+                </AccordionContent>
+              </AccordionItem>
             </Accordion>
 
             <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground text-lg py-6" disabled={isSubmitting || form.formState.isSubmitting}>
@@ -747,6 +735,6 @@ export function DetailedLoanApplicationForm() {
           </form>
         </Form>
       </CardContent>
-    </Card>
+    </Card >
   );
 }
