@@ -120,12 +120,8 @@ export default function MainAppLayout({
               href={item.href}
               label={item.label}
               icon={item.icon}
-              // More precise active state for dashboard and other specific routes
-              isActive={
-                item.href === ROUTES.DASHBOARD
-                  ? pathname === ROUTES.DASHBOARD // Exact match for /dashboard
-                  : pathname.startsWith(item.href)
-              }
+              // Use exact match for all routes to prevent multiple active states
+              isActive={pathname === item.href}
               onClick={() => { if (isMobile) setOpen(false); }}
             />
           ))}
@@ -147,7 +143,7 @@ export default function MainAppLayout({
   return (
     <div className="grid min-h-screen w-full lg:grid-cols-[280px_1fr] h-screen overflow-hidden bg-background">
       {/* Desktop Sidebar */}
-      <aside className="hidden border-r border-sidebar-border bg-sidebar lg:flex flex-col h-full shadow-md">
+      <aside className="hidden border-r border-sidebar-border bg-sidebar lg:flex flex-col h-full shadow-xl gradient-sidebar">
         <SidebarContentComp />
       </aside>
 

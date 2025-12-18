@@ -9,100 +9,67 @@ body {
 
 @layer base {
   :root {
-    /* Default Light Theme (Fallback, not active as .dark is set) */
-    --background: 65 45% 96%; /* Very light yellow/cream */
-    --foreground: 210 40% 20%; /* Darkest desaturated blue - for text */
+    /* ========== PROFESSIONAL FINANCE LIGHT THEME ========== */
+    
+    /* Main Background - Clean white */
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%; /* Slate 900 - Dark text */
 
-    --card: 65 40% 90%; /* Light cream for cards */
-    --card-foreground: 210 40% 20%; /* Darkest blue text on cards */
+    /* Card - Subtle gray for depth */
+    --card: 210 40% 98%; /* Slate 50 */
+    --card-foreground: 222 47% 11%;
 
-    --popover: 65 40% 90%; /* Light cream for popovers */
-    --popover-foreground: 210 40% 20%; /* Darkest blue text on popovers */
+    /* Popover */
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
 
-    --primary: 210 35% 45%; /* Medium desaturated blue - primary interactive color */
-    --primary-foreground: 210 40% 98%; /* Very light text for contrast on primary */
+    /* Primary - Deep Blue (Trust, Professionalism) */
+    --primary: 221 83% 53%; /* Blue 600 */
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 30% 85%; /* Softer, lighter blue for secondary elements */
-    --secondary-foreground: 210 40% 20%; /* Darkest blue text on secondary */
+    /* Secondary - Light Blue */
+    --secondary: 214 95% 93%; /* Blue 100 */
+    --secondary-foreground: 221 83% 53%;
 
-    --muted: 210 25% 90%; /* Even lighter blue for muted backgrounds */
-    --muted-foreground: 210 35% 45%; /* Slightly lighter dark blue for muted text */
+    /* Muted - Soft gray backgrounds */
+    --muted: 210 40% 96%; /* Slate 100 */
+    --muted-foreground: 215 16% 47%; /* Slate 500 */
 
-    --accent: 210 35% 45%; /* Using primary blue as accent */
-    --accent-foreground: 210 40% 98%; /* Light text on accent */
+    /* Accent - Emerald Green (Money, Success) */
+    --accent: 160 84% 39%; /* Emerald 600 */
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 72% 51%; /* Standard destructive red */
-    --destructive-foreground: 0 0% 98%; /* Light text on destructive */
+    /* Destructive */
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 210 25% 75%; /* A medium-light blue for borders */
-    --input: 210 25% 90%; /* Light blue for input backgrounds */
-    --ring: 210 35% 45%; /* Primary blue for focus rings */
+    /* Borders and Inputs */
+    --border: 214 32% 91%; /* Slate 200 */
+    --input: 214 32% 91%;
+    --ring: 221 83% 53%; /* Primary Blue */
 
-    --chart-1: 210 35% 45%;
-    --chart-2: 210 30% 55%;
-    --chart-3: 65 40% 75%;
-    --chart-4: 210 25% 65%;
-    --chart-5: 210 40% 35%;
+    /* Chart Colors - Professional palette */
+    --chart-1: 221 83% 53%; /* Blue */
+    --chart-2: 160 84% 39%; /* Emerald */
+    --chart-3: 38 92% 50%; /* Amber */
+    --chart-4: 262 83% 58%; /* Violet */
+    --chart-5: 12 76% 61%; /* Orange */
 
     --radius: 0.5rem;
 
-    /* Sidebar specific theme vars for Light Theme */
-    --sidebar-background: 65 40% 92%; 
-    --sidebar-foreground: 210 40% 20%; 
-    --sidebar-primary: 210 35% 45%; 
-    --sidebar-primary-foreground: 210 40% 98%; 
-    --sidebar-accent: 65 35% 85%; 
-    --sidebar-accent-foreground: 210 40% 20%;
-    --sidebar-border: 210 25% 80%;
-    --sidebar-ring: 210 35% 45%;
-  }
-
-  /* UPDATED: Dark Theme with Green as Primary Accent */
-  .dark {
-    --background: 220 18% 12%; /* Very dark blue-gray (original dark theme background) */
-    --foreground: 210 20% 96%; /* Off-white for text (original dark theme foreground) */
-
-    --card: 220 18% 18%; /* Slightly lighter dark for cards/form background */
-    --card-foreground: 210 20% 96%;
-
-    --popover: 220 18% 18%;
-    --popover-foreground: 210 20% 96%;
-
-    --primary: 140 60% 40%; /* PRIMARY: Green accent */
-    --primary-foreground: 0 0% 100%; /* White text on primary */
-
-    --secondary: 198 86% 50%; /* SECONDARY: Vibrant Teal/Cyan (the previous primary blue) */
-    --secondary-foreground: 0 0% 100%; /* White text on secondary */
-
-    --muted: 220 10% 25%; /* Darker grey for muted backgrounds */
-    --muted-foreground: 210 5% 65%; /* Lighter grey for muted text */
-
-    --accent: 140 60% 40%; /* ACCENT matches PRIMARY green */
-    --accent-foreground: 0 0% 100%;
-
-    --destructive: 0 84.2% 60.2%; /* Standard red */
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 220 10% 30%; /* Darker border */
-    --input: 220 10% 25%; /* Darker input backgrounds */
-    --ring: 140 60% 40%; /* RING matches PRIMARY green */
-
-    /* Chart colors (adjust if needed for the new palette) */
-    --chart-1: 140 60% 40%; /* Green */
-    --chart-2: 198 86% 50%; /* Teal/Cyan */
-    --chart-3: 210 10% 20%; /* Dark Grey */
-    --chart-4: 25 95% 55%; /* Orange */
-    --chart-5: 262.1 83.3% 57.8%; /* Purple */
-
-    /* Sidebar specific theme vars for new dark mode */
-    --sidebar-background: 220 18% 15%;
-    --sidebar-foreground: 210 20% 96%;
-    --sidebar-primary: 140 60% 40%;
+    /* ========== SIDEBAR - Professional Navy Blue ========== */
+    --sidebar-background: 222 47% 11%; /* Slate 900 */
+    --sidebar-foreground: 210 40% 98%; /* Light text */
+    --sidebar-primary: 221 83% 53%; /* Blue 600 */
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 10% 25%;
-    --sidebar-accent-foreground: 210 20% 96%;
-    --sidebar-border: 220 10% 30%;
-    --sidebar-ring: 140 60% 40%;
+    --sidebar-accent: 217 33% 17%; /* Slate 800 */
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 217 33% 17%;
+    --sidebar-ring: 221 83% 53%;
+    
+    /* Sidebar Muted */
+    --sidebar-muted: 215 28% 17%;
+    --sidebar-muted-foreground: 215 20% 65%;
   }
 }
 
@@ -113,4 +80,54 @@ body {
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* ========== CUSTOM UTILITY CLASSES ========== */
+
+@layer utilities {
+  /* Gradient backgrounds for cards */
+  .gradient-primary {
+    background: linear-gradient(135deg, hsl(221 83% 53%) 0%, hsl(221 83% 43%) 100%);
+  }
+  
+  .gradient-success {
+    background: linear-gradient(135deg, hsl(160 84% 39%) 0%, hsl(160 84% 29%) 100%);
+  }
+  
+  .gradient-warning {
+    background: linear-gradient(135deg, hsl(38 92% 50%) 0%, hsl(38 92% 40%) 100%);
+  }
+  
+  .gradient-sidebar {
+    background: linear-gradient(180deg, hsl(222 47% 11%) 0%, hsl(222 47% 8%) 100%);
+  }
+
+  /* Card hover effects */
+  .card-hover {
+    @apply transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5;
+  }
+
+  /* Text gradient */
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-emerald-600;
+  }
+}
+
+/* ========== SMOOTH SCROLLBAR ========== */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(210 40% 96%);
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(215 16% 70%);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(215 16% 55%);
 }

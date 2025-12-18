@@ -6,8 +6,8 @@ import UserModel from '@/models/User';
 import mongoose from 'mongoose';
 
 // Get a single user by ID
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
-  const { id } = params;
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
 
   if (!id || !mongoose.Types.ObjectId.isValid(id)) {
     return NextResponse.json({ success: false, message: 'Invalid or missing user ID' }, { status: 400 });
@@ -32,8 +32,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 }
 
 // Update a user by ID
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
-  const { id } = params;
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
 
   if (!id || !mongoose.Types.ObjectId.isValid(id)) {
     return NextResponse.json({ success: false, message: 'Invalid or missing user ID' }, { status: 400 });
@@ -71,23 +71,23 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     return NextResponse.json({ success: true, user: updatedUser.toObject(), message: 'User updated successfully' }, { status: 200 });
   } catch (error: any) {
     console.error(`Error updating user with ID ${id}:`, error);
-     if (error.name === 'ValidationError') {
-        let errors = {};
-        Object.keys(error.errors).forEach((key) => {
-            (errors as any)[key] = error.errors[key].message;
-        });
-        return NextResponse.json({ success: false, message: 'Validation Error', errors }, { status: 400 });
+    if (error.name === 'ValidationError') {
+      let errors = {};
+      Object.keys(error.errors).forEach((key) => {
+        (errors as any)[key] = error.errors[key].message;
+      });
+      return NextResponse.json({ success: false, message: 'Validation Error', errors }, { status: 400 });
     }
     if (error.code === 11000) { // Duplicate key error (e.g., email already exists)
-        return NextResponse.json({ success: false, message: 'Email already in use by another account.' }, { status: 409 });
+      return NextResponse.json({ success: false, message: 'Email already in use by another account.' }, { status: 409 });
     }
     return NextResponse.json({ success: false, message: error.message || 'Internal Server Error during user update' }, { status: 500 });
   }
 }
 
 // Delete a user by ID
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
-  const { id } = params;
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
 
   if (!id || !mongoose.Types.ObjectId.isValid(id)) {
     return NextResponse.json({ success: false, message: 'Invalid or missing user ID' }, { status: 400 });
@@ -100,7 +100,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     if (!deletedUser) {
       return NextResponse.json({ success: false, message: 'User not found' }, { status: 404 });
     }
-    
+
     // TODO: Consider implications for associated data, e.g., loan applications.
     // For now, it's a hard delete of the user.
 

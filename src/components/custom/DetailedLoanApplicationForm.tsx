@@ -310,7 +310,7 @@ export function DetailedLoanApplicationForm() {
             type="file"
             onChange={(e) => handleFileChange(e, specificFieldName || fieldName, index)}
             accept=".jpg,.jpeg,.png,.pdf"
-            className="block w-full text-sm text-foreground file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+            className="block w-full text-sm text-foreground overflow-hidden file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 file:shrink-0"
             disabled={isSubmitting}
           />
         </FormControl>
@@ -713,7 +713,7 @@ export function DetailedLoanApplicationForm() {
                             type="file"
                             onChange={(e) => handleFileChange(e, 'generalSupportingDocuments.0')} // Target first element of the array
                             accept=".jpg,.jpeg,.png,.pdf"
-                            className="block w-full text-sm text-foreground file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                            className="block w-full text-sm text-foreground overflow-hidden file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 file:shrink-0"
                             disabled={isSubmitting}
                           />
                         </FormControl>
